@@ -7,7 +7,7 @@ const ContactPage = () => {
       <div className="container mx-auto px-6 py-20">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-extrabold text-black">Get In Touch</h1>
-          <p className="mt-2 text-gray-600">Have questions? We're here to help.</p>
+          <p className="mt-2 text-gray-600">Have questions? We&apos;re here to help.</p>
         </div>
         
         <div className="grid md:grid-cols-2 gap-12 bg-white p-8 rounded-lg shadow-md">

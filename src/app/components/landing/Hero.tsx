@@ -21,7 +21,7 @@ const Hero = () => {
           Wear Your <span className="text-[#EF3D4C]">Ambition</span>
         </h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-gray-200">
-          Ceaser is more than a brand. It's a statement. Premium shirts crafted to fuel your journey to greatness.
+          Ceaser is more than a brand. It&apos;s a statement. Premium shirts crafted to fuel your journey to greatness.
         </p>
         <Link 
           href="/shop" 

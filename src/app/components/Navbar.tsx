@@ -48,63 +48,56 @@ const Navbar = () => {
           CEASER
         </Link>
 
-    {/* --- DESKTOP NAVIGATION with Colors --- */}
-<div className="hidden md:flex items-center space-x-10">
-  {navLinks.map((link) => {
-    const isSubMenuActive = link.subMenu?.some(sub => pathname === sub.href);
-    const isActive = pathname === link.href || isSubMenuActive;
+        {/* --- DESKTOP NAVIGATION with Colors --- */}
+        <div className="hidden md:flex items-center space-x-10">
+          {navLinks.map((link) => {
+            // Check if a sub-menu item is active to highlight the parent
+            const isSubMenuActive = link.subMenu?.some(sub => pathname === sub.href);
+            const isActive = pathname === link.href || isSubMenuActive;
 
-    return (
-      <div 
-        key={link.label}
-        className="relative"
-        onMouseEnter={() => link.subMenu && setOpenDropdown(link.label)}
-        onMouseLeave={() => link.subMenu && setOpenDropdown(null)}
-      >
-        {link.subMenu ? (
-          <button 
-            className={`relative flex items-center gap-1 uppercase font-bold text-sm tracking-wider transition-colors 
-              ${isActive ? 'text-primary' : 'hover:text-primary'}`}
-          >
-            {link.label}
-            <ChevronDown size={16} className={`transition-transform ${openDropdown === link.label ? 'rotate-180 text-primary' : ''}`} />
-            {/* Active Indicator Underline (Red) */}
-            {isActive && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-accent rounded-full"></span>}
-          </button>
-        ) : (
-          <Link 
-            href={link.href!}
-            className={`relative uppercase font-bold text-sm tracking-wider transition-colors 
-              ${isActive ? 'text-primary' : 'hover:text-primary'}`}
-          >
-            {link.label}
-            {/* Active Indicator Underline (Red) */}
-            {isActive && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-accent rounded-full"></span>}
-          </Link>
-        )}
-
-        {/* Dropdown Menu */}
-        {link.subMenu && openDropdown === link.label && (
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-52 bg-brand-white shadow-lg rounded-md py-2 z-40">
-            {link.subMenu.map((subLink) => (
-              <Link
-                key={subLink.label}
-                href={subLink.href}
-                className={`block px-5 py-3 text-sm font-medium transition-colors 
-                  ${pathname === subLink.href 
-                    ? 'text-accent' 
-                    : 'text-brand-black hover:bg-primary hover:text-white'}`}
+            return (
+              <div 
+                key={link.label}
+                className="relative"
+                onMouseEnter={() => link.subMenu && setOpenDropdown(link.label)}
+                onMouseLeave={() => link.subMenu && setOpenDropdown(null)}
               >
-                {subLink.label}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  })}
-</div>
+                {link.subMenu ? (
+                  <button className={`relative flex items-center gap-1 uppercase font-bold text-sm tracking-wider transition-colors ${isActive ? 'text-primary' : 'hover:text-primary'}`}>
+                    {link.label}
+                    <ChevronDown size={16} className={`transition-transform ${openDropdown === link.label ? 'rotate-180' : ''}`} />
+                    {/* Active Indicator Underline */}
+                    {isActive && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-accent rounded-full"></span>}
+                  </button>
+                ) : (
+                  <Link 
+                    href={link.href!}
+                    className={`relative uppercase font-bold text-sm tracking-wider transition-colors ${isActive ? 'text-primary' : 'hover:text-primary'}`}
+                  >
+                    {link.label}
+                    {/* Active Indicator Underline */}
+                    {isActive && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-accent rounded-full"></span>}
+                  </Link>
+                )}
 
+                {/* Dropdown Menu with Branded Hover */}
+                {link.subMenu && openDropdown === link.label && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-52 bg-brand-white shadow-lg rounded-md py-2 z-40">
+                    {link.subMenu.map((subLink) => (
+                      <Link
+                        key={subLink.label}
+                        href={subLink.href}
+                        className={`block px-5 py-3 text-sm font-medium transition-colors ${pathname === subLink.href ? 'text-accent' : 'text-brand-black hover:bg-primary hover:text-white'}`}
+                      >
+                        {subLink.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
 
         {/* Right Side Icons */}
         <div className="flex items-center space-x-5">

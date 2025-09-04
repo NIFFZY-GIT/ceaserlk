@@ -19,7 +19,7 @@ const AboutPage = () => {
         <h2 className="text-4xl font-bold">Forged From Ambition</h2>
         <div className="mt-4 mx-auto w-24 h-1 bg-accent rounded"></div>
         <p className="mt-8 max-w-3xl mx-auto text-lg text-gray-700 leading-relaxed">
-          Ceaser was born from a simple belief: what you wear is an extension of who you are. We saw a world full of generic clothing and dreamed of creating something more—a symbol for the hustlers, the dreamers, and the leaders. We're not just a clothing brand; we are a movement dedicated to the relentless pursuit of greatness. Every design is a piece of our philosophy.
+          Ceaser was born from a simple belief: what you wear is an extension of who you are. We saw a world full of generic clothing and dreamed of creating something more—a symbol for the hustlers, the dreamers, and the leaders. We&apos;re not just a clothing brand; we are a movement dedicated to the relentless pursuit of greatness. Every design is a piece of our philosophy.
         </p>
       </section>
 
