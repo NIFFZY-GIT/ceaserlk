@@ -7,7 +7,7 @@ const Hero = () => {
     <section className="relative h-[85vh] w-full flex items-center justify-center text-white">
       {/* Background Image */}
       <Image
-        src="/hero-background.jpg" // A motivational image (e.g., person achieving a goal)
+        src="/images/image.jpg" // A motivational image (e.g., person achieving a goal)
         alt="Motivational background"
         fill
         style={{objectFit: 'cover'}}

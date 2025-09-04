@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Menu, User, X, ChevronDown } from 'lucide-react'; 
+import { ShoppingCart, Menu, User , CircleUser , X, ChevronDown } from 'lucide-react'; 
 import { useCart } from '@/context/CartContext';
 
 // Navigation links structure
@@ -102,7 +102,7 @@ const Navbar = () => {
         {/* Right Side Icons */}
         <div className="flex items-center space-x-5">
           {/* Icons and mobile menu toggle remain the same */}
-          <Link href="/login" className="hover:text-primary transition-colors hidden md:block"> <User size={26} /> </Link>
+          <Link href="/login" className="hover:text-primary transition-colors hidden md:block"> <CircleUser size={26} /> </Link>
           <button onClick={openCart} className="relative hover:text-primary transition-colors">
             <ShoppingCart size={26} />
             {cartCount > 0 && (<span className="absolute -top-2 -right-2 bg-accent text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">{cartCount}</span>)}
