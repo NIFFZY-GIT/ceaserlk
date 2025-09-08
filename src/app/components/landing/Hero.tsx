@@ -4,7 +4,7 @@ import Image from 'next/image';
 
 const Hero = () => {
   return (
-    <section className="relative h-[85vh] w-full flex items-center justify-center text-white">
+    <section className="relative h-[88vh] w-full flex items-center justify-center text-white">
       {/* Background Image */}
       <Image
         src="/images/image.jpg" // A motivational image (e.g., person achieving a goal)

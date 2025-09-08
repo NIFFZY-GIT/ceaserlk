@@ -1,7 +1,83 @@
 @import "tailwindcss";
 
 
+/* src/app/globals.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 
+ =====================================================================
+  MANUAL STYLES - REPLACING THE TAILWIND CONFIG
+ =====================================================================
+*/
+
+/* 1. Define your colors as CSS variables */
+:root {
+  --color-primary: #107D3F;
+  --color-accent: #EF3D4C;
+  --color-brand-white: #FFFFFF;
+  --color-brand-black: #000000;
+}
+
+/* 2. Define your keyframes for the animation */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* 
+  3. Manually create custom classes to *imitate* Tailwind.
+     This is where you lose all the power of Tailwind.
+*/
+
+/* Background Colors */
+.bg-brand-black {
+  background-color: var(--color-brand-black);
+}
+.bg-accent {
+  background-color: var(--color-accent);
+}
+.bg-primary {
+  background-color: var(--color-primary);
+}
 
 
+/* Text Colors */
+.text-brand-white {
+  color: var(--color-brand-white);
+}
+.text-primary {
+  color: var(--color-primary);
+}
+.text-accent {
+  color: var(--color-accent);
+}
 
+/* Hover States (You have to write these manually for every class) */
+.hover\:text-primary:hover {
+  color: var(--color-primary);
+}
+.hover\:bg-primary:hover {
+  background-color: var(--color-primary);
+}
+
+/* Animation */
+.animate-marquee {
+  animation: marquee 60s linear infinite;
+}
+
+/* And you would have to manually create every other class... */
+
+@layer utilities {
+  @keyframes marquee {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .animate-marquee {
+    animation: marquee 40s linear infinite;
+  }
+}
 

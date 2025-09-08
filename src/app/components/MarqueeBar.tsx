@@ -1,28 +1,45 @@
 // src/app/components/MarqueeBar.tsx
+// This version uses a pure CSS animation for a smooth, continuous scroll.
 
-// A single, powerful motivational sentence.
-const motivationalSentence = "THE ONLY THING STANDING BETWEEN YOU AND YOUR GOAL IS THE STORY YOU KEEP TELLING YOURSELF THAT YOU CAN'T ACHIEVE IT • ";
+const motivationalQuotes = [
+  "Believe you can and you're halfway there.",
+  "The future belongs to those who believe in the beauty of their dreams.",
+  "The only way to do great work is to love what you do.",
+  "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+  "Strive for progress, not perfection."
+];
 
 const MarqueeBar = () => {
   return (
-    // The main container acts as a "window" that hides the overflowing text.
-    // `group` is used to pause the animation on hover.
-    <div className="relative flex overflow-hidden bg-primary text-white py-2.5 group">
-      
-      {/* 
-        This is the single, moving "snake".
-        - `absolute` allows it to be positioned off-screen to start.
-        - `whitespace-nowrap` is crucial to keep the sentence on one line.
-        - `animate-marquee-rtl` applies our new right-to-left animation.
-        - `group-hover:paused` stops the animation when the user hovers over the bar.
-      */}
-      <div className="absolute whitespace-nowrap animate-marquee-rtl group-hover:paused">
-        <p className="font-bold uppercase tracking-wider text-sm">
-          {/* We repeat the sentence to ensure a seamless loop for all screen sizes */}
-          {motivationalSentence.repeat(5)}
-        </p>
-      </div>
+    // The outer container hides the overflow
+    <div className="relative flex h-9 overflow-x-hidden bg-accent text-white">
+      {/* The inner container holds the duplicated content and has the animation */}
+      <div className="flex animate-marquee whitespace-nowrap">
+        {/* Render the first set of quotes */}
+        {motivationalQuotes.map((quote, index) => (
+          <div
+            key={index}
+            className="flex items-center justify-center flex-shrink-0 px-8"
+          >
+            <p className="text-base font-semibold text-center md:text-lg">
+              {quote}
+            </p>
+          </div>
+        ))}
 
+        {/* Render the second, identical set of quotes for the seamless loop */}
+        {motivationalQuotes.map((quote, index) => (
+          <div
+            key={`duplicate-${index}`}
+            className="flex items-center justify-center flex-shrink-0 px-8"
+            aria-hidden="true" // Hide the duplicated content from screen readers
+          >
+            <p className="text-base font-semibold text-center md:text-lg">
+              {quote}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
