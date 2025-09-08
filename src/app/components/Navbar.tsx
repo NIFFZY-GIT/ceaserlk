@@ -56,7 +56,7 @@ const Navbar = () => {
         {/* LOGO */}
         <Link href="/" onClick={handleLinkClick} className="transition-opacity rounded-sm hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
           <Image
-            src="/assets/logo1.png"
+            src="/assets/log1.png"
             alt="Ceaser Brand Logo"
             width={150}
             height={63}
