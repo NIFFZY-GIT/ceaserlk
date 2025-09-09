@@ -4,94 +4,76 @@
 
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { useRef, useLayoutEffect } from 'react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import Image from 'next/image';
+// 1. Import the 'motion' component from Framer Motion
+import { motion } from 'framer-motion';
 
-gsap.registerPlugin(ScrollTrigger);
+// 2. Define animation variants for the container and its items
+// This is a clean way to manage animation properties.
+
+// The parent container's variants control the staggering of its children.
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2, // Each child will animate 0.2s after the previous one
+      ease: 'easeOut' as const
+    }
+  }
+};
+
+// The children's variants define how each item will animate.
+const itemVariants = {
+  hidden: { opacity: 0, y: 50 }, // Start invisible and 50px down
+  visible: { 
+    opacity: 1, 
+    y: 0,       // End fully visible and in its original position
+    transition: {
+      duration: 0.8,
+      ease: 'easeOut' as const
+    }
+  }
+};
 
 const Interstitial = () => {
-  const sectionRef = useRef(null);
+  // No more need for useRef or useLayoutEffect!
   
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      // 1. Parallax background animation
-      gsap.to(".gsap-parallax-bg", {
-        yPercent: 20, // Move the image down by 20% of its height
-        ease: "none",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top bottom', // Start when the top of the section hits the bottom of the viewport
-          end: 'bottom top', // End when the bottom of the section hits the top
-          scrub: true // Smoothly link the animation to the scrollbar
-        }
-      });
-      
-      // 2. Main content reveal timeline
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 60%',
-          toggleActions: 'play none none none'
-        }
-      });
-      
-      tl.from(".gsap-bg-logo", { scale: 0.8, opacity: 0, duration: 1, ease: 'power3.out' })
-        .from(".gsap-word > span", {
-            yPercent: 110,
-            opacity: 0,
-            stagger: 0.1,
-            duration: 0.8,
-            ease: 'power3.out'
-        }, "-=0.7")
-        .from(".gsap-para", { y: 30, opacity: 0, duration: 0.8, ease: 'power3.out' }, "-=0.5")
-        .from(".gsap-cta-button", { scale: 0.9, opacity: 0, duration: 0.8, ease: 'power3.out' }, "-=0.5");
-
-    }, sectionRef);
-    return () => ctx.revert();
-  }, []);
-
   return (
-    // The section needs to be relative and overflow-hidden for the parallax effect
-    <section ref={sectionRef} className="relative py-32 overflow-hidden bg-brand-black md:py-40">
-      {/* Parallax Background Image */}
-      <Image
-        src="/images/interstitial-bg.jpg"
-        alt="Atmospheric background"
-        fill
-        className="object-cover w-full h-full opacity-10 gsap-parallax-bg"
-      />
-      
-      <div className="container relative z-10 max-w-3xl px-6 mx-auto text-center">
-        {/* Semi-transparent background logo for depth */}
-        <Image
-            src="/assets/logo1.png" // Assuming this is your logo path
-            alt="Ceaser Brand Logo Mark"
-            width={200}
-            height={84}
-            className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 opacity-5 gsap-bg-logo"
-        />
+    // 3. Use the 'motion.section' component and link it to our variants.
+    <motion.section
+      className="py-32 bg-brand-black md:py-40"
+      variants={containerVariants}
+      initial="hidden" // Start in the 'hidden' state
+      whileInView="visible" // Animate to the 'visible' state when it enters the viewport
+      viewport={{ once: true, amount: 0.5 }} // Trigger once, when 50% of the section is visible
+    >
+      <div className="container max-w-3xl px-6 mx-auto text-center">
+        {/* 4. Each animated item is now a 'motion' component using the itemVariants */}
+        <motion.h2 
+          className="text-4xl font-bold tracking-wider text-white uppercase md:text-5xl"
+          variants={itemVariants}
+        >
+          Beyond the Apparel
+        </motion.h2>
 
-        <h2 className="text-4xl font-bold tracking-wider text-white uppercase md:text-6xl">
-            {/* The double-span structure allows for the word-by-word reveal animation */}
-            <span className="inline-block overflow-hidden gsap-word"><span className="inline-block">Beyond</span></span>{' '}
-            <span className="inline-block overflow-hidden gsap-word"><span className="inline-block">the</span></span>{' '}
-            <span className="inline-block overflow-hidden gsap-word"><span className="inline-block">Apparel</span></span>
-        </h2>
-        
-        <p className="mt-6 text-lg leading-relaxed text-gray-400 gsap-para">
+        <motion.p 
+          className="mt-6 text-lg leading-relaxed text-gray-400"
+          variants={itemVariants}
+        >
           We believe in the power of mindset. Our brand is a tribute to the discipline, resilience, and relentless drive it takes to achieve greatness.
-        </p>
+        </motion.p>
         
-        <div className="mt-12 gsap-cta-button">
-          <Link href="/about" className="inline-flex items-center gap-3 px-8 py-4 font-bold text-white transition-all duration-300 rounded-md group bg-primary hover:scale-105 hover:shadow-lg hover:shadow-primary/30">
+        <motion.div 
+          className="mt-10"
+          variants={itemVariants}
+        >
+          <Link href="/about" className="inline-flex items-center gap-3 px-8 py-4 font-bold text-white transition-transform rounded-md group bg-primary hover:scale-105">
             <span>Discover Our Mission</span>
             <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
-        </div>
+        </motion.div>
       </div>
-    </section>
+    </motion.section>
   );
 };
 
