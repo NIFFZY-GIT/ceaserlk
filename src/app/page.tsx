@@ -2,16 +2,17 @@
 
 import Hero from "@/app/components/landing/Hero";
 import FeaturedProducts from "@/app/components/landing/FeaturedProducts";
-import Interstitial from "@/app/components/landing/Interstitial"; // 1. Import the buffer
+import VideoShowcase from "@/app/components/landing/VideoShowcase"; // 1. Import the new component
 import BrandEthos from "@/app/components/landing/BrandEthos";
 
 
 export default function HomePage() {
   return (
     <main>
-      <Hero />
+            <VideoShowcase /> 
+
       <FeaturedProducts />
-        {/* 2. Place it between the two sliders */}
+  {/* 2. Add it right after featured products */}
       <BrandEthos />
 
     </main>
