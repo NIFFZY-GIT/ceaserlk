@@ -39,7 +39,7 @@ const FeaturedProducts = () => {
       const mm = gsap.matchMedia();
   
       // Add a media query for desktop screens where the animation should run
-      mm.add("(min-width: 400px)", () => {
+      mm.add("(min-width: 1024px)", () => {
           if (!track.parentElement) return;
           const amountToScroll = track.scrollWidth - track.parentElement.offsetWidth;
   
