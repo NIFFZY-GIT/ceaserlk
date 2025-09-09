@@ -80,7 +80,7 @@ const FeaturedProducts = () => {
           </Link>
         </div>
 
-        <div className="w-full pb-4 -mb-4 overflow-x-auto overscroll-behavior-x-contain">
+        <div className="w-full pb-4 -mb-4 overflow-x-auto overscroll-behavior-x-contain modern-scrollbar">
           <div ref={trackRef} className="flex gap-8 pr-6 w-max md:pr-0">
             {/* --- FIX 2: Use the array index to create a guaranteed unique key --- */}
             {featuredProducts.map((product, index) => (

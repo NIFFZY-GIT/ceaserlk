@@ -80,3 +80,29 @@
     animation: marquee 40s linear infinite;
   }
 }
+
+/* Custom Scrollbar Styles */
+.modern-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 4px;
+  border: 2px solid #1a1a1a;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #149a4c;
+}
+
+/* For Firefox */
+.modern-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) #1a1a1a;
+}

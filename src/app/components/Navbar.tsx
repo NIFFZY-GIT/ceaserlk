@@ -9,16 +9,15 @@ import { usePathname } from 'next/navigation';
 import { ShoppingCart, Menu, User, CircleUser, X, ChevronDown } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
-const navLinks = [
+interface NavLink {
+  href: string;
+  label: string;
+  subMenu?: { href: string; label: string; }[];
+}
+
+const navLinks: NavLink[] = [
+    { href: '/', label: 'Home' },
   { href: '/shop', label: 'Shop' },
-  {
-    label: 'Collections',
-    subMenu: [
-      { href: '/collections/new-arrivals', label: 'New Arrivals' },
-      { href: '/collections/best-sellers', label: 'Best Sellers' },
-      { href: '/collections/on-sale', label: 'On Sale' },
-    ]
-  },
   { href: '/about', label: 'Our Mission' },
   { href: '/contact', label: 'Contact Us' },
 ];
@@ -38,7 +37,7 @@ const Navbar = () => {
     if (isMobileMenuOpen) {
       setIsMobileMenuOpen(false);
     }
-  }, [pathname]);
+  }, [pathname, isMobileMenuOpen]);
 
   const handleLinkClick = () => {
     setIsMobileMenuOpen(false);
@@ -67,7 +66,7 @@ const Navbar = () => {
         {/* DESKTOP NAVIGATION */}
         <div className="items-center hidden space-x-10 md:flex">
           {navLinks.map((link) => {
-            const isSubMenuActive = link.subMenu?.some(sub => pathname === sub.href);
+            const isSubMenuActive = link.subMenu?.some((sub: { href: string; }) => pathname === sub.href);
             const isActive = pathname === link.href || isSubMenuActive;
             const isDropdownOpen = openDropdown === link.label;
 
@@ -100,7 +99,7 @@ const Navbar = () => {
                 {/* DESKTOP DROPDOWN: Black background ('bg-brand-black') */}
                 {link.subMenu && (
                   <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-4 w-52 bg-brand-black border border-gray-700 shadow-lg rounded-md py-2 z-40 transition-opacity duration-200 ${isDropdownOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                    {link.subMenu.map((subLink) => (
+                    {link.subMenu.map((subLink: { label: string; href: string; }) => (
                       <Link
                         key={subLink.label}
                         href={subLink.href}
@@ -145,7 +144,7 @@ const Navbar = () => {
                   </button>
                   <div className={`overflow-hidden transition-all duration-300 ${openDropdown === link.label ? 'max-h-96' : 'max-h-0'}`}>
                     <div className="flex flex-col items-center pt-4 space-y-4">
-                      {link.subMenu.map((subLink) => (
+                      {link.subMenu.map((subLink: { label: string; href: string; }) => (
                         <Link key={subLink.label} href={subLink.href} onClick={handleLinkClick} 
                           // MOBILE SUB-LINKS: Active is Red ('text-accent'), hover is Green ('hover:text-primary')
                           className={`text-base hover:text-primary ${pathname === subLink.href ? 'text-accent' : ''}`}>
