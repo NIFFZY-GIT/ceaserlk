@@ -11,7 +11,7 @@ export default function HomePage() {
     <main>
       <Hero />
       <FeaturedProducts />
-      <Interstitial />    {/* 2. Place it between the two sliders */}
+        {/* 2. Place it between the two sliders */}
       <BrandEthos />
 
     </main>
