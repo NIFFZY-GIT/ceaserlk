@@ -22,7 +22,6 @@ const Navbar = () => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // REMOVED: The 'openDropdown' state is no longer needed.
-
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : 'auto';
     return () => { document.body.style.overflow = 'auto'; };
@@ -37,7 +36,6 @@ const Navbar = () => {
   const handleLinkClick = () => {
     setIsMobileMenuOpen(false);
   };
-
   return (
     <header className="sticky top-0 z-30 shadow-lg bg-brand-black text-brand-white">
       <nav className="container flex items-center justify-between px-6 py-6 mx-auto">
@@ -51,7 +49,6 @@ const Navbar = () => {
             priority
           />
         </Link>
-
         {/* DESKTOP NAVIGATION (Simplified) */}
         <div className="items-center hidden space-x-10 md:flex">
           {navLinks.map((link) => {
@@ -68,7 +65,6 @@ const Navbar = () => {
             );
           })}
         </div>
-
         {/* RIGHT SIDE ICONS & MOBILE MENU TOGGLE */}
         <div className="flex items-center space-x-5">
           <Link href="/login" className="hidden transition-colors hover:text-primary md:block"> <CircleUser size={26} /> </Link>
@@ -81,7 +77,6 @@ const Navbar = () => {
           </button>
         </div>
       </nav>
-
       {/* MOBILE MENU (Simplified) */}
       <div className={`absolute top-full left-0 w-full bg-brand-black shadow-lg md:hidden transition-all duration-300 ease-in-out z-20 ${isMobileMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
         <div className="flex flex-col items-center py-10 space-y-8">
@@ -105,5 +100,4 @@ const Navbar = () => {
     </header>
   );
 };
-
 export default Navbar;
