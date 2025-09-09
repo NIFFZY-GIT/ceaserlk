@@ -98,12 +98,7 @@ const FeaturedProducts = () => {
           </div>
         </div>
       </div>
-      <div className="container px-6 mx-auto mt-16 text-center md:hidden">
-          <Link href="/shop" className="inline-flex items-center gap-2 px-8 py-3 font-bold text-white rounded-md bg-primary">
-              View All Products
-              <ArrowRight className="w-5 h-5"/>
-          </Link>
-      </div>
+    
     </section>
   );
 };
