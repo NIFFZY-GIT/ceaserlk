@@ -2,15 +2,18 @@
 
 import Hero from "@/app/components/landing/Hero";
 import FeaturedProducts from "@/app/components/landing/FeaturedProducts";
-import BrandMission from "@/app/components/landing/BrandMission";
+import Interstitial from "@/app/components/landing/Interstitial"; // 1. Import the buffer
+import BrandEthos from "@/app/components/landing/BrandEthos";
+
 
 export default function HomePage() {
   return (
-    // The main tag is already in your layout.tsx, so we can use a fragment <>
-    <>
+    <main>
       <Hero />
       <FeaturedProducts />
-      <BrandMission />
-    </>
+      <Interstitial />    {/* 2. Place it between the two sliders */}
+      <BrandEthos />
+
+    </main>
   );
 }

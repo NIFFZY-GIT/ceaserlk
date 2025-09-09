@@ -1,5 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 @import "tailwindcss";
-
 
 /* src/app/globals.css */
 
@@ -19,6 +19,15 @@
   --color-accent: #EF3D4C;
   --color-brand-white: #FFFFFF;
   --color-brand-black: #000000;
+
+  /* Define font variable */
+  --font-sans: 'Montserrat', sans-serif;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans); /* Montserrat is now default */
+  }
 }
 
 /* 2. Define your keyframes for the animation */
@@ -26,11 +35,6 @@
   0% { transform: translateX(0%); }
   100% { transform: translateX(-100%); }
 }
-
-/* 
-  3. Manually create custom classes to *imitate* Tailwind.
-     This is where you lose all the power of Tailwind.
-*/
 
 /* Background Colors */
 .bg-brand-black {
@@ -43,7 +47,6 @@
   background-color: var(--color-primary);
 }
 
-
 /* Text Colors */
 .text-brand-white {
   color: var(--color-brand-white);
@@ -55,7 +58,7 @@
   color: var(--color-accent);
 }
 
-/* Hover States (You have to write these manually for every class) */
+/* Hover States */
 .hover\:text-primary:hover {
   color: var(--color-primary);
 }
@@ -68,8 +71,6 @@
   animation: marquee 60s linear infinite;
 }
 
-/* And you would have to manually create every other class... */
-
 @layer utilities {
   @keyframes marquee {
     0% { transform: translateX(0%); }
@@ -80,4 +81,3 @@
     animation: marquee 40s linear infinite;
   }
 }
-

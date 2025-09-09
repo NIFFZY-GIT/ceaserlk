@@ -1,10 +1,12 @@
 // src/app/components/ProductCard.tsx
+
 "use client";
 
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Heart } from 'lucide-react';
+import { useCart } from '@/context/CartContext'; // Assuming you have this for cart functionality
 
 // Types remain the same
 type ProductColor = { name: string; hex: string; ringColor?: string };
@@ -25,6 +27,7 @@ const OutOfStockLine = () => (
 );
 
 export const ProductCard = ({ product }: { product: Product }) => {
+  const { addToCart } = useCart(); // Get cart function
   const [currentImage, setCurrentImage] = useState(product.images[0]);
   const [selectedColor, setSelectedColor] = useState(product.colors[0]);
   const [selectedSize, setSelectedSize] = useState(product.availableSizes[0] || null);
@@ -32,109 +35,128 @@ export const ProductCard = ({ product }: { product: Product }) => {
   
   const isSizeAvailable = (size: string) => product.availableSizes.includes(size);
 
-  const handleActionClick = (e: React.MouseEvent) => {
+  const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); 
+    if (!selectedSize) {
+      alert("Please select a size.");
+      return;
+    }
+    addToCart({
+      id: product.id + product.colors.indexOf(selectedColor) + product.sizes.indexOf(selectedSize),
+      productId: product.id,
+      name: product.name,
+      price: product.salePrice ?? product.price,
+      quantity: 1,
+      imageUrl: product.images[0].url,
+    });
   };
 
   return (
-    // THE CHANGE IS HERE: The hover events are now on the main div
     <div 
-      className="group flex flex-col"
+      className="flex flex-col h-full group" // Added h-full to ensure consistent height in grids
       onMouseEnter={() => product.images[1] && setCurrentImage(product.images[1])}
       onMouseLeave={() => setCurrentImage(product.images[0])}
     >
-      <Link 
-        href={`/product/${product.id}`} 
-        className="block relative aspect-square w-full bg-gray-100 rounded-md overflow-hidden"
-        // The hover events have been REMOVED from this Link component
-      >
-        {/* --- IMAGE & OVERLAYS --- */}
-        <Image
-          key={currentImage.id}
-          src={currentImage.url}
-          alt={product.name}
-          fill
-          style={{ objectFit: 'cover' }}
-          className="group-hover:scale-105 transition-all duration-500"
-        />
-        
-        {/* Sale Badge */}
-        {product.salePrice && (
-          <div className="absolute top-0 left-0">
-            <div className="absolute top-2 -left-10 bg-black text-white text-sm font-bold uppercase px-12 py-1.5 transform -rotate-45">
-              SALE
-            </div>
-          </div>
-        )}
-        
-        {/* Wishlist Button */}
-        <button
-          onClick={(e) => {
-            handleActionClick(e);
-            setIsLiked(!isLiked);
-          }}
-          className="absolute top-3 right-3 p-2 bg-white/70 rounded-full backdrop-blur-sm hover:bg-white transition"
+      {/* 
+        ====================================================================
+          CHANGE 1: The entire card content is wrapped in a new div.
+          This div provides the slightly dark background, padding, and hover effect.
+        ====================================================================
+      */}
+      <div className="flex flex-col h-full p-4 transition-all duration-300 border border-gray-100 bg-gray-50 rounded-xl hover:shadow-xl hover:-translate-y-1">
+        <Link 
+          href={`/product/${product.id}`} 
+          // CHANGE 2: Removed bg-gray-100 as the parent now has the background.
+          className="relative block w-full overflow-hidden rounded-md aspect-square"
         >
-          <Heart size={20} className={`transition-all ${isLiked ? 'fill-accent text-accent' : 'text-gray-600'}`} />
-        </button>
-      </Link>
-      
-      {/* --- PRODUCT INFO --- */}
-      <div className="mt-4 flex flex-col flex-grow">
-        <h3 className="text-lg font-semibold text-black uppercase">{product.name}</h3>
-        
-        {/* Price */}
-        <div className="flex items-center gap-2 mt-1">
-          {product.salePrice ? (
-            <>
-              <p className="text-lg text-accent font-bold">${product.salePrice.toFixed(2)}</p>
-              <p className="text-md text-gray-500 line-through">${product.price.toFixed(2)}</p>
-            </>
-          ) : (
-            <p className="text-lg text-primary font-bold">${product.price.toFixed(2)}</p>
+          {/* --- IMAGE & OVERLAYS --- */}
+          <Image
+            key={currentImage.id}
+            src={currentImage.url}
+            alt={product.name}
+            fill
+            style={{ objectFit: 'cover' }}
+            className="transition-all duration-500 group-hover:scale-105"
+          />
+          
+          {/* Sale Badge */}
+          {product.salePrice && (
+            <div className="absolute top-0 left-0">
+              <div className="absolute top-2 -left-10 bg-black text-white text-sm font-bold uppercase px-12 py-1.5 transform -rotate-45">
+                SALE
+              </div>
+            </div>
           )}
-        </div>
-        
-        {/* Color Swatches */}
-        <div className="flex items-center gap-2 mt-3">
-          {product.colors.map(color => (
-            <button
-              key={color.name}
-              onClick={(e) => { handleActionClick(e); setSelectedColor(color); }}
-              aria-label={`Select color ${color.name}`}
-              className={`w-5 h-5 rounded-full ring-2 ring-offset-1 ${selectedColor.name === color.name ? color.ringColor || 'ring-primary' : 'ring-transparent'}`}
-              style={{ backgroundColor: color.hex }}
-            />
-          ))}
-        </div>
-
-        {/* Size Selector */}
-        <div className="flex items-center gap-2 mt-3">
-          {product.sizes.map(size => (
-            <button
-              key={size}
-              onClick={(e) => { handleActionClick(e); if (isSizeAvailable(size)) setSelectedSize(size); }}
-              disabled={!isSizeAvailable(size)}
-              className={`relative w-9 h-9 border rounded-md font-semibold text-sm flex items-center justify-center transition-colors
-                ${isSizeAvailable(size) ? 
-                  (selectedSize === size ? 'bg-black text-white border-black' : 'bg-white text-black border-gray-300 hover:bg-gray-100') :
-                  'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                }`}
-            >
-              {size}
-              {!isSizeAvailable(size) && <OutOfStockLine />}
-            </button>
-          ))}
-        </div>
-
-        {/* Add to Cart Button */}
-        <div className="mt-4 flex-grow flex items-end">
+          
+          {/* Wishlist Button */}
           <button
-            onClick={handleActionClick}
-            className="w-full bg-black text-white py-3 rounded-full font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsLiked(!isLiked);
+            }}
+            className="absolute p-2 transition rounded-full top-3 right-3 bg-white/70 backdrop-blur-sm hover:bg-white"
           >
-            Add to Cart
+            <Heart size={20} className={`transition-all ${isLiked ? 'fill-accent text-accent' : 'text-gray-600'}`} />
           </button>
+        </Link>
+        
+        {/* --- PRODUCT INFO --- */}
+        <div className="flex flex-col flex-grow mt-4">
+          <h3 className="text-lg font-semibold text-black uppercase">{product.name}</h3>
+          
+          {/* Price */}
+          <div className="flex items-center gap-2 mt-1">
+            {product.salePrice ? (
+              <>
+                <p className="text-lg font-bold text-accent">${product.salePrice.toFixed(2)}</p>
+                <p className="text-gray-500 line-through text-md">${product.price.toFixed(2)}</p>
+              </>
+            ) : (
+              <p className="text-lg font-bold text-primary">${product.price.toFixed(2)}</p>
+            )}
+          </div>
+          
+          {/* Color Swatches */}
+          <div className="flex items-center gap-2 mt-3">
+            {product.colors.map(color => (
+              <button
+                key={color.name}
+                onClick={(e) => { e.preventDefault(); setSelectedColor(color); }}
+                aria-label={`Select color ${color.name}`}
+                className={`w-5 h-5 rounded-full ring-2 ring-offset-1 ${selectedColor.name === color.name ? color.ringColor || 'ring-primary' : 'ring-transparent'}`}
+                style={{ backgroundColor: color.hex }}
+              />
+            ))}
+          </div>
+
+          {/* Size Selector */}
+          <div className="flex items-center gap-2 mt-3">
+            {product.sizes.map(size => (
+              <button
+                key={size}
+                onClick={(e) => { e.preventDefault(); if (isSizeAvailable(size)) setSelectedSize(size); }}
+                disabled={!isSizeAvailable(size)}
+                className={`relative w-9 h-9 border rounded-md font-semibold text-sm flex items-center justify-center transition-colors
+                  ${isSizeAvailable(size) ? 
+                    (selectedSize === size ? 'bg-black text-white border-black' : 'bg-white text-black border-gray-300 hover:bg-gray-100') :
+                    'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                  }`}
+              >
+                {size}
+                {!isSizeAvailable(size) && <OutOfStockLine />}
+              </button>
+            ))}
+          </div>
+
+          {/* Add to Cart Button */}
+          <div className="flex items-end flex-grow mt-4">
+            <button
+              onClick={handleAddToCart}
+              className="w-full py-3 font-bold tracking-wider text-white uppercase transition-colors bg-black rounded-full hover:bg-gray-800"
+            >
+              Add to Cart
+            </button>
+          </div>
         </div>
       </div>
     </div>
