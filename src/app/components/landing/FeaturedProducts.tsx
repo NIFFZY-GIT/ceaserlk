@@ -80,21 +80,23 @@ const FeaturedProducts = () => {
           </Link>
         </div>
 
-        <div ref={trackRef} className="flex gap-8 w-max pr-[50vw]">
-          {/* --- FIX 2: Use the array index to create a guaranteed unique key --- */}
-          {featuredProducts.map((product, index) => (
-            <div key={`featured-product-${product.id}-${index}`} className="flex-shrink-0 w-64 p-4 transition-transform duration-300 bg-white shadow-lg rounded-xl md:w-80 hover:-translate-y-2">
-              <ProductCard product={product} />
+        <div className="w-full pb-4 -mb-4 overflow-x-auto overscroll-behavior-x-contain">
+          <div ref={trackRef} className="flex gap-8 pr-6 w-max md:pr-0">
+            {/* --- FIX 2: Use the array index to create a guaranteed unique key --- */}
+            {featuredProducts.map((product, index) => (
+              <div key={`featured-product-${product.id}-${index}`} className="flex-shrink-0 w-64 p-4 transition-transform duration-300 bg-white shadow-lg rounded-xl md:w-80 hover:-translate-y-2">
+                <ProductCard product={product} />
+              </div>
+            ))}
+            <div className="flex items-center justify-center flex-shrink-0 w-64 md:w-80">
+              <Link href="/shop" className="flex flex-col items-center justify-center w-full h-full transition-colors duration-300 border-2 border-gray-600 border-dashed bg-gray-900/50 rounded-xl group hover:bg-primary hover:border-primary">
+                 <span className="text-xl font-bold text-center text-white">Explore the<br/>Full Collection</span>
+                  <div className="flex items-center gap-2 mt-4 font-semibold text-primary group-hover:text-white">
+                    <span>View All</span>
+                    <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+                  </div>
+              </Link>
             </div>
-          ))}
-          <div className="flex items-center justify-center flex-shrink-0 w-64 md:w-80">
-            <Link href="/shop" className="flex flex-col items-center justify-center w-full h-full transition-colors duration-300 border-2 border-gray-600 border-dashed bg-gray-900/50 rounded-xl group hover:bg-primary hover:border-primary">
-               <span className="text-xl font-bold text-center text-white">Explore the<br/>Full Collection</span>
-                <div className="flex items-center gap-2 mt-4 font-semibold text-primary group-hover:text-white">
-                  <span>View All</span>
-                  <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
-                </div>
-            </Link>
           </div>
         </div>
       </div>
