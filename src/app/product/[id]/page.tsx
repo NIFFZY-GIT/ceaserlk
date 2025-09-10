@@ -13,9 +13,10 @@ const productData = {
   price: 29.99,
   description: "The Conquer Tee isn't just a piece of clothing; it's a mindset. Made from a premium tri-blend fabric, it offers unmatched comfort and durability, whether you're in the gym or mapping out your next big move. Wear it as a reminder: every challenge is an opportunity to conquer.",
   images: [
-    { id: 1, url: '/shirt-1-front.png' },
-    { id: 2, url: '/shirt-1-back.png' },
-    { id: 3, url: '/shirt-1-detail.png' },
+    { id: 1, url: '/images/image.jpg' },
+    { id: 2, url: '/images/image1.jpg' },
+    { id: 3, url: '/images/image.jpg' },
+    
   ],
   colors: [
     { name: 'Black', hex: '#000000' },
@@ -34,51 +35,54 @@ const ProductPage = ({ params }: { params: { id: string } }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isMuted, setIsMuted] = useState(false);
   
-  // --- UPDATED useEffect to handle AbortError ---
+  // --- Audio useEffect (no changes needed here) ---
   useEffect(() => {
     const audio = audioRef.current;
-    
-    // We create an async function inside the effect to use await
     const playAudio = async () => {
       if (audio) {
         try {
-          // Try to play the audio
           await audio.play();
         } catch (error: unknown) {
-          // Check if the error is the specific AbortError from Strict Mode
           if (typeof error === 'object' && error !== null && 'name' in error && (error as { name?: string }).name === 'AbortError') {
-            // This is the expected interruption in Strict Mode, so we can safely ignore it.
             console.log('Audio play() aborted by React Strict Mode, this is normal in development.');
           } else {
-            // This is a different error, like the browser blocking autoplay.
             console.error("Audio autoplay was prevented by the browser:", error);
           }
         }
       }
     };
-    
     playAudio();
-
-    // The cleanup function remains the same and is still very important.
     return () => {
       if (audio) {
         audio.pause();
         audio.currentTime = 0;
       }
     };
-  }, []); // The empty array [] means this effect runs only once per mount.
+  }, []);
 
   const handleAddToCart = () => { /* ... existing function ... */ };
 
   return (
-    <div className="bg-brand-white py-12 md:py-20">
-      {/* Audio Element with your specified path */}
+    <div className="py-12 bg-brand-white md:py-20">
       <audio ref={audioRef} src="/Assets/epic1.mp3" loop muted={isMuted} />
       
-      <div className="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-start">
+      {/*
+        ====================================================================
+          CHANGE 2: Adjusted the gap to be smaller on mobile (gap-8)
+          and larger on desktop (md:gap-12).
+        ====================================================================
+      */}
+      <div className="container grid items-start gap-8 px-6 mx-auto md:grid-cols-2 md:gap-12">
         {/* --- IMAGE GALLERY --- */}
-        <div className="flex flex-col gap-4 sticky top-28">
-          <div className="relative aspect-square w-full bg-gray-100 rounded-lg overflow-hidden">
+        {/*
+          ====================================================================
+            CHANGE 1: Made the sticky positioning responsive.
+            `md:sticky` and `md:top-28` ensure it only applies on screens
+            medium and larger, fixing the mobile scrolling issue.
+          ====================================================================
+        */}
+        <div className="flex flex-col gap-4 md:sticky md:top-28">
+          <div className="relative w-full overflow-hidden bg-gray-100 rounded-lg aspect-square">
             <Image
               src={selectedImage.url}
               alt={`${productData.name} - ${selectedColor.name}`}
@@ -89,7 +93,7 @@ const ProductPage = ({ params }: { params: { id: string } }) => {
             />
             <button 
               onClick={() => setIsMuted(!isMuted)}
-              className="absolute bottom-4 right-4 p-3 bg-white/50 backdrop-blur-sm rounded-full text-black hover:bg-white transition-colors"
+              className="absolute p-3 text-black transition-colors rounded-full bottom-4 right-4 bg-white/50 backdrop-blur-sm hover:bg-white"
               aria-label={isMuted ? "Unmute sound" : "Mute sound"}
             >
               {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
@@ -108,11 +112,11 @@ const ProductPage = ({ params }: { params: { id: string } }) => {
           </div>
         </div>
 
-        {/* --- PRODUCT DETAILS (No changes) --- */}
+        {/* --- PRODUCT DETAILS --- */}
         <div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-black">{productData.name}</h1>
-          <p className="text-3xl font-bold text-primary my-4">${productData.price.toFixed(2)}</p>
-          <p className="text-gray-700 leading-relaxed">{productData.description}</p>
+          <h1 className="text-4xl font-extrabold text-black md:text-5xl">{productData.name}</h1>
+          <p className="my-4 text-3xl font-bold text-primary">${productData.price.toFixed(2)}</p>
+          <p className="leading-relaxed text-gray-700">{productData.description}</p>
           
           <div className="mt-8">
             <h3 className="text-sm font-medium text-black">Color: <span className="font-semibold">{selectedColor.name}</span></h3>
@@ -144,21 +148,27 @@ const ProductPage = ({ params }: { params: { id: string } }) => {
             </div>
           </div>
 
-          <div className="mt-8 flex items-center gap-4">
-            <div className="flex items-center border border-gray-300 rounded-md">
+          {/*
+            ====================================================================
+              CHANGE 3: Made the action buttons stack vertically on mobile
+              (`flex-col`) and switch to a row layout on larger screens (`sm:flex-row`).
+            ====================================================================
+          */}
+          <div className="flex flex-col items-center gap-4 mt-8 sm:flex-row">
+            <div className="flex items-center w-full border border-gray-300 rounded-md sm:w-auto">
               <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-3 text-gray-600 hover:bg-gray-100"><Minus size={16} /></button>
-              <span className="px-5 font-semibold text-black">{quantity}</span>
+              <span className="w-full px-5 font-semibold text-center text-black">{quantity}</span>
               <button onClick={() => setQuantity(q => q + 1)} className="p-3 text-gray-600 hover:bg-gray-100"><Plus size={16} /></button>
             </div>
             <button 
               onClick={handleAddToCart}
-              className="flex-grow bg-accent text-white py-4 rounded-md font-bold text-base uppercase tracking-wider hover:bg-red-500 transition-colors duration-300"
+              className="w-full py-4 text-base font-bold tracking-wider text-white uppercase transition-colors duration-300 rounded-md sm:flex-grow bg-accent hover:bg-red-500"
             >
               Add to Cart
             </button>
           </div>
 
-          <div className="mt-8 space-y-3 text-gray-600 border-t pt-6">
+          <div className="pt-6 mt-8 space-y-3 text-gray-600 border-t">
             <div className="flex items-center gap-2"><Check className="text-primary" size={20} /> Premium tri-blend fabric</div>
             <div className="flex items-center gap-2"><Check className="text-primary" size={20} /> Athletic fit & feel</div>
             <div className="flex items-center gap-2"><ShieldCheck className="text-primary" size={20} /> 30-Day Money Back Guarantee</div>

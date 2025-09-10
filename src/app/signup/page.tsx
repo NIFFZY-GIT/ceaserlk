@@ -5,7 +5,7 @@ import { Chrome } from 'lucide-react'; // Using Chrome icon for Google as a comm
 
 const SignUpPage = () => {
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       
       {/* --- Left Column: Branding & Motivational Image --- */}
       <div className="relative hidden lg:block">
@@ -15,11 +15,11 @@ const SignUpPage = () => {
           fill
           style={{ objectFit: 'cover' }}
         />
-        <div className="absolute inset-0 bg-primary/70 flex flex-col justify-end p-12 text-white">
+        <div className="absolute inset-0 flex flex-col justify-end p-12 text-white bg-primary/70">
           <h1 className="text-4xl font-extrabold tracking-tight uppercase">
             Join The Movement
           </h1>
-          <p className="mt-4 text-lg text-white/80 max-w-md">
+          <p className="max-w-md mt-4 text-lg text-white/80">
             Become part of a community dedicated to ambition, discipline, and success. Your journey starts now.
           </p>
         </div>
@@ -28,10 +28,8 @@ const SignUpPage = () => {
       {/* --- Right Column: Sign-up Form --- */}
       <div className="flex items-center justify-center p-8 sm:p-12 bg-brand-white">
         <div className="w-full max-w-md">
-          <div className="text-center lg:text-left mb-8">
-            <Link href="/" className="text-3xl font-extrabold text-primary inline-block mb-4">
-              CEASER
-            </Link>
+          <div className="mb-8 text-center lg:text-left">
+            
             <h2 className="text-3xl font-extrabold text-black">
               Create Your Account
             </h2>
@@ -41,7 +39,7 @@ const SignUpPage = () => {
           </div>
 
           <form className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name</label>
                 <input
@@ -106,7 +104,7 @@ const SignUpPage = () => {
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full py-3 px-4 bg-accent text-white font-bold rounded-md uppercase tracking-wider hover:bg-red-500 transition-colors duration-300"
+                className="w-full px-4 py-3 font-bold tracking-wider text-white uppercase transition-colors duration-300 rounded-md bg-accent hover:bg-red-500"
               >
                 Create Account
               </button>
@@ -114,7 +112,7 @@ const SignUpPage = () => {
           </form>
 
           {/* Divider */}
-          <div className="my-6 flex items-center">
+          <div className="flex items-center my-6">
             <div className="flex-grow border-t border-gray-300"></div>
             <span className="mx-4 text-sm text-gray-500">OR</span>
             <div className="flex-grow border-t border-gray-300"></div>
@@ -124,7 +122,7 @@ const SignUpPage = () => {
           <div>
             <button
               type="button"
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 text-black font-semibold rounded-md hover:bg-gray-100 transition-colors duration-300"
+              className="flex items-center justify-center w-full gap-2 px-4 py-3 font-semibold text-black transition-colors duration-300 border border-gray-300 rounded-md hover:bg-gray-100"
             >
               <Chrome size={20} />
               Sign up with Google
