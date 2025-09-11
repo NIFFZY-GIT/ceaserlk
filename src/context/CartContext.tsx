@@ -152,7 +152,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const removeFromCart = async (itemId: number) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/cart/items?cartItemId=${itemId}`, {
+      const res = await fetch(`/api/cart?cartItemId=${itemId}`, {
         method: 'DELETE',
       });
 
@@ -177,7 +177,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/cart/items', {
+      const res = await fetch('/api/cart', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

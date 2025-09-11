@@ -1,3 +1,86 @@
+export async function PATCH(req: NextRequest) {
+  let body;
+  try {
+    body = await req.json();
+    const { cartItemId, quantity } = body;
+    if (!cartItemId || typeof quantity !== 'number') {
+      return NextResponse.json({ error: 'cartItemId and quantity are required' }, { status: 400 });
+    }
+
+    // Get current cart item and reservation
+    const cartItemRes = await pool.query('SELECT * FROM "CartItem" WHERE id = $1', [cartItemId]);
+    if (cartItemRes.rows.length === 0) {
+      return NextResponse.json({ error: 'Cart item not found' }, { status: 404 });
+    }
+    const cartItem = cartItemRes.rows[0];
+    const oldQuantity = cartItem.quantity;
+
+    // If new quantity is zero, remove item and reservation, restore stock
+    if (quantity <= 0) {
+      await pool.query('DELETE FROM "StockReservation" WHERE "cartItemId" = $1', [cartItemId]);
+      await pool.query('DELETE FROM "CartItem" WHERE id = $1', [cartItemId]);
+      await pool.query('UPDATE "ProductSize" SET stock = stock + $1 WHERE "productId" = $2 AND id = $3', [oldQuantity, cartItem.productId, cartItem.productSizeId]);
+      return NextResponse.json({ success: true, removed: true });
+    }
+
+    // Update cart item quantity
+    await pool.query('UPDATE "CartItem" SET quantity = $1 WHERE id = $2', [quantity, cartItemId]);
+    // Update stock reservation
+    await pool.query('UPDATE "StockReservation" SET quantity = $1, "expiresAt" = $2 WHERE "cartItemId" = $3', [quantity, new Date(Date.now() + 30 * 60 * 1000), cartItemId]);
+
+    // If quantity reduced, restore stock
+    if (quantity < oldQuantity) {
+      const diff = oldQuantity - quantity;
+      await pool.query('UPDATE "ProductSize" SET stock = stock + $1 WHERE "productId" = $2 AND id = $3', [diff, cartItem.productId, cartItem.productSizeId]);
+    }
+
+    // If quantity increased, check stock and reduce
+    if (quantity > oldQuantity) {
+      const diff = quantity - oldQuantity;
+      const stockRes = await pool.query('SELECT stock FROM "ProductSize" WHERE "productId" = $1 AND id = $2', [cartItem.productId, cartItem.productSizeId]);
+      if (stockRes.rows.length === 0 || stockRes.rows[0].stock < diff) {
+        // Rollback quantity
+        await pool.query('UPDATE "CartItem" SET quantity = $1 WHERE id = $2', [oldQuantity, cartItemId]);
+        await pool.query('UPDATE "StockReservation" SET quantity = $1 WHERE "cartItemId" = $2', [oldQuantity, cartItemId]);
+        return NextResponse.json({ error: 'Not enough stock available' }, { status: 400 });
+      }
+      await pool.query('UPDATE "ProductSize" SET stock = stock - $1 WHERE "productId" = $2 AND id = $3', [diff, cartItem.productId, cartItem.productSizeId]);
+    }
+
+    return NextResponse.json({ success: true, updated: true });
+  } catch (error) {
+    console.error('[API_PATCH_CART_ERROR]', error);
+    return NextResponse.json({ error: 'Failed to update cart item quantity' }, { status: 500 });
+  }
+}
+export async function DELETE(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const cartItemId = searchParams.get('cartItemId');
+
+  if (!cartItemId) {
+    return NextResponse.json({ error: 'cartItemId is required' }, { status: 400 });
+  }
+
+  try {
+    // Get the cart item before deleting
+    const cartItemRes = await pool.query('SELECT * FROM "CartItem" WHERE id = $1', [cartItemId]);
+    if (cartItemRes.rows.length === 0) {
+      return NextResponse.json({ error: 'Cart item not found' }, { status: 404 });
+    }
+    const cartItem = cartItemRes.rows[0];
+    // Restore full reserved quantity to stock
+    await pool.query('UPDATE "ProductSize" SET stock = stock + $1 WHERE "productId" = $2 AND id = $3', [cartItem.quantity, cartItem.productId, cartItem.productSizeId]);
+    // Delete the stock reservation for this cart item
+    await pool.query('DELETE FROM "StockReservation" WHERE "cartItemId" = $1', [cartItemId]);
+    // Delete the cart item itself
+    const result = await pool.query('DELETE FROM "CartItem" WHERE id = $1 RETURNING *', [cartItemId]);
+    return NextResponse.json({ success: true, deleted: result.rows[0] });
+  } catch (error) {
+    console.error('[API_DELETE_CART_ITEM_ERROR]', error);
+    return NextResponse.json({ error: 'Failed to delete cart item' }, { status: 500 });
+  }
+}
+// PATCH handler added below
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
