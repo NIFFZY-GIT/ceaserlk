@@ -226,9 +226,9 @@ export default function NewProductPage() {
     formData.append('price', price);
     if (salePrice) formData.append('salePrice', salePrice);
 
-    // Send colors, sizes, images, and variants data
-    formData.append('colors', JSON.stringify(colors.map(({name, hex_code}) => ({name, hex_code}))));
-    formData.append('sizes', JSON.stringify(sizes.map(({name}) => ({name}))));
+  // Send colors, sizes, images, and variants data (include local ids for mapping)
+  formData.append('colors', JSON.stringify(colors.map(({id, name, hex_code}) => ({ id, name, hex_code }))));
+  formData.append('sizes', JSON.stringify(sizes.map(({id, name}) => ({ id, name }))));
     formData.append('variants', JSON.stringify(variants));
 
     // Append image files

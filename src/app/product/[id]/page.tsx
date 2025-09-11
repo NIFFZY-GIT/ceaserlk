@@ -65,12 +65,16 @@ const ProductPage = ({ params }: { params: Promise<{ id: string }> }) => {
     fetchProduct();
   }, [resolvedParams.id]);
   
-  // Effect to change the main image when a new color is selected
+
+  // Effect to change the main image and thumbnails when a new color is selected
   useEffect(() => {
     if (product && selectedColor) {
-      const colorSpecificImage = product.images.find(img => img.colorId === selectedColor.id);
-      const firstGeneralImage = product.images.find(img => img.colorId === null);
-      setSelectedImage(colorSpecificImage || firstGeneralImage || product.images[0] || null);
+      // Find all images for the selected color
+      const colorImages = product.images.filter(img => img.colorId === selectedColor.id);
+      // If no color-specific images, fallback to general images (colorId === null)
+      const generalImages = product.images.filter(img => img.colorId === null);
+      // Set main image to first color image, or first general image, or first image
+      setSelectedImage(colorImages[0] || generalImages[0] || product.images[0] || null);
     }
   }, [selectedColor, product]);
   
@@ -132,7 +136,11 @@ const ProductPage = ({ params }: { params: Promise<{ id: string }> }) => {
             )}
           </div>
           <div className="grid grid-cols-5 gap-4">
-            {product.images.map(image => (
+            {/* Show only images for selected color, or general images if none exist */}
+            {(product.images.filter(img => img.colorId === selectedColor?.id).length > 0
+              ? product.images.filter(img => img.colorId === selectedColor?.id)
+              : product.images.filter(img => img.colorId === null)
+            ).map(image => (
               <button key={image.id} onClick={() => setSelectedImage(image)} className={`relative aspect-square w-full bg-gray-100 rounded-md overflow-hidden ring-2 transition ${selectedImage?.id === image.id ? 'ring-primary' : 'ring-transparent hover:ring-gray-300'}`}>
                 <Image src={image.url} alt={`Thumbnail`} fill style={{objectFit: 'cover'}} />
               </button>

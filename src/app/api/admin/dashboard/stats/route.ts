@@ -11,7 +11,7 @@ export async function GET() {
     ] = await Promise.all([
       pool.query(`SELECT COUNT(*) as product_count FROM "Product"`),
       pool.query(`SELECT COUNT(*) as variant_count, SUM(stock) as total_stock FROM "ProductVariant"`),
-      pool.query(`SELECT COUNT(DISTINCT "sessionId") as active_sessions FROM "CartItem"`)
+  pool.query(`SELECT COUNT(DISTINCT "sessionId") as active_sessions FROM "CartItemWithSession"`)
     ]);
 
     // Create dashboard data with available information

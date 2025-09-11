@@ -4,164 +4,183 @@ import path from 'path';
 import fs from 'fs/promises';
 
 export async function POST(req: NextRequest) {
-  const client = await pool.connect(); // Get a client from the pool
-
+  const client = await pool.connect();
   try {
-    // 1. PARSE THE MULTIPART FORMDATA (Same as before)
+    // Parse multipart form data
     const formData = await req.formData();
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
-    const price = parseFloat(formData.get('price') as string);
+    const name = (formData.get('name') as string) ?? '';
+    const description = (formData.get('description') as string) ?? '';
+    const price = parseFloat((formData.get('price') as string) ?? '0');
     const salePrice = formData.get('salePrice') ? parseFloat(formData.get('salePrice') as string) : null;
-    const colors = JSON.parse(formData.get('colors') as string) as { name: string; hex_code: string }[];
-    const sizes = JSON.parse(formData.get('sizes') as string) as string[];
-    const stock = JSON.parse(formData.get('stock') as string) as { [key: string]: string };
-    const imageMetadata = JSON.parse(formData.get('imageMetadata') as string) as { originalName: string; linkedColorName: string | null }[];
+  const colors = JSON.parse((formData.get('colors') as string) ?? '[]') as { id: number; name: string; hex_code: string }[];
+  const sizes = JSON.parse((formData.get('sizes') as string) ?? '[]') as { id: number; name: string }[];
+    const variants = JSON.parse((formData.get('variants') as string) ?? '[]') as { id: number; imageId: number; colorId: number; sizeId: number; stock: number }[];
     const images = formData.getAll('images') as File[];
 
-    // NEW: Get the audio file
     const audioFile = formData.get('audioFile') as File | null;
     let audioUrl: string | null = null;
 
-    // 2. SAVE UPLOADED IMAGES TO THE FILESYSTEM (Same as before)
+    // Basic validation
+    if (!name || Number.isNaN(price)) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    }
+
+    // Save images to filesystem and remember mapping from index to url
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
     await fs.mkdir(uploadDir, { recursive: true });
-    const uploadedFileUrls: { [originalName: string]: string } = {};
 
-    for (const image of images) {
-      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-      const fileExtension = path.extname(image.name);
-      const uniqueFilename = `${path.basename(image.name, fileExtension)}-${uniqueSuffix}${fileExtension}`;
+    // We also get temp ids sent alongside each image as imageId_{index}
+    const tempImageIds: number[] = [];
+    const uploadedImageByTempId: Record<number, string> = {};
+
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      const tempIdStr = formData.get(`imageId_${i}`) as string | null;
+      const tempId = tempIdStr ? Number(tempIdStr) : Date.now() + i;
+      tempImageIds.push(tempId);
+
+      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const ext = path.extname(image.name);
+      const uniqueFilename = `${path.basename(image.name, ext)}-${uniqueSuffix}${ext}`;
       const filePath = path.join(uploadDir, uniqueFilename);
       const buffer = Buffer.from(await image.arrayBuffer());
       await fs.writeFile(filePath, buffer);
-      uploadedFileUrls[image.name] = `/uploads/products/${uniqueFilename}`;
+      uploadedImageByTempId[tempId] = `/uploads/products/${uniqueFilename}`;
     }
 
-    // NEW: Save the audio file if it exists
     if (audioFile) {
       const audioUploadDir = path.join(process.cwd(), 'public', 'uploads', 'audio');
       await fs.mkdir(audioUploadDir, { recursive: true });
-      
-      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-      const fileExtension = path.extname(audioFile.name);
-      const uniqueFilename = `${path.basename(audioFile.name, fileExtension)}-${uniqueSuffix}${fileExtension}`;
+      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const ext = path.extname(audioFile.name);
+      const uniqueFilename = `${path.basename(audioFile.name, ext)}-${uniqueSuffix}${ext}`;
       const filePath = path.join(audioUploadDir, uniqueFilename);
-      
       const buffer = Buffer.from(await audioFile.arrayBuffer());
       await fs.writeFile(filePath, buffer);
-      
-      audioUrl = `/uploads/audio/${uniqueFilename}`; // The public URL
+      audioUrl = `/uploads/audio/${uniqueFilename}`;
     }
 
-    // 3. DATABASE INSERTION WITHIN A TRANSACTION
-    await client.query('BEGIN'); // Start transaction
+    // Start transaction
+    await client.query('BEGIN');
 
-    // Step A: Insert the main product and get its new ID
-    const productQuery = `
-      INSERT INTO "Product" (name, description, price, "salePrice", "audioUrl") 
-      VALUES ($1, $2, $3, $4, $5) 
-      RETURNING id;
-    `;
-    const productResult = await client.query(productQuery, [name, description, price, salePrice, audioUrl]);
-    const productId = productResult.rows[0].id;
+    // Insert product
+    const productRes = await client.query(
+      'INSERT INTO "Product" (name, description, price, "salePrice", "audioUrl") VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [name, description, price, salePrice, audioUrl]
+    );
+    const productId: number = productRes.rows[0].id;
 
-    // Step B: Insert colors and map their names to their new IDs
-    const colorNameToIdMap = new Map<string, number>();
-    if (colors.length > 0) {
-      // First, check if any colors already exist for this product
-      const existingColorsQuery = `
-        SELECT id, name FROM "ProductColor" 
-        WHERE "productId" = $1 AND name = ANY($2)
-      `;
-      const colorNames = colors.map(c => c.name);
-      const existingColors = await client.query(existingColorsQuery, [productId, colorNames]);
-      
-      if (existingColors.rows.length > 0) {
-        const duplicateColorNames = existingColors.rows.map(row => row.name);
-        return NextResponse.json({ 
-          error: `Color(s) already exist for this product: ${duplicateColorNames.join(', ')}. Please use different color names.` 
-        }, { status: 409 });
-      }
-
-      // Check for global color conflicts (optional - you might want to allow same color names across products)
-      const globalColorCheck = `
-        SELECT DISTINCT name FROM "ProductColor" 
-        WHERE name = ANY($1)
-      `;
-      const globalExistingColors = await client.query(globalColorCheck, [colorNames]);
-      
-      if (globalExistingColors.rows.length > 0) {
-        const globalDuplicateColorNames = globalExistingColors.rows.map(row => row.name);
-        console.log(`Warning: Color names ${globalDuplicateColorNames.join(', ')} already exist in other products`);
-        // You can choose to return an error here or just log a warning
-        // For now, we'll allow it and just log the warning
-      }
-
-      // Insert new colors
+    // Insert colors -> map name => id
+    const colorNameToId = new Map<string, number>();
+    if (colors.length) {
       const colorValues: (string | number)[] = [];
-      const colorPlaceholders = colors.map((color, index) => {
-        const offset = index * 3;
-        colorValues.push(color.name, color.hex_code, productId);
-        return `($${offset + 1}, $${offset + 2}, $${offset + 3})`;
-      }).join(', ');
-
-      const colorQuery = `
-        INSERT INTO "ProductColor" (name, hex_code, "productId") 
-        VALUES ${colorPlaceholders} 
-        RETURNING id, name;
-      `;
-      const colorResult = await client.query(colorQuery, colorValues);
-      colorResult.rows.forEach(row => colorNameToIdMap.set(row.name, row.id));
+      const placeholders = colors
+        .map((c, idx) => {
+          const off = idx * 3;
+          colorValues.push(c.name, c.hex_code, productId);
+          return `($${off + 1}, $${off + 2}, $${off + 3})`;
+        })
+        .join(', ');
+      const colorInsert = await client.query(
+        `INSERT INTO "ProductColor" (name, hex_code, "productId") VALUES ${placeholders} RETURNING id, name`,
+        colorValues
+      );
+      for (const row of colorInsert.rows) colorNameToId.set(row.name, row.id);
     }
 
-    // Step C: Insert sizes with their stock
-    if (sizes.length > 0) {
+    // Insert sizes -> map name => id
+    const sizeNameToId = new Map<string, number>();
+    if (sizes.length) {
       const sizeValues: (string | number)[] = [];
-      const sizePlaceholders = sizes.map((size, index) => {
-          const offset = index * 3;
-          sizeValues.push(size, parseInt(stock[size] || '0', 10), productId);
-          return `($${offset + 1}, $${offset + 2}, $${offset + 3})`;
-      }).join(', ');
-      
-      const sizeQuery = `
-        INSERT INTO "ProductSize" (name, stock, "productId") 
-        VALUES ${sizePlaceholders};
-      `;
-      await client.query(sizeQuery, sizeValues);
-    }
-    
-    // Step D: Insert images and link them to colors
-    if (imageMetadata.length > 0) {
-        const imageValues: (string | number | null)[] = [];
-        const imagePlaceholders = imageMetadata.map((meta, index) => {
-            const offset = index * 3;
-            const url = uploadedFileUrls[meta.originalName];
-            const colorId = meta.linkedColorName ? colorNameToIdMap.get(meta.linkedColorName) ?? null : null;
-            imageValues.push(url, productId, colorId);
-            return `($${offset + 1}, $${offset + 2}, $${offset + 3})`;
-        }).join(', ');
-
-        const imageQuery = `
-            INSERT INTO "ProductImage" (url, "productId", "colorId") 
-            VALUES ${imagePlaceholders};
-        `;
-        await client.query(imageQuery, imageValues);
+      const placeholders = sizes
+        .map((s, idx) => {
+          const off = idx * 2;
+          sizeValues.push(s.name, productId);
+          return `($${off + 1}, $${off + 2})`;
+        })
+        .join(', ');
+      const sizeInsert = await client.query(
+        `INSERT INTO "ProductSize" (name, "productId") VALUES ${placeholders} RETURNING id, name`,
+        sizeValues
+      );
+      for (const row of sizeInsert.rows) sizeNameToId.set(row.name, row.id);
     }
 
-    await client.query('COMMIT'); // Commit transaction if all queries succeed
+    // Insert images (no color link here; variants will carry color)
+    const tempIdToImageId = new Map<number, number>();
+    if (tempImageIds.length) {
+      const imgValues: (string | number)[] = [];
+      const placeholders = tempImageIds
+        .map((tempId, idx) => {
+          const off = idx * 2;
+          imgValues.push(uploadedImageByTempId[tempId], productId);
+          return `($${off + 1}, $${off + 2})`;
+        })
+        .join(', ');
+      const imgInsert = await client.query(
+        `INSERT INTO "ProductImage" (url, "productId") VALUES ${placeholders} RETURNING id, url`,
+        imgValues
+      );
+      // Map by url back to tempId
+      const urlToTempId = new Map<string, number>();
+      for (const tid of tempImageIds) {
+        urlToTempId.set(uploadedImageByTempId[tid], tid);
+      }
+      for (const row of imgInsert.rows) {
+        const tid = urlToTempId.get(row.url);
+        if (tid !== undefined) tempIdToImageId.set(tid, row.id);
+      }
+    }
 
-    return NextResponse.json({ 
-      message: 'Product created successfully', 
-      productId: productId 
-    }, { status: 201 });
+    // Build id maps from local ids to real ids
+    const colorLocalIdToRealId = new Map<number, number>();
+    for (const c of colors) {
+      const real = colorNameToId.get(c.name);
+      if (real) colorLocalIdToRealId.set(c.id, real);
+    }
+    const sizeLocalIdToRealId = new Map<number, number>();
+    for (const s of sizes) {
+      const real = sizeNameToId.get(s.name);
+      if (real) sizeLocalIdToRealId.set(s.id, real);
+    }
 
+    // Insert variants
+    if (variants.length) {
+      const varValues: (number)[] = [];
+      const placeholders = variants
+        .map((v, idx) => {
+          const imageId = tempIdToImageId.get(v.imageId);
+          const colorId = colorLocalIdToRealId.get(v.colorId);
+          const sizeId = sizeLocalIdToRealId.get(v.sizeId);
+          if (!imageId || !colorId || !sizeId) {
+            console.error('[ADMIN_CREATE_PRODUCT] Variant mapping failed:', {
+              variant: v,
+              resolved: { imageId, colorId, sizeId },
+              tempImageIds: Array.from(tempIdToImageId.entries()),
+              colorLocalMap: Array.from(colorLocalIdToRealId.entries()),
+              sizeLocalMap: Array.from(sizeLocalIdToRealId.entries()),
+            });
+            throw new Error('Invalid variant mapping');
+          }
+          const off = idx * 5;
+          varValues.push(productId, imageId, colorId, sizeId, Math.max(0, Number(v.stock) || 0));
+          return `($${off + 1}, $${off + 2}, $${off + 3}, $${off + 4}, $${off + 5})`;
+        })
+        .join(', ');
+      await client.query(
+        `INSERT INTO "ProductVariant" ("productId", "imageId", "colorId", "sizeId", stock) VALUES ${placeholders}`,
+        varValues
+      );
+    }
+
+    await client.query('COMMIT');
+    return NextResponse.json({ message: 'Product created successfully', productId }, { status: 201 });
   } catch (error) {
-    await client.query('ROLLBACK'); // Roll back transaction on error
+    await client.query('ROLLBACK');
     console.error('Failed to create product:', error);
     return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
   } finally {
-    client.release(); // Release the client back to the pool
+    client.release();
   }
 }
 
@@ -175,8 +194,8 @@ export async function GET() {
         p.price,
         p."salePrice" as sale_price,
         p."audioUrl" as audio_url,
-        (SELECT url FROM "ProductImage" i WHERE i."productId" = p.id LIMIT 1) as image_url,
-        (SELECT SUM(stock) FROM "ProductSize" s WHERE s."productId" = p.id) as total_stock
+  (SELECT url FROM "ProductImage" i WHERE i."productId" = p.id LIMIT 1) as image_url,
+  (SELECT COALESCE(SUM(v.stock), 0) FROM "ProductVariant" v WHERE v."productId" = p.id) as total_stock
       FROM "Product" p
       ORDER BY p."createdAt" DESC;
     `;

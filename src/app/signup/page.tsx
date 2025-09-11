@@ -15,7 +15,6 @@ const Logo = () => (
   </svg>
 );
 
-
 const SignUpPage = () => {
   const router = useRouter(); // Initialize router for redirection
   const [showPassword, setShowPassword] = useState(false);

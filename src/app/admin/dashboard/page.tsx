@@ -104,7 +104,7 @@ export default async function DashboardPage() {
               </table>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-32 bg-gray-50 rounded-md">
+            <div className="flex items-center justify-center h-32 rounded-md bg-gray-50">
               <p className="text-gray-500">No recent orders found.</p>
             </div>
           )}
