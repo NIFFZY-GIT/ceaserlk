@@ -3,9 +3,10 @@
 "use client";
 
 import { useState } from 'react';
-import { LayoutDashboard, Package, MapPin, User, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, MapPin, User, LogOut, Lock } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 // --- MOCK DATA (In a real app, this would come from your database) ---
 const mockUser = {
@@ -29,6 +30,7 @@ const mockAddresses = [
 type Tab = 'dashboard' | 'orders' | 'addresses' | 'details';
 
 const ProfileDashboard = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
 
   const navItems = [
@@ -37,6 +39,42 @@ const ProfileDashboard = () => {
     { id: 'addresses', label: 'Addresses', icon: MapPin },
     { id: 'details', label: 'Account Details', icon: User },
   ];
+
+  // If user is not authenticated, show login prompt
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-black to-gray-900">
+        <div className="container px-6 py-20 mx-auto">
+          <div className="max-w-md mx-auto text-center">
+            <div className="p-8 border border-gray-800 bg-gray-900/50 rounded-xl">
+              <Lock className="w-16 h-16 mx-auto mb-6 text-gray-400" />
+              <h1 className="mb-4 text-3xl font-bold text-white">Sign In Required</h1>
+              <p className="mb-6 text-gray-400">
+                Please sign in to view your profile, order history, and manage your account.
+              </p>
+              <div className="space-y-3">
+                <Link 
+                  href="/login" 
+                  className="block w-full py-3 font-bold text-white transition-colors duration-300 rounded-md bg-primary hover:bg-primary/90"
+                >
+                  Sign In
+                </Link>
+                <Link 
+                  href="/signup" 
+                  className="block w-full py-3 font-bold text-white transition-colors duration-300 border border-gray-600 rounded-md hover:bg-gray-800"
+                >
+                  Create Account
+                </Link>
+              </div>
+              <div className="mt-6 text-sm text-gray-500">
+                <p>Sign in to access your profile, order history, and saved preferences.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const renderContent = () => {
     switch (activeTab) {

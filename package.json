@@ -10,19 +10,31 @@
     "tailwind:init": "tailwindcss init -p"
   },
   "dependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/pg": "^8.15.5",
+    "bcrypt": "^6.0.0",
     "clsx": "^2.1.1",
+    "cookies-next": "^6.1.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
+    "formidable": "^3.5.4",
     "framer-motion": "^12.23.12",
     "gsap": "^3.13.0",
+    "jose": "^6.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.2",
     "lucide-react": "^0.542.0",
     "next": "15.5.2",
+    "pg": "^8.16.3",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.12",
+    "@types/formidable": "^3.4.5",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

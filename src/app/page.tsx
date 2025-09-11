@@ -1,6 +1,5 @@
 // src/app/page.tsx
 
-import Hero from "@/app/components/landing/Hero";
 import FeaturedProducts from "@/app/components/landing/FeaturedProducts";
 import VideoShowcase from "@/app/components/landing/VideoShowcase"; // 1. Import the new component
 import BrandEthos from "@/app/components/landing/BrandEthos";

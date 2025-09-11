@@ -2,12 +2,13 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Menu, User, CircleUser, X } from 'lucide-react';
+import { ShoppingCart, Menu, User, CircleUser, X, Settings } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 
 // UPDATED: 'Collections' is now a direct link, and the subMenu is removed.
 const navLinks = [
@@ -19,9 +20,12 @@ const navLinks = [
 
 const Navbar = () => {
   const { openCart, cartCount } = useCart();
+  const { user, logout } = useAuth();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  // REMOVED: The 'openDropdown' state is no longer needed.
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : 'auto';
     return () => { document.body.style.overflow = 'auto'; };
@@ -31,10 +35,30 @@ const Navbar = () => {
     if (isMobileMenuOpen) {
       setIsMobileMenuOpen(false);
     }
-  }, [pathname]);
+  }, [pathname, isMobileMenuOpen]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLinkClick = () => {
     setIsMobileMenuOpen(false);
+    setIsProfileDropdownOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setIsProfileDropdownOpen(false);
   };
   return (
     <header className="sticky top-0 z-30 shadow-lg bg-brand-black text-brand-white">
@@ -67,7 +91,53 @@ const Navbar = () => {
         </div>
         {/* RIGHT SIDE ICONS & MOBILE MENU TOGGLE */}
         <div className="flex items-center space-x-5">
-          <Link href="/login" className="hidden transition-colors hover:text-primary md:block"> <CircleUser size={26} /> </Link>
+          {/* Profile Icon with Conditional Logic */}
+          {user ? (
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                className="hidden transition-colors hover:text-primary md:block"
+              >
+                <CircleUser size={26} />
+              </button>
+              
+              {/* Profile Dropdown */}
+              {isProfileDropdownOpen && (
+                <div className="absolute right-0 z-50 w-48 py-2 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg top-full">
+                  <Link
+                    href="/profile"
+                    onClick={handleLinkClick}
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Profile
+                  </Link>
+                  {user.role === 'ADMIN' && (
+                    <Link
+                      href="/admin/dashboard"
+                      onClick={handleLinkClick}
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Dashboard
+                    </Link>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link href="/login" className="hidden transition-colors hover:text-primary md:block">
+              <CircleUser size={26} />
+            </Link>
+          )}
+          
           <button onClick={openCart} className="relative transition-colors hover:text-primary">
             <ShoppingCart size={26} />
             {cartCount > 0 && (<span className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white rounded-full -top-2 -right-2 bg-accent">{cartCount}</span>)}
@@ -91,9 +161,36 @@ const Navbar = () => {
             </Link>
           ))}
           <div className="w-3/4 pt-6 mt-4 border-t border-gray-700">
-            <Link href="/login" onClick={handleLinkClick} className="flex items-center justify-center gap-3 text-lg font-bold tracking-wider uppercase hover:text-primary">
-              <User size={26} /> <span>Account</span>
-            </Link>
+            {user ? (
+              <div className="space-y-4">
+                <Link 
+                  href="/profile" 
+                  onClick={handleLinkClick} 
+                  className="flex items-center justify-center gap-3 text-lg font-bold tracking-wider uppercase hover:text-primary"
+                >
+                  <User size={26} /> <span>Profile</span>
+                </Link>
+                {user.role === 'ADMIN' && (
+                  <Link 
+                    href="/admin/dashboard" 
+                    onClick={handleLinkClick} 
+                    className="flex items-center justify-center gap-3 text-lg font-bold tracking-wider uppercase hover:text-primary"
+                  >
+                    <Settings size={26} /> <span>Dashboard</span>
+                  </Link>
+                )}
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center justify-center w-full gap-3 text-lg font-bold tracking-wider uppercase hover:text-primary"
+                >
+                  <X size={26} /> <span>Logout</span>
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" onClick={handleLinkClick} className="flex items-center justify-center gap-3 text-lg font-bold tracking-wider uppercase hover:text-primary">
+                <User size={26} /> <span>Account</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>

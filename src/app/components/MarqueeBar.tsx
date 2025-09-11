@@ -12,7 +12,7 @@ const motivationalQuotes = [
 const MarqueeBar = () => {
   return (
     // The outer container hides the overflow
-    <div className="relative flex h-9 overflow-x-hidden bg-accent text-white">
+    <div className="relative flex overflow-x-hidden text-white bg-red-600 h-9">
       {/* The inner container holds the duplicated content and has the animation */}
       <div className="flex animate-marquee whitespace-nowrap">
         {/* Render the first set of quotes */}
