@@ -1,558 +1,302 @@
 "use client";
 
-import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import { useState } from 'react';
+import { PlusCircle, Trash2, ImagePlus, X, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Loader2, Plus, X, UploadCloud, Music, FileAudio, Trash2, Edit } from 'lucide-react';
 
-// Define the types for our form state
-interface ColorInput {
-  id: number;
-  name: string;
-  hex_code: string;
-}
+// --- UPDATED TYPE DEFINITIONS ---
+type SizeStock = { size: string; stock: number };
+type ProductVariant = {
+  id: number; // Temporary client-side ID
+  colorName: string;
+  colorHex: string;
+  price: string;
+  compareAtPrice: string; // <-- NEW: The original price
+  sku: string;
+  images: File[];
+  sizes: SizeStock[];
+  thumbnailImageName: string | null; // <-- NEW: To track the main image
+};
 
-interface SizeInput {
-  id: number;
-  name: string;
-}
-
-interface ImageInput {
-  id: number;
-  file: File;
-  previewUrl: string;
-}
-
-interface ProductVariant {
-  id: number;
-  imageId: number;
-  colorId: number;
-  sizeId: number;
-  stock: number;
-}
-
-interface ExistingColor {
-  name: string;
-  hex_code: string;
-  source: 'global' | 'product';
-}
-
-export default function NewProductPage() {
+const AddProductPage = () => {
   const router = useRouter();
-  
-  // Form state
-  const [name, setName] = useState('');
+  const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [salePrice, setSalePrice] = useState('');
-  
-  // Dynamic state for variants
-  const [colors, setColors] = useState<ColorInput[]>([]);
-  const [sizes, setSizes] = useState<SizeInput[]>([]);
-  const [images, setImages] = useState<ImageInput[]>([]);
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
-  
-  // Existing colors from database
-  const [existingColors, setExistingColors] = useState<ExistingColor[]>([]);
-  
-  // Form inputs
-  const [newColorName, setNewColorName] = useState('');
-  const [newColorHex, setNewColorHex] = useState('#000000');
-  const [newSizeName, setNewSizeName] = useState('');
-
-  // Audio file
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-
-  // Control state
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Fetch existing colors on component mount
-  useEffect(() => {
-    const fetchExistingColors = async () => {
-      try {
-        const res = await fetch('/api/admin/colors');
-        if (res.ok) {
-          const data = await res.json();
-          setExistingColors(data.colors || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch existing colors:', error);
-      }
-    };
-    fetchExistingColors();
-  }, []);
-
-  // --- Handlers for Colors ---
-  const handleAddColor = () => {
-    if (!newColorName.trim()) return;
-    
-    const trimmedName = newColorName.trim();
-    
-    // Check if color already exists in current selection
-    if (colors.find(c => c.name.toLowerCase() === trimmedName.toLowerCase())) {
-      setError(`Color "${trimmedName}" is already added to this product.`);
-      return;
-    }
-    
-    // Check if color exists in database
-    const existingColor = existingColors.find(c => c.name.toLowerCase() === trimmedName.toLowerCase());
-    if (existingColor) {
-      setError(`Color "${trimmedName}" already exists in the database. Please use a different name or select it from existing colors below.`);
-      return;
-    }
-    
-    // Add new color
-    setColors([...colors, { id: Date.now(), name: trimmedName, hex_code: newColorHex }]);
-    setNewColorName('');
-    setError(null);
-  };
-
-  const handleSelectExistingColor = (existingColor: ExistingColor) => {
-    // Check if color already exists in current selection
-    if (colors.find(c => c.name.toLowerCase() === existingColor.name.toLowerCase())) {
-      setError(`Color "${existingColor.name}" is already added to this product.`);
-      return;
-    }
-    
-    // Add existing color to selection
-    setColors([...colors, { id: Date.now(), name: existingColor.name, hex_code: existingColor.hex_code }]);
-    setError(null);
-  };
-
-  const handleRemoveColor = (idToRemove: number) => {
-    setColors(colors.filter(color => color.id !== idToRemove));
-    // Remove any variants that use this color
-    setVariants(variants.filter(variant => variant.colorId !== idToRemove));
-  };
-
-  // --- Handlers for Sizes ---
-  const handleAddSize = () => {
-    if (!newSizeName.trim()) return;
-    
-    const trimmedName = newSizeName.trim().toUpperCase();
-    
-    // Check if size already exists
-    if (sizes.find(s => s.name === trimmedName)) {
-      setError(`Size "${trimmedName}" already exists.`);
-      return;
-    }
-    
-    setSizes([...sizes, { id: Date.now(), name: trimmedName }]);
-    setNewSizeName('');
-    setError(null);
-  };
-
-  const handleRemoveSize = (idToRemove: number) => {
-    setSizes(sizes.filter(size => size.id !== idToRemove));
-    // Remove any variants that use this size
-    setVariants(variants.filter(variant => variant.sizeId !== idToRemove));
-  };
-
-  // --- Handlers for Images ---
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files).map(file => ({
-        id: Date.now() + Math.random(),
-        file,
-        previewUrl: URL.createObjectURL(file),
-      }));
-      setImages(prevImages => [...prevImages, ...filesArray]);
-    }
-  };
-
-  const handleRemoveImage = (idToRemove: number) => {
-    const imageToRemove = images.find(img => img.id === idToRemove);
-    if (imageToRemove) {
-      URL.revokeObjectURL(imageToRemove.previewUrl);
-      setImages(images.filter(img => img.id !== idToRemove));
-      // Remove any variants that use this image
-      setVariants(variants.filter(variant => variant.imageId !== idToRemove));
-    }
-  };
-
-  // --- Handlers for Variants ---
-  const handleAddVariant = () => {
-    if (images.length === 0 || colors.length === 0 || sizes.length === 0) {
-      setError('Please add at least one image, color, and size before creating variants.');
-      return;
-    }
-    
-    const newVariant: ProductVariant = {
+  const [variants, setVariants] = useState<ProductVariant[]>([
+    {
       id: Date.now(),
-      imageId: images[0].id,
-      colorId: colors[0].id,
-      sizeId: sizes[0].id,
-      stock: 0
-    };
-    
-    setVariants([...variants, newVariant]);
-    setError(null);
+      colorName: '',
+      colorHex: '#000000',
+      price: '',
+      compareAtPrice: '', // <-- NEW
+      sku: '',
+      images: [],
+      sizes: [{ size: 'S', stock: 0 }],
+      thumbnailImageName: null, // <-- NEW
+    },
+  ]);
+
+  const addVariant = () => {
+    setVariants([
+      ...variants,
+      {
+        id: Date.now(),
+        colorName: '', 
+        colorHex: '#000000', 
+        price: '',
+        compareAtPrice: '', // <-- NEW 
+        sku: '',
+        images: [], 
+        sizes: [{ size: 'S', stock: 0 }], 
+        thumbnailImageName: null,
+      },
+    ]);
   };
 
-  const handleUpdateVariant = (variantId: number, field: keyof ProductVariant, value: number) => {
-    setVariants(variants.map(variant => 
-      variant.id === variantId ? { ...variant, [field]: value } : variant
-    ));
+  const removeVariant = (id: number) => {
+    setVariants(variants.filter((v) => v.id !== id));
   };
 
-  const handleRemoveVariant = (idToRemove: number) => {
-    setVariants(variants.filter(variant => variant.id !== idToRemove));
+  const handleVariantChange = (id: number, field: keyof ProductVariant, value: any) => {
+    setVariants(
+      variants.map((v) => (v.id === id ? { ...v, [field]: value } : v))
+    );
+  };
+  
+  const handleSizeChange = (variantId: number, index: number, field: keyof SizeStock, value: any) => {
+    const newVariants = variants.map(v => {
+      if (v.id === variantId) {
+        const newSizes = v.sizes.map((s, i) => (i === index ? {...s, [field]: value} : s));
+        return {...v, sizes: newSizes};
+      }
+      return v;
+    });
+    setVariants(newVariants);
   };
 
-  // --- Audio Handler ---
-  const handleAudioChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setAudioFile(e.target.files[0]);
+  const addSize = (variantId: number) => {
+    const newVariants = variants.map(v => {
+      if (v.id === variantId) {
+        return {...v, sizes: [...v.sizes, {size: '', stock: 0}]};
+      }
+      return v;
+    });
+    setVariants(newVariants);
+  };
+
+  const removeSize = (variantId: number, index: number) => {
+    const newVariants = variants.map(v => {
+        if (v.id === variantId) {
+            return {...v, sizes: v.sizes.filter((_, i) => i !== index)};
+        }
+        return v;
+    });
+    setVariants(newVariants);
+  };
+  
+  const handleImageChange = (id: number, files: FileList | null) => {
+    if (files) {
+        const variant = variants.find(v => v.id === id)!;
+        const newImages = [...variant.images, ...Array.from(files)];
+        // If this is the first image, automatically set it as the thumbnail
+        const newThumbnail = variant.thumbnailImageName === null && newImages.length > 0 ? newImages[0].name : variant.thumbnailImageName;
+        handleVariantChange(id, 'images', newImages);
+        handleVariantChange(id, 'thumbnailImageName', newThumbnail);
     }
   };
 
-  // --- Form Submission ---
-  const handleSubmit = async (e: FormEvent) => {
+  const removeImage = (variantId: number, imageToRemove: File) => {
+    const variant = variants.find(v => v.id === variantId)!;
+    const newImages = variant.images.filter(img => img !== imageToRemove);
+    let newThumbnail = variant.thumbnailImageName;
+    // If the removed image was the thumbnail, pick a new one or set to null
+    if (variant.thumbnailImageName === imageToRemove.name) {
+        newThumbnail = newImages.length > 0 ? newImages[0].name : null;
+    }
+    handleVariantChange(variantId, 'images', newImages);
+    handleVariantChange(variantId, 'thumbnailImageName', newThumbnail);
+  };
+
+  // NEW: Function to set the thumbnail
+  const setThumbnail = (variantId: number, imageName: string) => {
+    handleVariantChange(variantId, 'thumbnailImageName', imageName);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setIsLoading(true);
     setError(null);
-    
-    if (!name || !price || variants.length === 0) {
-      setError('Please fill in Name, Price, and create at least one product variant.');
-      setIsSubmitting(false);
-      return;
-    }
 
     const formData = new FormData();
-    formData.append('name', name);
+
+    // 1. Append the base product data
+    formData.append('productName', productName);
     formData.append('description', description);
-    formData.append('price', price);
-    if (salePrice) formData.append('salePrice', salePrice);
 
-  // Send colors, sizes, images, and variants data (include local ids for mapping)
-  formData.append('colors', JSON.stringify(colors.map(({id, name, hex_code}) => ({ id, name, hex_code }))));
-  formData.append('sizes', JSON.stringify(sizes.map(({id, name}) => ({ id, name }))));
-    formData.append('variants', JSON.stringify(variants));
+    // 2. Prepare and append variant data (without the File objects)
+    const variantsForApi = variants.map(variant => ({
+      ...variant,
+      images: variant.images.map(img => img.name), // Send only image names for mapping
+    }));
+    formData.append('variants', JSON.stringify(variantsForApi));
 
-    // Append image files
-    images.forEach((image, index) => {
-      formData.append('images', image.file);
-      formData.append(`imageId_${index}`, String(image.id));
+    // 3. Append all the image files, keyed by their variant's temporary ID
+    variants.forEach(variant => {
+      variant.images.forEach(imageFile => {
+        // This key format is crucial for the backend to map images to variants
+        formData.append(`images_variant_${variant.id}`, imageFile);
+      });
     });
-    
-    // Append audio file if it exists
-    if (audioFile) {
-      formData.append('audioFile', audioFile);
-    }
-    
+
     try {
-      const res = await fetch('/api/admin/products', {
+      const response = await fetch('/api/admin/products', {
         method: 'POST',
-        body: formData,
+        body: formData, // The browser will automatically set the correct 'multipart/form-data' header
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to create product');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create product.');
       }
 
+      alert('Product created successfully!');
       router.push('/admin/products');
-      
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
-      setError(errorMessage);
+
+    } catch (err: any) {
+      setError(err.message);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
-  const getImageById = (id: number) => images.find(img => img.id === id);
-  const getColorById = (id: number) => colors.find(color => color.id === id);
-  const getSizeById = (id: number) => sizes.find(size => size.id === id);
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Add New Product</h1>
-          <p className="mt-1 text-gray-500">Create product variants by linking images, colors, sizes, and stock levels.</p>
+    <div className="max-w-4xl mx-auto">
+      <h1 className="mb-6 text-3xl font-bold text-gray-800">Add New Product</h1>
+      <form onSubmit={handleSubmit} className="space-y-8">
+        
+        {/* Error message display */}
+        {error && (
+          <div className="p-4 border border-red-300 rounded-md bg-red-50">
+            <p className="text-red-500">{error}</p>
+          </div>
+        )}
+
+        {/* Base Product Details */}
+        <div className="p-6 bg-white rounded-lg shadow">
+          <h2 className="mb-4 text-xl font-semibold">Base Details</h2>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="productName" className="block text-sm font-medium text-gray-700">Product Name</label>
+              <input type="text" id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary" required />
+            </div>
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+              <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"></textarea>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <Link href="/admin/products" className="px-4 py-2 font-semibold text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
-            Cancel
-          </Link>
-          <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed">
-            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus size={20} />}
-            <span>{isSubmitting ? 'Saving...' : 'Save Product'}</span>
+
+        {/* Product Variants Section */}
+        <div>
+            <h2 className="mb-4 text-xl font-semibold text-gray-800">Product Variants</h2>
+            <div className="space-y-6">
+                {variants.map((variant) => (
+                <div key={variant.id} className="relative p-6 bg-white rounded-lg shadow">
+                    {variants.length > 1 && (
+                        <button type="button" onClick={() => removeVariant(variant.id)} className="absolute text-gray-400 top-4 right-4 hover:text-red-500">
+                            <Trash2 size={20} />
+                        </button>
+                    )}
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        {/* --- NEW: Color Picker + Text Input --- */}
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700">Color</label>
+                            <div className="flex items-center gap-4 mt-1">
+                                <input type="color" value={variant.colorHex} onChange={e => handleVariantChange(variant.id, 'colorHex', e.target.value)} className="w-10 h-10 p-1 border-gray-300 rounded-md shadow-sm" />
+                                <input type="text" value={variant.colorName} onChange={e => handleVariantChange(variant.id, 'colorName', e.target.value)} className="block w-full border-gray-300 rounded-md shadow-sm" placeholder="e.g., Ocean Blue" required />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Price (Sale Price)</label>
+                            <input type="number" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="e.g., 49.99" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Compare At Price (Original)</label>
+                            <input type="number" value={variant.compareAtPrice} onChange={e => handleVariantChange(variant.id, 'compareAtPrice', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="Optional: e.g., 59.99" />
+                            <p className="mt-1 text-xs text-gray-500">If set, this will show as the original price (crossed out).</p>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700">SKU</label>
+                            <input type="text" value={variant.sku} onChange={e => handleVariantChange(variant.id, 'sku', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="e.g., TSH-OB-001" />
+                        </div>
+                        
+                        {/* --- NEW: Images with Thumbnail Selection --- */}
+                        <div className="md:col-span-2">
+                           <label className="block mb-2 text-sm font-medium text-gray-700">Images</label>
+                            <div className="flex flex-wrap gap-4">
+                                {variant.images.map((image, index) => {
+                                    const isThumbnail = variant.thumbnailImageName === image.name;
+                                    return (
+                                        <div key={index} className="relative group">
+                                            <img src={URL.createObjectURL(image)} alt="upload preview" className={`object-cover w-24 h-24 rounded-md border-2 ${isThumbnail ? 'border-primary' : 'border-transparent'}`} />
+                                            <div className="absolute inset-0 flex items-center justify-center gap-2 transition-opacity bg-black rounded-md opacity-0 bg-opacity-60 group-hover:opacity-100">
+                                                <button type="button" title="Set as thumbnail" onClick={() => setThumbnail(variant.id, image.name)} className="p-1.5 text-white bg-black/50 rounded-full hover:bg-primary">
+                                                    <Star size={14} fill={isThumbnail ? 'currentColor' : 'none'} />
+                                                </button>
+                                                <button type="button" title="Remove image" onClick={() => removeImage(variant.id, image)} className="p-1.5 text-white bg-black/50 rounded-full hover:bg-red-500">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:bg-gray-50">
+                                    <ImagePlus size={24} className="text-gray-400" />
+                                    <span className="mt-1 text-xs text-gray-500">Add Images</span>
+                                    <input type="file" multiple accept="image/*" onChange={e => handleImageChange(variant.id, e.target.files)} className="hidden" />
+                                </label>
+                            </div>
+                        </div>
+                        
+                        {/* --- NEW: Text Input for Sizes --- */}
+                        <div className="md:col-span-2">
+                            <label className="block mb-2 text-sm font-medium text-gray-700">Sizes & Stock</label>
+                            <div className="space-y-2">
+                            {variant.sizes.map((sizeStock, index) => (
+                                <div key={index} className="flex items-center gap-4">
+                                    <input type="text" placeholder="Size (e.g., M, 32x34)" value={sizeStock.size} onChange={e => handleSizeChange(variant.id, index, 'size', e.target.value)} className="block w-full border-gray-300 rounded-md shadow-sm" required />
+                                    <input type="number" placeholder="Stock" value={sizeStock.stock} onChange={e => handleSizeChange(variant.id, index, 'stock', parseInt(e.target.value) || 0)} className="block w-full border-gray-300 rounded-md shadow-sm" />
+                                    {variant.sizes.length > 1 && <button type="button" onClick={() => removeSize(variant.id, index)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button>}
+                                </div>
+                            ))}
+                            <button type="button" onClick={() => addSize(variant.id)} className="flex items-center gap-1 mt-2 text-sm font-medium text-primary hover:text-primary-dark">
+                                <PlusCircle size={16} /> Add Size
+                            </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ))}
+            </div>
+            <button type="button" onClick={addVariant} className="flex items-center gap-2 px-4 py-2 mt-6 text-sm font-medium text-white bg-gray-600 border border-transparent rounded-md shadow-sm hover:bg-gray-700">
+                <PlusCircle size={20} /> Add Another Variant
+            </button>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-end pt-4">
+          <button type="button" onClick={() => router.push('/admin/products')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">Cancel</button>
+          <button type="submit" disabled={isLoading} className="inline-flex justify-center px-6 py-2 ml-3 text-sm font-medium text-white border border-transparent rounded-md shadow-sm bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed">
+            {isLoading ? 'Saving...' : 'Save Product'}
           </button>
         </div>
-      </div>
-
-      {error && <div className="p-4 text-red-800 bg-red-100 border-l-4 border-red-500 rounded-md" role="alert">{error}</div>}
-
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Left Column: Main Details */}
-        <div className="space-y-6 lg:col-span-2">
-          <div className="p-6 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold">Product Details</h2>
-            <div className="mt-4 space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">Product Name</label>
-                <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary" required />
-              </div>
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-                <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={5} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary"></textarea>
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-6 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold">Pricing</h2>
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div>
-                <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price ($)</label>
-                <input type="number" id="price" value={price} onChange={e => setPrice(e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary" required min="0" step="0.01" />
-              </div>
-              <div>
-                <label htmlFor="sale-price" className="block text-sm font-medium text-gray-700">Sale Price ($)</label>
-                <input type="number" id="sale-price" value={salePrice} onChange={e => setSalePrice(e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-primary focus:ring-primary" min="0" step="0.01" />
-              </div>
-            </div>
-          </div>
-
-          {/* Audio Upload */}
-          <div className="p-6 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold">Product Page Audio (Optional)</h2>
-            <div className="mt-4">
-              <label htmlFor="audio-upload" className="flex flex-col items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none">
-                <Music className="w-8 h-8 text-gray-400" />
-                <span className="font-medium text-gray-600">Click to upload audio</span>
-                <span className="text-xs text-gray-500">MP3, WAV, OGG up to 10MB</span>
-                <input id="audio-upload" type="file" accept="audio/*" className="hidden" onChange={handleAudioChange} />
-              </label>
-            </div>
-            {audioFile && (
-              <div className="flex items-center justify-between p-3 mt-4 text-sm rounded-md bg-gray-50">
-                <div className="flex items-center gap-2">
-                  <FileAudio className="w-5 h-5 text-gray-500" />
-                  <span className="font-medium">{audioFile.name}</span>
-                </div>
-                <button type="button" onClick={() => setAudioFile(null)} className="p-1 rounded-full hover:bg-red-100">
-                  <X size={16} className="text-red-600" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Product Variants Table */}
-          <div className="p-6 bg-white rounded-lg shadow">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Product Variants</h2>
-              <button type="button" onClick={handleAddVariant} className="flex items-center gap-2 px-3 py-2 text-sm text-white rounded-md bg-primary hover:bg-primary/90">
-                <Plus size={16} />
-                Add Variant
-              </button>
-            </div>
-            
-            {variants.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Image</th>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Color</th>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Size</th>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Stock</th>
-                      <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {variants.map(variant => {
-                      const image = getImageById(variant.imageId);
-                      const color = getColorById(variant.colorId);
-                      const size = getSizeById(variant.sizeId);
-                      
-                      return (
-                        <tr key={variant.id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="relative w-16 h-16">
-                                {image && (
-                                  <Image src={image.previewUrl} alt="Variant" fill className="object-cover rounded-md" />
-                                )}
-                              </div>
-                              <select 
-                                value={variant.imageId} 
-                                onChange={e => handleUpdateVariant(variant.id, 'imageId', Number(e.target.value))}
-                                className="ml-2 text-sm border-gray-300 rounded-md focus:border-primary focus:ring-primary"
-                              >
-                                {images.map(img => (
-                                  <option key={img.id} value={img.id}>Image {images.indexOf(img) + 1}</option>
-                                ))}
-                              </select>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              {color && (
-                                <div className="flex items-center gap-2">
-                                  <span className="w-4 h-4 border rounded-full" style={{backgroundColor: color.hex_code}}></span>
-                                  <span className="text-sm">{color.name}</span>
-                                </div>
-                              )}
-                              <select 
-                                value={variant.colorId} 
-                                onChange={e => handleUpdateVariant(variant.id, 'colorId', Number(e.target.value))}
-                                className="ml-2 text-sm border-gray-300 rounded-md focus:border-primary focus:ring-primary"
-                              >
-                                {colors.map(color => (
-                                  <option key={color.id} value={color.id}>{color.name}</option>
-                                ))}
-                              </select>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <select 
-                              value={variant.sizeId} 
-                              onChange={e => handleUpdateVariant(variant.id, 'sizeId', Number(e.target.value))}
-                              className="text-sm border-gray-300 rounded-md focus:border-primary focus:ring-primary"
-                            >
-                              {sizes.map(size => (
-                                <option key={size.id} value={size.id}>{size.name}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <input
-                              type="number"
-                              value={variant.stock}
-                              onChange={e => handleUpdateVariant(variant.id, 'stock', Number(e.target.value))}
-                              className="w-20 text-sm border-gray-300 rounded-md focus:border-primary focus:ring-primary"
-                              min="0"
-                            />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveVariant(variant.id)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="py-8 text-center text-gray-500">
-                No variants created yet. Add images, colors, and sizes first, then create variants.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Assets */}
-        <div className="space-y-6 lg:col-span-1">
-          {/* Images */}
-          <div className="p-6 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold">Images</h2>
-            <div className="mt-4">
-              <label htmlFor="image-upload" className="flex flex-col items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-md appearance-none cursor-pointer hover:border-primary focus:outline-none">
-                <UploadCloud className="w-8 h-8 text-gray-400" />
-                <span className="font-medium text-gray-600">Click to upload</span>
-                <span className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</span>
-                <input id="image-upload" type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
-              </label>
-            </div>
-            {images.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 mt-4">
-                {images.map((image) => (
-                  <div key={image.id} className="relative group aspect-square">
-                    <Image src={image.previewUrl} alt="Product preview" fill className="object-cover rounded-md" />
-                    <button 
-                      type="button" 
-                      onClick={() => handleRemoveImage(image.id)} 
-                      className="absolute p-1 text-white transition-opacity bg-red-500 rounded-full opacity-0 top-2 right-2 group-hover:opacity-100"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Colors */}
-          <div className="p-6 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold">Colors</h2>
-            <div className="mt-4">
-              <div className="flex items-center gap-2">
-                <input type="text" placeholder="e.g., Midnight Blue" value={newColorName} onChange={e => setNewColorName(e.target.value)} className="flex-grow text-sm border-gray-300 rounded-md focus:border-primary focus:ring-primary"/>
-                <input type="color" value={newColorHex} onChange={e => setNewColorHex(e.target.value)} className="w-10 h-10 p-1 border-gray-300 rounded-md cursor-pointer" />
-                <button type="button" onClick={handleAddColor} className="p-2 text-white rounded-md bg-primary hover:bg-primary/90"><Plus size={16} /></button>
-              </div>
-              
-              {colors.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {colors.map(color => (
-                    <div key={color.id} className="flex items-center gap-2 px-2 py-1 text-xs bg-gray-100 rounded-full">
-                      <span className="block w-3 h-3 border border-gray-300 rounded-full" style={{ backgroundColor: color.hex_code }}></span>
-                      {color.name}
-                      <button type="button" onClick={() => handleRemoveColor(color.id)}>
-                        <X size={12} className="text-gray-500 hover:text-red-600"/>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {existingColors.length > 0 && (
-                <div className="p-3 mt-4 rounded-md bg-gray-50">
-                  <label className="block mb-2 text-xs font-medium text-gray-700">Select from Existing</label>
-                  <div className="grid grid-cols-1 gap-1 overflow-y-auto max-h-32">
-                    {existingColors.map((existingColor, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => handleSelectExistingColor(existingColor)}
-                        className="flex items-center gap-2 p-2 text-xs text-left transition-colors border border-gray-200 rounded hover:bg-white"
-                      >
-                        <span className="block w-3 h-3 border border-gray-300 rounded-full" style={{ backgroundColor: existingColor.hex_code }}></span>
-                        <span className="truncate">{existingColor.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Sizes */}
-          <div className="p-6 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold">Sizes</h2>
-            <div className="mt-4">
-              <div className="flex items-center gap-2">
-                <input type="text" placeholder="e.g., M" value={newSizeName} onChange={e => setNewSizeName(e.target.value)} className="flex-grow text-sm border-gray-300 rounded-md focus:border-primary focus:ring-primary"/>
-                <button type="button" onClick={handleAddSize} className="p-2 text-white rounded-md bg-primary hover:bg-primary/90"><Plus size={16} /></button>
-              </div>
-              {sizes.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {sizes.map(size => (
-                    <div key={size.id} className="flex items-center gap-2 px-3 py-1 text-xs bg-gray-100 rounded-full">
-                      {size.name}
-                      <button type="button" onClick={() => handleRemoveSize(size.id)}>
-                        <X size={12} className="text-gray-500 hover:text-red-600"/>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </form>
+        {error && <p className="mt-4 text-right text-red-600">{error}</p>}
+      </form>
+    </div>
   );
-}
+};
+
+export default AddProductPage;

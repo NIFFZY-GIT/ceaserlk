@@ -1,32 +1,29 @@
 import { Pool } from 'pg';
 
-let pool: Pool | undefined;
+// Declare pool at a higher scope
+let pool: Pool;
 
-if (!pool) {
-  // Try to use DATABASE_URL first, then fall back to individual parameters
-  if (process.env.DATABASE_URL) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
-  } else {
-    // Fallback to individual connection parameters
-    pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      database: process.env.DB_NAME || 'ceaser_db',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'admin',
+// Using a global variable to prevent connection exhaustion during development hot-reloads.
+declare const global: {
+  pool: Pool;
+};
+
+if (process.env.NODE_ENV === 'production') {
+  // Production setup
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false, // Necessary for many cloud database providers
+    },
+  });
+} else {
+  // Development setup
+  if (!global.pool) {
+    global.pool = new Pool({
+      connectionString: process.env.DATABASE_URL, // Use the variable here!
     });
   }
-  
-  // Test the connection
-  pool.on('connect', () => {
-    console.log('✅ Database connection established');
-  });
-  
-  pool.on('error', (err) => {
-    console.error('❌ Database connection error:', err.message);
-  });
+  pool = global.pool;
 }
 
-export default pool as Pool;
+export const db = pool;
