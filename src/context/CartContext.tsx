@@ -1,236 +1,109 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { setCookie, getCookie } from 'cookies-next';
-import { nanoid } from 'nanoid';
+import { v4 as uuidv4 } from 'uuid';
 
-// Updated CartItem type for new reservation system
+// --- TYPE DEFINITIONS ---
 export interface CartItem {
-  id: number;
-  productId: number;
-  colorId: number;
-  sizeId: number;
+  id: string; // cart_item id
   quantity: number;
-  name: string;
-  sizeName: string;
+  skuId: string;
+  size: string;
+  price: string;
+  compareAtPrice: string | null;
   colorName: string;
   imageUrl: string;
-  price: number;
+  productId: string;
+  name: string;
 }
 
 export interface Cart {
-  sessionId: string;
+  id: string; // cart id
+  expiresAt: string;
   items: CartItem[];
-  expiresAt: string; // ISO string format
-}
-
-interface ProductDetails {
-  productId: number;
-  productSizeId: number; // Size ID
-  sizeName: string;
-  colorName: string;
-  name: string;
-  price: number;
-  imageUrl: string;
 }
 
 interface CartContextType {
   cart: Cart | null;
-  cartCount: number;
   isCartOpen: boolean;
+  cartCount: number;
   loading: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addToCart: (productDetails: ProductDetails, quantity: number) => Promise<void>;
-  removeFromCart: (itemId: number) => Promise<void>;
-  updateQuantity: (itemId: number, newQuantity: number) => Promise<void>;
-  clearCart: () => void;
+  addToCart: (skuId: string, quantity: number) => Promise<void>;
+  removeFromCart: (cartItemId: string) => Promise<void>;
+  updateQuantity: (cartItemId: string, newQuantity: number) => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+// Helper to get or create a session ID
+const getSessionId = (): string => {
+  let sessionId = localStorage.getItem('cart_session_id');
+  if (!sessionId) {
+    sessionId = uuidv4();
+    localStorage.setItem('cart_session_id', sessionId);
+  }
+  return sessionId;
+};
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<Cart | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [sessionId, setSessionId] = useState<string>('');
-
-  // Initialize session ID
-  useEffect(() => {
-    let existingSessionId = getCookie('cartSessionId') as string;
-    if (!existingSessionId) {
-      existingSessionId = nanoid();
-      setCookie('cartSessionId', existingSessionId, { maxAge: 60 * 60 * 24 * 7 }); // 7 days
-    }
-    setSessionId(existingSessionId);
-  }, []);
 
   const fetchCart = useCallback(async () => {
-    if (!sessionId) return;
-    
     setLoading(true);
+    const sessionId = getSessionId();
     try {
       const res = await fetch(`/api/cart?sessionId=${sessionId}`);
-      if (!res.ok) throw new Error("Failed to fetch cart");
+      // This is where your error was happening
+      if (!res.ok) {
+        // Log the server error for better debugging
+        console.error("Server responded with an error:", await res.text());
+        throw new Error("Failed to fetch cart");
+      }
       const data: Cart = await res.json();
       setCart(data);
     } catch (error) {
-      console.error("Fetch cart error:", error);
-      setCart(null);
+      console.error("Cart fetch error:", error);
     } finally {
       setLoading(false);
     }
-  }, [sessionId]);
+  }, []);
 
   useEffect(() => {
-    if (sessionId) {
-      fetchCart();
-    }
-  }, [fetchCart, sessionId]);
-
-  // Helper function to get color ID from product and color name
-  const getColorIdFromProduct = async (productId: number, colorName: string): Promise<number | null> => {
-    try {
-      const res = await fetch(`/api/products/${productId}`);
-      if (!res.ok) return null;
-      const product = await res.json();
-      const color = product.colors.find((c: { id: number; name: string }) => c.name === colorName);
-      return color ? color.id : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const addToCart = async (productDetails: ProductDetails, quantity: number) => {
-    if (!sessionId) {
-      console.error('No session ID available');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Get color ID from the product details
-      const colorId = await getColorIdFromProduct(productDetails.productId, productDetails.colorName);
-      const sizeId = productDetails.productSizeId;
-
-      if (!colorId || !sizeId) {
-        throw new Error('Invalid color or size selection');
-      }
-
-      const res = await fetch('/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          productId: productDetails.productId,
-          colorId,
-          sizeId,
-          quantity,
-          name: productDetails.name,
-          price: productDetails.price,
-          colorName: productDetails.colorName,
-          sizeName: productDetails.sizeName,
-          imageUrl: productDetails.imageUrl,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to add item to cart');
-      }
-
-      await fetchCart(); // Refresh cart
-      setIsCartOpen(true); // Open cart drawer
-    } catch (error) {
-      console.error('Add to cart error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to add item to cart');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const removeFromCart = async (itemId: number) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/cart?cartItemId=${itemId}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to remove item from cart');
-      }
-
-      await fetchCart(); // Refresh cart
-    } catch (error) {
-      console.error('Remove from cart error:', error);
-      alert('Failed to remove item from cart');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateQuantity = async (itemId: number, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      await removeFromCart(itemId);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch('/api/cart', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cartItemId: itemId,
-          quantity: newQuantity,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to update quantity');
-      }
-
-      await fetchCart(); // Refresh cart
-    } catch (error) {
-      console.error('Update quantity error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update quantity');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const clearCart = () => {
-    // Clear session and cart
-    const newSessionId = nanoid();
-    setCookie('cartSessionId', newSessionId, { maxAge: 60 * 60 * 24 * 7 });
-    setSessionId(newSessionId);
-    setCart(null);
-  };
+    fetchCart();
+  }, [fetchCart]);
 
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 
+  // Placeholder functions for cart mutations
+  const addToCart = async (skuId: string, quantity: number) => {
+    // TODO: Implement POST to /api/cart
+    console.log('Adding to cart:', { skuId, quantity });
+    await fetchCart(); // Re-fetch cart to show updates
+  };
+  const removeFromCart = async (cartItemId: string) => {
+    // TODO: Implement DELETE to /api/cart
+    console.log('Removing from cart:', cartItemId);
+    await fetchCart();
+  };
+  const updateQuantity = async (cartItemId: string, newQuantity: number) => {
+    // TODO: Implement PUT to /api/cart
+    console.log('Updating quantity:', { cartItemId, newQuantity });
+    await fetchCart();
+  };
+
   const cartCount = cart?.items.reduce((total, item) => total + item.quantity, 0) || 0;
 
-  return (
-    <CartContext.Provider
-      value={{
-        cart,
-        cartCount,
-        isCartOpen,
-        loading,
-        openCart,
-        closeCart,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  );
+  const value = {
+    cart, isCartOpen, cartCount, loading,
+    openCart, closeCart, addToCart, removeFromCart, updateQuantity,
+  };
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
 export const useCart = () => {

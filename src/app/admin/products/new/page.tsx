@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { PlusCircle, Trash2, ImagePlus, X, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 // --- UPDATED TYPE DEFINITIONS ---
 type SizeStock = { size: string; stock: number };
@@ -97,31 +98,61 @@ const AddProductPage = () => {
   };
   
   const handleImageChange = (id: number, files: FileList | null) => {
-    if (files) {
-        const variant = variants.find(v => v.id === id)!;
-        const newImages = [...variant.images, ...Array.from(files)];
-        // If this is the first image, automatically set it as the thumbnail
-        const newThumbnail = variant.thumbnailImageName === null && newImages.length > 0 ? newImages[0].name : variant.thumbnailImageName;
-        handleVariantChange(id, 'images', newImages);
-        handleVariantChange(id, 'thumbnailImageName', newThumbnail);
+    if (!files || files.length === 0) return;
+    
+    console.log('Adding files:', files.length, 'files to variant', id); // Debug log
+    
+    const variant = variants.find(v => v.id === id);
+    if (!variant) {
+      console.error('Variant not found:', id);
+      return;
     }
+    
+    const newFiles = Array.from(files);
+    const newImages = [...variant.images, ...newFiles];
+    
+    console.log('New images array length:', newImages.length); // Debug log
+    
+    // If this is the first image and no thumbnail is set, automatically set it as the thumbnail
+    const newThumbnail = variant.thumbnailImageName === null && newImages.length > 0 
+      ? newImages[0].name 
+      : variant.thumbnailImageName;
+    
+    // Update the variant with new images and thumbnail
+    setVariants(variants.map(v => 
+      v.id === id 
+        ? { ...v, images: newImages, thumbnailImageName: newThumbnail }
+        : v
+    ));
   };
 
   const removeImage = (variantId: number, imageToRemove: File) => {
-    const variant = variants.find(v => v.id === variantId)!;
+    const variant = variants.find(v => v.id === variantId);
+    if (!variant) return;
+    
     const newImages = variant.images.filter(img => img !== imageToRemove);
     let newThumbnail = variant.thumbnailImageName;
+    
     // If the removed image was the thumbnail, pick a new one or set to null
     if (variant.thumbnailImageName === imageToRemove.name) {
-        newThumbnail = newImages.length > 0 ? newImages[0].name : null;
+      newThumbnail = newImages.length > 0 ? newImages[0].name : null;
     }
-    handleVariantChange(variantId, 'images', newImages);
-    handleVariantChange(variantId, 'thumbnailImageName', newThumbnail);
+    
+    // Update the variant
+    setVariants(variants.map(v => 
+      v.id === variantId 
+        ? { ...v, images: newImages, thumbnailImageName: newThumbnail }
+        : v
+    ));
   };
 
   // NEW: Function to set the thumbnail
   const setThumbnail = (variantId: number, imageName: string) => {
-    handleVariantChange(variantId, 'thumbnailImageName', imageName);
+    setVariants(variants.map(v => 
+      v.id === variantId 
+        ? { ...v, thumbnailImageName: imageName }
+        : v
+    ));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -241,7 +272,13 @@ const AddProductPage = () => {
                                     const isThumbnail = variant.thumbnailImageName === image.name;
                                     return (
                                         <div key={index} className="relative group">
-                                            <img src={URL.createObjectURL(image)} alt="upload preview" className={`object-cover w-24 h-24 rounded-md border-2 ${isThumbnail ? 'border-primary' : 'border-transparent'}`} />
+                                            <Image 
+                                                src={URL.createObjectURL(image)} 
+                                                alt="upload preview" 
+                                                width={96}
+                                                height={96}
+                                                className={`object-cover w-24 h-24 rounded-md border-2 ${isThumbnail ? 'border-primary' : 'border-transparent'}`} 
+                                            />
                                             <div className="absolute inset-0 flex items-center justify-center gap-2 transition-opacity bg-black rounded-md opacity-0 bg-opacity-60 group-hover:opacity-100">
                                                 <button type="button" title="Set as thumbnail" onClick={() => setThumbnail(variant.id, image.name)} className="p-1.5 text-white bg-black/50 rounded-full hover:bg-primary">
                                                     <Star size={14} fill={isThumbnail ? 'currentColor' : 'none'} />
@@ -256,7 +293,18 @@ const AddProductPage = () => {
                                 <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:bg-gray-50">
                                     <ImagePlus size={24} className="text-gray-400" />
                                     <span className="mt-1 text-xs text-gray-500">Add Images</span>
-                                    <input type="file" multiple accept="image/*" onChange={e => handleImageChange(variant.id, e.target.files)} className="hidden" />
+                                    <input 
+                                        type="file" 
+                                        multiple 
+                                        accept="image/*" 
+                                        onChange={(e) => {
+                                            console.log('File input changed:', e.target.files?.length, 'files');
+                                            handleImageChange(variant.id, e.target.files);
+                                            // Reset the input value so the same files can be selected again
+                                            e.target.value = '';
+                                        }} 
+                                        className="hidden" 
+                                    />
                                 </label>
                             </div>
                         </div>
