@@ -107,63 +107,112 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    console.log('[CART_CONTEXT] Adding to cart:', { productDetails, quantity, sessionId });
+    
     setLoading(true);
     try {
       // Get color ID from the product details
+      console.log('[CART_CONTEXT] Getting color ID for product:', productDetails.productId, 'color:', productDetails.colorName);
       const colorId = await getColorIdFromProduct(productDetails.productId, productDetails.colorName);
       const sizeId = productDetails.productSizeId;
+
+      console.log('[CART_CONTEXT] Resolved IDs:', { colorId, sizeId });
 
       if (!colorId || !sizeId) {
         throw new Error('Invalid color or size selection');
       }
 
+      const requestBody = {
+        sessionId,
+        productId: productDetails.productId,
+        colorId,
+        sizeId,
+        quantity,
+        name: productDetails.name,
+        price: productDetails.price,
+        colorName: productDetails.colorName,
+        sizeName: productDetails.sizeName,
+        imageUrl: productDetails.imageUrl,
+      };
+
+      console.log('[CART_CONTEXT] Sending request to API:', requestBody);
+
       const res = await fetch('/api/cart', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          productId: productDetails.productId,
-          colorId,
-          sizeId,
-          quantity,
-          name: productDetails.name,
-          price: productDetails.price,
-          colorName: productDetails.colorName,
-          sizeName: productDetails.sizeName,
-          imageUrl: productDetails.imageUrl,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to add item to cart');
+      console.log('[CART_CONTEXT] API response status:', res.status);
+      console.log('[CART_CONTEXT] API response headers:', Object.fromEntries(res.headers.entries()));
+
+      let responseData;
+      try {
+        responseData = await res.json();
+        console.log('[CART_CONTEXT] Parsed response data:', responseData);
+      } catch (parseError) {
+        console.error('[CART_CONTEXT] Failed to parse response as JSON:', parseError);
+        responseData = {};
       }
 
+      if (!res.ok) {
+        console.error('[CART_CONTEXT] API error response:', responseData);
+        throw new Error(responseData.error || 'Failed to add item to cart');
+      }
+
+      // Success case
       await fetchCart(); // Refresh cart
+      console.log('[CART_CONTEXT] Cart refreshed successfully');
       setIsCartOpen(true); // Open cart drawer
     } catch (error) {
       console.error('Add to cart error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to add item to cart');
+      
+      let errorMessage = 'Failed to add item to cart';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Show a more user-friendly alert
+      if (errorMessage.includes('Not enough stock available') || errorMessage.includes('out of stock')) {
+        alert('Sorry, this item is currently out of stock. Please try a different size or color.');
+      } else if (errorMessage.includes('Server responded with:')) {
+        alert('There was a server error. Please try again later.');
+      } else {
+        alert(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const removeFromCart = async (itemId: number) => {
+    console.log('[CART_CONTEXT] Removing from cart:', itemId);
+    
     setLoading(true);
     try {
       const res = await fetch(`/api/cart/items?cartItemId=${itemId}`, {
         method: 'DELETE',
       });
 
+      console.log('[CART_CONTEXT] DELETE response status:', res.status);
+
       if (!res.ok) {
-        throw new Error('Failed to remove item from cart');
+        let errorMessage = `Failed to remove item from cart (${res.status})`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          console.warn('[CART_CONTEXT] Could not parse DELETE error response as JSON');
+          errorMessage = `Server error: ${res.status} ${res.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
+      console.log('[CART_CONTEXT] Item removed successfully, refreshing cart...');
       await fetchCart(); // Refresh cart
     } catch (error) {
-      console.error('Remove from cart error:', error);
-      alert('Failed to remove item from cart');
+      console.error('[CART_CONTEXT] Remove from cart error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to remove item from cart');
     } finally {
       setLoading(false);
     }
@@ -175,6 +224,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    console.log('[CART_CONTEXT] Updating quantity:', { itemId, newQuantity });
+    
     setLoading(true);
     try {
       const res = await fetch('/api/cart/items', {
@@ -186,14 +237,24 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }),
       });
 
+      console.log('[CART_CONTEXT] PATCH response status:', res.status);
+
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to update quantity');
+        let errorMessage = `Failed to update quantity (${res.status})`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          console.warn('[CART_CONTEXT] Could not parse error response as JSON');
+          errorMessage = `Server error: ${res.status} ${res.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
+      console.log('[CART_CONTEXT] Quantity update successful, refreshing cart...');
       await fetchCart(); // Refresh cart
     } catch (error) {
-      console.error('Update quantity error:', error);
+      console.error('[CART_CONTEXT] Update quantity error:', error);
       alert(error instanceof Error ? error.message : 'Failed to update quantity');
     } finally {
       setLoading(false);
