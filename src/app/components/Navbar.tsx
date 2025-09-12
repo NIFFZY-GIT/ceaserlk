@@ -5,8 +5,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingCart, Menu, User, CircleUser, X, Settings, Search } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { ShoppingCart, Menu, User, CircleUser, X, Settings } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -22,11 +22,8 @@ const Navbar = () => {
   const { openCart, cartCount } = useCart();
   const { user, logout } = useAuth();
   const pathname = usePathname();
-  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -53,15 +50,6 @@ const Navbar = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  // Handle search
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
-    }
-  };
 
   const handleLinkClick = () => {
     setIsMobileMenuOpen(false);
@@ -101,27 +89,6 @@ const Navbar = () => {
             );
           })}
         </div>
-
-        {/* SEARCH BAR (Desktop only) */}
-        <div className="hidden md:flex">
-          <form onSubmit={handleSearch} className="relative">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setIsSearchFocused(false)}
-                placeholder="Search products..."
-                className={`pl-10 pr-4 py-2 text-sm bg-gray-800 text-white border rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-primary ${
-                  isSearchFocused ? 'w-64 border-primary' : 'w-48 border-gray-600'
-                }`}
-              />
-            </div>
-          </form>
-        </div>
-
         {/* RIGHT SIDE ICONS & MOBILE MENU TOGGLE */}
         <div className="flex items-center space-x-5">
           {/* Profile Icon with Conditional Logic */}
@@ -183,22 +150,6 @@ const Navbar = () => {
       {/* MOBILE MENU (Simplified) */}
       <div className={`absolute top-full left-0 w-full bg-brand-black shadow-lg md:hidden transition-all duration-300 ease-in-out z-20 ${isMobileMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
         <div className="flex flex-col items-center py-10 space-y-8">
-          {/* Mobile Search */}
-          <div className="w-3/4 mb-4">
-            <form onSubmit={handleSearch} className="relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search products..."
-                  className="w-full pl-10 pr-4 py-3 text-sm bg-gray-800 text-white border border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                />
-              </div>
-            </form>
-          </div>
-          
           {navLinks.map((link) => (
             <Link
               key={link.label}

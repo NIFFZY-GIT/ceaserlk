@@ -8,10 +8,9 @@ import { SlidersHorizontal, Loader2 } from 'lucide-react';
 // Define the full Product type for type safety
 type ProductColor = { color_id: number; name: string; hex_code: string; };
 type ProductImage = { image_id: number; url: string; color_id: number | null; };
-type ProductSize = { name: string; stock: number; };
 type Product = {
   id: number; name: string; price: number; salePrice?: number | null;
-  images: ProductImage[]; colors: ProductColor[]; sizes: ProductSize[];
+  images: ProductImage[]; colors: ProductColor[]; sizes: string[];
   stock: { [sizeName: string]: number };
 };
 
@@ -69,7 +68,7 @@ const ShopPage = () => {
     const sizes = new Set<string>();
     const colors = new Map<string, { name: string; hex: string }>();
     allProducts.forEach(product => {
-      product.sizes.forEach(size => sizes.add(size.name));
+      product.sizes.forEach(size => sizes.add(size));
       product.colors.forEach(color => {
         if (!colors.has(color.name)) {
           colors.set(color.name, { name: color.name, hex: color.hex_code });
@@ -77,7 +76,7 @@ const ShopPage = () => {
       });
     });
     return {
-      availableSizes: Array.from(sizes).map(name => ({ name, stock: 0 })), // Convert to expected format
+      availableSizes: Array.from(sizes),
       availableColors: Array.from(colors.values()),
     };
   }, [allProducts]);
@@ -94,7 +93,7 @@ const ShopPage = () => {
 
       // Size filter: show if no sizes selected OR if the product has at least one of the selected sizes
       if (filters.sizes.length > 0) {
-        const productHasSize = product.sizes.some(size => filters.sizes.includes(size.name));
+        const productHasSize = product.sizes.some(size => filters.sizes.includes(size));
         if (!productHasSize) return false;
       }
       
