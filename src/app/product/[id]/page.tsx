@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
-import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, Truck, ArrowLeft } from 'lucide-react';
+import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, Truck, ArrowLeft, X } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 import { gsap } from 'gsap';
 
@@ -28,7 +28,7 @@ type Product = {
 };
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
-  const { addToCart, openCart } = useCart();
+  const { addToCart, openCart, error, clearError } = useCart();
   
   // Animation refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -103,22 +103,46 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       alert("Please select a size.");
       return;
     }
+    
     setIsAdding(true);
+    clearError(); // Clear any previous errors
+    
     try {
-      await addToCart(selectedSize.id, quantity);
+      const success = await addToCart(selectedSize.id, quantity);
       
-      // Success animation
-      gsap.to(".add-to-cart-btn", {
-        scale: 1.05,
-        duration: 0.2,
-        yoyo: true,
-        repeat: 1
-      });
-      
-      openCart();
+      if (success) {
+        // Success animation
+        gsap.to(".add-to-cart-btn", {
+          scale: 1.05,
+          duration: 0.2,
+          yoyo: true,
+          repeat: 1
+        });
+        openCart();
+      } else {
+        // Error animation for stock issues
+        if (containerRef.current) {
+          gsap.to(containerRef.current, {
+            x: 10,
+            duration: 0.1,
+            yoyo: true,
+            repeat: 3,
+            ease: "power2.inOut"
+          });
+        }
+      }
     } catch (error) {
       console.error("Failed to add to cart:", error);
-      alert("There was an issue adding the item to your cart.");
+      // Error animation for other issues
+      if (containerRef.current) {
+        gsap.to(containerRef.current, {
+          x: 10,
+          duration: 0.1,
+          yoyo: true,
+          repeat: 3,
+          ease: "power2.inOut"
+        });
+      }
     } finally {
       setIsAdding(false);
     }
@@ -307,6 +331,21 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             
             {/* Quantity & Add to Cart */}
             <div className="space-y-4">
+              {/* Error Message */}
+              {error && (
+                <div className="p-4 text-sm font-medium text-red-800 bg-red-100 border border-red-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span>{error}</span>
+                    <button
+                      onClick={clearError}
+                      className="ml-2 text-red-600 hover:text-red-800"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-center gap-4">
                 {/* Quantity Selector */}
                 <div className="flex items-center border border-gray-300 rounded-lg">
