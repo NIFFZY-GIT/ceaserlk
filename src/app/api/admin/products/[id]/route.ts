@@ -16,6 +16,7 @@ export async function GET(
         p.id,
         p.name,
         p.description,
+        p.audio_url,
         p.shipping_cost,
         p.is_published,
         (
@@ -94,6 +95,8 @@ export async function PUT(
     const productName = formData.get('productName') as string;
     const description = formData.get('description') as string;
     const shippingCost = formData.get('shippingCost') as string;
+    const audioFile = formData.get('audioFile') as File | null;
+    const removeAudio = formData.get('removeAudio') === 'true';
     
     // Debug logging to see what we received
     console.log('DEBUG - Form Data Received:', {
@@ -131,13 +134,62 @@ export async function PUT(
       await client.query('DELETE FROM product_variants WHERE id = ANY($1::uuid[])', [variantsToDelete]);
     }
 
-    // --- 2. Update the Base Product ---
-    await client.query(
-      'UPDATE products SET name = $1, description = $2, shipping_cost = $3 WHERE id = $4',
-      [productName, description, parseFloat(shippingCost) || 0, productId]
-    );
+    // --- 2. Handle Audio File Upload ---
+    let audioUrl: string | null = null;
+    let shouldUpdateAudio = false;
 
-    // --- 3. Reconcile Variants, Images, and Sizes ---
+    // Get the current product to check if there's an existing audio file
+    const currentProduct = await client.query('SELECT audio_url FROM products WHERE id = $1', [productId]);
+    const oldAudioUrl = currentProduct.rows[0]?.audio_url;
+
+    if (removeAudio && oldAudioUrl) {
+      // Remove existing audio file
+      const oldFilePath = path.join(process.cwd(), 'public', oldAudioUrl);
+      try {
+        await fs.unlink(oldFilePath);
+      } catch (e) {
+        console.error(`Failed to delete old audio file: ${oldFilePath}`, e);
+      }
+      audioUrl = null;
+      shouldUpdateAudio = true;
+    } else if (audioFile && audioFile.size > 0) {
+      // Delete old audio file if it exists when replacing with new one
+      if (oldAudioUrl) {
+        const oldFilePath = path.join(process.cwd(), 'public', oldAudioUrl);
+        try {
+          await fs.unlink(oldFilePath);
+        } catch (e) {
+          console.error(`Failed to delete old audio file: ${oldFilePath}`, e);
+        }
+      }
+      
+      const buffer = Buffer.from(await audioFile.arrayBuffer());
+      const filename = `${Date.now()}-${audioFile.name.replace(/\s+/g, '-')}`;
+      const uploadPath = path.join(process.cwd(), 'public/uploads/audio', filename);
+      
+      // Ensure the audio directory exists
+      const audioDir = path.join(process.cwd(), 'public/uploads/audio');
+      await fs.mkdir(audioDir, { recursive: true });
+      
+      await fs.writeFile(uploadPath, buffer);
+      audioUrl = `/uploads/audio/${filename}`;
+      shouldUpdateAudio = true;
+    }
+
+    // --- 3. Update the Base Product ---
+    if (shouldUpdateAudio) {
+      await client.query(
+        'UPDATE products SET name = $1, description = $2, shipping_cost = $3, audio_url = $4 WHERE id = $5',
+        [productName, description, parseFloat(shippingCost) || 0, audioUrl, productId]
+      );
+    } else {
+      await client.query(
+        'UPDATE products SET name = $1, description = $2, shipping_cost = $3 WHERE id = $4',
+        [productName, description, parseFloat(shippingCost) || 0, productId]
+      );
+    }
+
+    // --- 4. Reconcile Variants, Images, and Sizes ---
     for (const variant of variants) {
       let variantId = variant.id;
       let thumbnailUrl: string | null = variant.thumbnailImageUrl; // Start with the existing one

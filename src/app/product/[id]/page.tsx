@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, X } from 'lucide-react';
+import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, X, Volume2, VolumeX } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 import { gsap } from 'gsap';
 
@@ -26,6 +26,7 @@ type Product = {
   id: string;
   name: string;
   description: string;
+  audio_url: string | null;
   variants: Variant[];
 };
 
@@ -42,6 +43,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   
   // State management
   const [product, setProduct] = useState<Product | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [selectedSize, setSelectedSize] = useState<StockInfo | null>(null);
@@ -49,6 +51,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  
+  // Audio player state
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   // Entrance animations - Optimized to prevent double animation
   useEffect(() => {
@@ -114,11 +121,32 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     };
   }, [params.id, searchParams]);
 
+  // Auto-play audio when product loads
+  useEffect(() => {
+    if (product?.audio_url && audioRef.current && !isAudioPlaying) {
+      const playAudio = async () => {
+        try {
+          audioRef.current!.volume = isMuted ? 0 : 0.5; // Set initial volume
+          await audioRef.current!.play();
+          setIsAudioPlaying(true);
+        } catch (error) {
+          console.log('Audio autoplay prevented by browser:', error);
+        }
+      };
+      playAudio();
+    }
+  }, [product?.audio_url, isMuted, isAudioPlaying]);
+
   const handleVariantSelect = (variant: Variant) => {
     setSelectedVariant(variant);
     setSelectedImage(variant.images?.[0] || null);
     setSelectedSize(variant.stock?.find(s => s.stock > 0) || null);
     setQuantity(1);
+    
+    // Update URL without triggering a full page reload
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('variant', variant.variantId);
+    window.history.replaceState({}, '', newUrl.toString());
   };
   
   const handleAddToCart = async () => {
@@ -187,6 +215,19 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     } finally {
       setIsAdding(false);
     }
+  };
+
+  // Audio control functions
+  const toggleMute = () => {
+    if (audioRef.current) {
+      const newMutedState = !isMuted;
+      setIsMuted(newMutedState);
+      audioRef.current.volume = newMutedState ? 0 : 0.5;
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsAudioPlaying(false);
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
@@ -295,6 +336,38 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 {product.name}
               </h1>
             </div>
+
+            {/* Audio Player Controls */}
+            {product.audio_url && (
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-gray-50">
+                <div className="flex items-center gap-2">
+                  {isAudioPlaying ? (
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  ) : (
+                    <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                  )}
+                  <span className="text-sm font-medium text-gray-700">
+                    {isAudioPlaying ? 'Playing Audio' : 'Audio Ready'}
+                  </span>
+                </div>
+                <button
+                  onClick={toggleMute}
+                  className="flex items-center justify-center w-10 h-10 text-gray-600 transition-all bg-white border-2 border-gray-200 rounded-full hover:border-gray-300 hover:text-gray-900 hover:scale-105"
+                  title={isMuted ? "Unmute audio" : "Mute audio"}
+                >
+                  {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                </button>
+                <audio 
+                  ref={audioRef}
+                  src={product.audio_url}
+                  onEnded={handleAudioEnded}
+                  onPlay={() => setIsAudioPlaying(true)}
+                  onPause={() => setIsAudioPlaying(false)}
+                  loop
+                  preload="auto"
+                />
+              </div>
+            )}
             
             {/* Price */}
             <div className="space-y-2">

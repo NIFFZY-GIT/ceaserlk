@@ -14,7 +14,10 @@ interface ProductVariant {
   images: ProductImage[]; sizes: ProductSize[];
 }
 interface FullProduct {
-  id: string; name: string; description: string;
+  id: string; 
+  name: string; 
+  description: string;
+  audio_url: string | null;
   shipping_cost: string; // Add shipping cost
   variants: ProductVariant[];
 }
@@ -40,6 +43,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
   const [shippingCost, setShippingCost] = useState('');
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
+  const [removeAudio, setRemoveAudio] = useState(false);
   const [variants, setVariants] = useState<VariantFormState[]>([]);
 
   // State to track items to be deleted on the backend
@@ -61,6 +67,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         setProductName(data.name);
         setDescription(data.description || '');
         setShippingCost(data.shipping_cost?.toString() || '0');
+        setCurrentAudioUrl(data.audio_url);
         setVariants(data.variants.map(v => ({
           ...v,
           compareAtPrice: v.compareAtPrice || '', sku: v.sku || '',
@@ -102,6 +109,17 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     formData.append('productName', productName);
     formData.append('description', description);
     formData.append('shippingCost', shippingCost);
+    
+    // Add audio file if selected
+    if (audioFile) {
+      formData.append('audioFile', audioFile);
+    }
+    
+    // Add remove audio flag
+    if (removeAudio) {
+      formData.append('removeAudio', 'true');
+    }
+    
     formData.append('variantsToDelete', JSON.stringify(variantsToDelete));
     formData.append('imagesToDelete', JSON.stringify(imagesToDelete));
     formData.append('sizesToDelete', JSON.stringify(sizesToDelete));
@@ -185,6 +203,67 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                <p className="mt-1 text-xs text-gray-500">
                   Enter 0 for free shipping on this product.
                 </p>
+            </div>
+            
+            {/* AUDIO FILE FIELD */}
+            <div>
+              <label htmlFor="audioFile" className="block text-sm font-medium text-gray-700">
+                Product Audio File
+              </label>
+              <input 
+                type="file" 
+                id="audioFile" 
+                accept="audio/*" 
+                disabled={removeAudio}
+                onChange={(e) => setAudioFile(e.target.files?.[0] || null)} 
+                className="block w-full mt-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Upload an audio file for your product (e.g., sound demo, pronunciation guide)
+              </p>
+              {currentAudioUrl && !removeAudio && (
+                <div className="mt-2">
+                  <p className="text-sm font-medium text-gray-700">Current Audio:</p>
+                  <div className="flex items-center gap-4 mt-1">
+                    <audio controls className="flex-1">
+                      <source src={currentAudioUrl} type="audio/mpeg" />
+                      <source src={currentAudioUrl} type="audio/wav" />
+                      <source src={currentAudioUrl} type="audio/ogg" />
+                      Your browser does not support the audio element.
+                    </audio>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRemoveAudio(true);
+                        setAudioFile(null); // Clear any selected new file
+                      }}
+                      className="px-3 py-1 text-sm text-red-600 transition-colors border border-red-300 rounded hover:bg-red-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              )}
+              {removeAudio && (
+                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                  <p className="text-sm text-red-700">Audio will be removed when you save.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRemoveAudio(false);
+                      setAudioFile(null); // Clear any selected new file
+                    }}
+                    className="mt-1 text-sm text-red-600 underline hover:no-underline"
+                  >
+                    Undo
+                  </button>
+                </div>
+              )}
+              {audioFile && (
+                <p className="mt-1 text-sm text-green-600">
+                  New file selected: {audioFile.name}
+                </p>
+              )}
             </div>
             
             <div>

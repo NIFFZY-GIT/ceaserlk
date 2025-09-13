@@ -17,6 +17,7 @@ export async function GET(
         p.id,
         p.name,
         p.description,
+        p.audio_url,
         (
           SELECT json_agg(variants_agg)
           FROM (
