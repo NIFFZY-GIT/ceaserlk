@@ -14,7 +14,7 @@ interface StripePaymentHandlerProps {
   };
 }
 
-export default function StripePaymentHandler({ cart, onPaymentSuccess, shippingDetails }: StripePaymentHandlerProps) {
+export default function StripePaymentHandler({ cart, shippingDetails }: Omit<StripePaymentHandlerProps, 'onPaymentSuccess'>) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);

@@ -4,17 +4,15 @@ import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { Loader2, Lock, ShoppingBag, ArrowLeft, CreditCard } from 'lucide-react';
+import { Loader2, ArrowLeft, CreditCard } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import StripePaymentHandler from './StripePaymentHandler';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export default function CheckoutPage() {
   const { cart, loading: cartLoading, cartCount } = useCart();
-  const router = useRouter();
 
   const [shippingDetails, setShippingDetails] = useState({
     email: '',
@@ -26,19 +24,12 @@ export default function CheckoutPage() {
     postalCode: '',
     country: 'Sri Lanka'
   });
-  const [formError, setFormError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setShippingDetails({ ...shippingDetails, [e.target.name]: e.target.value });
   };
 
   // --- THIS IS THE KEY CHANGE ---
-  // This function's only job is to redirect the user to the confirmation page.
-  // The confirmation page will then be responsible for verifying the payment and creating the order.
-  const onPaymentSuccess = async (paymentIntentId: string) => {
-    router.push(`/order-confirmation?payment_intent=${paymentIntentId}`);
-  };
-
   if (cartLoading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
   if (!cart || cartCount === 0) return <div className="flex flex-col items-center justify-center min-h-screen text-center"><h1 className="text-2xl font-bold">Your cart is empty.</h1><Link href="/shop" className="mt-4 text-primary hover:underline">Continue Shopping</Link></div>;
 
@@ -70,9 +61,8 @@ export default function CheckoutPage() {
               <div className="p-8 bg-white border shadow-sm rounded-xl">
                 <div className="flex items-center gap-3 mb-6"><div className="flex items-center justify-center w-8 h-8 text-sm font-bold text-white bg-black rounded-full">2</div><h2 className="text-xl font-bold text-gray-900">Payment Details</h2><CreditCard className="w-6 h-6 text-gray-500" /></div>
                 <Elements stripe={stripePromise} options={options}>
-                  <StripePaymentHandler cart={cart} onPaymentSuccess={onPaymentSuccess} shippingDetails={shippingDetails} />
+                  <StripePaymentHandler cart={cart} shippingDetails={shippingDetails} />
                 </Elements>
-                {formError && <div className="p-3 mt-4 text-sm text-red-700 bg-red-100 border border-red-200 rounded-lg">{formError}</div>}
               </div>
             </div>
           </div>

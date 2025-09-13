@@ -3,7 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Loader2 } from 'lucide-react';
-import { AdminData } from '../page';
+
+export interface AdminData {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  created_at: string;
+}
 
 interface CurrentUser {
     userId: string;

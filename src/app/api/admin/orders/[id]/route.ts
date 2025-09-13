@@ -5,9 +5,9 @@ import { db } from '@/lib/db';
 // --- GET a single order's full details (with corrected signature) ---
 export async function GET(
   request: NextRequest, 
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params; // Now correctly destructured
+  const { id } = await params; // Await the params promise
   if (!id) {
     return NextResponse.json({ error: "ID parameter is missing" }, { status: 400 });
   }
@@ -20,7 +20,7 @@ export async function GET(
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
     */
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
 
@@ -69,7 +69,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
     */
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
 

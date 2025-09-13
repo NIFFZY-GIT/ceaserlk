@@ -1,15 +1,30 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Crown, Loader2, User, Mail, Phone, Calendar, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Crown, Loader2, Mail, Phone, Calendar, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
-import { CustomerDetail, CustomerOrder } from '../page';
+
+export interface CustomerOrder {
+  id: string;
+  status: string;
+  total_amount: string;
+  created_at: string;
+}
+
+export interface CustomerDetail {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: 'USER' | 'ADMIN';
+  created_at: string;
+  phone_number: string;
+  orders: CustomerOrder[];
+}
 
 const statusColors: { [key: string]: string } = { PAID: 'bg-blue-100 text-blue-800', SHIPPED: 'bg-indigo-100 text-indigo-800', DELIVERED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-800', PENDING: 'bg-yellow-100 text-yellow-800', };
 
 export default function CustomerDetailView({ customer }: { customer: CustomerDetail }) {
-  const router = useRouter();
   const [currentRole, setCurrentRole] = useState(customer.role);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +44,8 @@ export default function CustomerDetailView({ customer }: { customer: CustomerDet
         if (!res.ok) throw new Error("Failed to promote user.");
         const data = await res.json();
         setCurrentRole(data.role);
-    } catch (err: any) {
-        setError(err.message);
+    } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to promote user');
     } finally {
         setIsUpdating(false);
     }

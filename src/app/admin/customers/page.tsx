@@ -6,7 +6,7 @@ async function getCustomers(): Promise<CustomerData[]> {
   try {
     // --- THIS IS THE FIX for the cookies() error ---
     // We get the headers from the incoming request and forward them.
-    const requestHeaders = new Headers(headers());
+    const requestHeaders = new Headers(await headers());
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/customers`, {
       cache: 'no-store',

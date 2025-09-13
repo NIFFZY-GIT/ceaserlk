@@ -12,7 +12,7 @@ export async function GET(
     if (!authResult || authResult.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
   
@@ -69,7 +69,7 @@ export async function PUT(
     if (!authResult || authResult.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
   

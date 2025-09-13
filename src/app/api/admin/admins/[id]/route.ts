@@ -13,14 +13,14 @@ export async function PUT(
     if (!authResult || authResult.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
   
   const { id: targetUserId } = params;
 
   // --- CRITICAL SECURITY CHECK: Prevent an admin from demoting themselves ---
-  if (authResult.userId === targetUserId) {
+  if (authResult.userId.toString() === targetUserId) {
     return NextResponse.json({ error: "You cannot change your own role." }, { status: 400 });
   }
 

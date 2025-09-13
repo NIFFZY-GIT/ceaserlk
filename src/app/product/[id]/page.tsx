@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, Truck, ArrowLeft, X } from 'lucide-react';
+import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, X } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 import { gsap } from 'gsap';
 
@@ -33,6 +33,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const { addToCart, openCart, error, clearError } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   // Animation refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,9 +50,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [isAdding, setIsAdding] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  // Entrance animations
+  // Entrance animations - Optimized to prevent double animation
   useEffect(() => {
-    if (!loading && product && containerRef.current) {
+    if (!loading && product && containerRef.current && !containerRef.current.hasAttribute('data-animated')) {
+      containerRef.current.setAttribute('data-animated', 'true');
       gsap.fromTo(containerRef.current.children, 
         { opacity: 0, y: 30 },
         { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: "power2.out" }
@@ -59,7 +61,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
   }, [loading, product]);
 
+  // Product fetching with variant URL parameter handling
   useEffect(() => {
+    let isMounted = true; // Prevent state updates if component unmounts
+    
     const fetchProduct = async () => {
       setLoading(true);
       try {
@@ -69,21 +74,45 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           throw new Error('Failed to fetch product');
         }
         const data: Product = await res.json();
-        setProduct(data);
-        if (data.variants && data.variants.length > 0) {
-          const initialVariant = data.variants[0];
-          setSelectedVariant(initialVariant);
-          setSelectedImage(initialVariant.images?.[0] || null);
-          setSelectedSize(initialVariant.stock?.find(s => s.stock > 0) || null);
+        
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setProduct(data);
+          
+          if (data.variants && data.variants.length > 0) {
+            // Check if there's a variant parameter in the URL
+            const variantParam = searchParams.get('variant');
+            let initialVariant = data.variants[0]; // Default to first variant
+            
+            // If variant parameter exists, try to find matching variant
+            if (variantParam) {
+              const matchedVariant = data.variants.find(v => v.variantId === variantParam);
+              if (matchedVariant) {
+                initialVariant = matchedVariant;
+              }
+            }
+            
+            setSelectedVariant(initialVariant);
+            setSelectedImage(initialVariant.images?.[0] || null);
+            setSelectedSize(initialVariant.stock?.find(s => s.stock > 0) || null);
+          }
         }
       } catch (error) {
         console.error(error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
+    
     fetchProduct();
-  }, [params.id]);
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      isMounted = false;
+    };
+  }, [params.id, searchParams]);
 
   const handleVariantSelect = (variant: Variant) => {
     setSelectedVariant(variant);

@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-08-27.basil',
 });
 
 export async function POST(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, orderId: existingOrder.rows[0].id });
       }
 
-      const { cart_id, customer_email, customer_name, shipping_address, shipping_city, shipping_postal, phone, subtotal, shipping_cost, total_amount } = paymentIntent.metadata;
+      const { cart_id, userId, customer_email, customer_name, shipping_address, shipping_city, shipping_postal, phone, subtotal, shipping_cost, total_amount } = paymentIntent.metadata;
       if (!cart_id || !customer_email) {
         throw new Error('Essential metadata missing from Payment Intent');
       }
@@ -50,12 +50,13 @@ export async function POST(request: NextRequest) {
       await client.query('BEGIN');
       const orderQuery = `
         INSERT INTO orders (
-          customer_email, full_name, phone_number,
+          user_id, customer_email, full_name, phone_number,
           shipping_address_line1, shipping_city, shipping_postal_code, shipping_country, 
           subtotal, shipping_cost, total_amount, payment_intent_id, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PAID') RETURNING id;
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'PAID') RETURNING id;
       `;
       const orderResult = await client.query(orderQuery, [
+        userId, // <-- THE FIX IS HERE
         customer_email, customer_name, phone, shipping_address, shipping_city, 
         shipping_postal, 'Sri Lanka', parseFloat(subtotal), parseFloat(shipping_cost), 
         parseFloat(total_amount), paymentIntentId

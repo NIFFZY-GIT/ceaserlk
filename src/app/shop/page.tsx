@@ -1,21 +1,33 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { ProductCard } from '@/app/components/ProductCard';
 import FilterSidebar, { Filters, AvailableColors } from '@/app/components/FilterSidebar';
 import { SlidersHorizontal, Loader2 } from 'lucide-react';
 
 // Simplified Product type, as the backend now structures the data perfectly for the card
+type ProductVariant = {
+  variantId: string;
+  price: string;
+  compareAtPrice: string | null;
+  thumbnailUrl: string;
+  colorName: string;
+  colorHex: string;
+  images: { id: string, url: string }[];
+  stock: { id: string; size: string; stock: number }[];
+};
+
 type Product = {
   id: string;
   name: string;
   description: string;
-  variants: any[]; // The ProductCard will handle the variant details
+  variants: ProductVariant[];
 };
 
 const ShopPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
   // State for filter options, fetched once
   const [availableSizes, setAvailableSizes] = useState<string[]>([]);
@@ -32,37 +44,60 @@ const ShopPage = () => {
   // UI State
   const [isMobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [isDesktopFilterVisible, setDesktopFilterVisible] = useState(true);
-  
-  // Fetch initial filter options and price range on mount
+  // Combined effect to fetch initial data and products in one go
   useEffect(() => {
-    const fetchInitialData = async () => {
+    let isMounted = true;
+    
+    const fetchAllData = async () => {
+      setLoading(true);
       try {
+        // Fetch filter options and price range first
         const [optionsRes, priceRes] = await Promise.all([
           fetch('/api/products/filter-options'),
           fetch('/api/products/price-range'),
         ]);
+        
         const optionsData = await optionsRes.json();
         const priceData = await priceRes.json();
         
-        setAvailableSizes(optionsData.availableSizes);
-        setAvailableColors(optionsData.availableColors);
-        setPriceRange(priceData);
-        // Set the filter's max price to the highest possible value
-        setFilters(prev => ({ ...prev, maxPrice: priceData.maxPrice }));
+        if (isMounted) {
+          setAvailableSizes(optionsData.availableSizes);
+          setAvailableColors(optionsData.availableColors);
+          setPriceRange(priceData);
+          setFilters(prev => ({ ...prev, maxPrice: priceData.maxPrice }));
+          setInitialDataLoaded(true);
+          
+          // Now fetch products with default filters
+          const res = await fetch('/api/products');
+          const productsData = await res.json();
+          setProducts(productsData);
+        }
       } catch (error) {
-        console.error("Failed to fetch initial filter data:", error);
+        console.error("Failed to fetch shop data:", error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
-    fetchInitialData();
+
+    fetchAllData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // --- CORE LOGIC: Re-fetch products when filters change ---
+  // Separate effect for filter changes (only after initial load)
   useEffect(() => {
+    if (!initialDataLoaded) return;
+    
+    let isMounted = true;
+    
     const fetchFilteredProducts = async () => {
       setLoading(true);
       
       const params = new URLSearchParams();
-      // Only add maxPrice if it's not the absolute maximum
       if (filters.maxPrice < priceRange.maxPrice) {
         params.append('maxPrice', filters.maxPrice.toString());
       }
@@ -76,19 +111,24 @@ const ShopPage = () => {
       try {
         const res = await fetch(`/api/products?${params.toString()}`);
         const data = await res.json();
-        setProducts(data);
+        if (isMounted) {
+          setProducts(data);
+        }
       } catch (error) {
         console.error("Failed to fetch filtered products:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
-    // Don't fetch until the initial price range is loaded
-    if (priceRange.maxPrice > 0) {
-      fetchFilteredProducts();
-    }
-  }, [filters, priceRange.maxPrice]);
+    fetchFilteredProducts();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [filters, initialDataLoaded, priceRange.maxPrice]);
 
 
   const handleFilterChange = (filterType: keyof Filters, value: string | number) => {

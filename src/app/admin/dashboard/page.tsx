@@ -1,4 +1,4 @@
-import { DollarSign, ShoppingBag, Users, AlertCircle, Package } from 'lucide-react';
+import { DollarSign, ShoppingBag, Users, AlertCircle } from 'lucide-react';
 import SalesChart from './_components/SalesChart';
 import Link from 'next/link';
 import { cookies } from 'next/headers'; // <-- 1. IMPORT THE COOKIES HELPER

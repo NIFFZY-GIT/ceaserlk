@@ -9,6 +9,12 @@ export interface Filters {
   colors: string[];
 }
 
+// Define the available colors type
+export interface AvailableColors {
+  name: string;
+  hex: string;
+}
+
 // Define the shape of the props this component will receive
 interface FilterSidebarProps {
   isOpen: boolean;
@@ -16,7 +22,7 @@ interface FilterSidebarProps {
   filters: Filters;
   onFilterChange: (filterType: keyof Filters, value: string | number) => void;
   availableSizes: string[];
-  availableColors: { name: string; hex: string }[];
+  availableColors: AvailableColors[];
   clearFilters: () => void;
   minPrice: number;
   maxPrice: number;

@@ -22,7 +22,7 @@ export interface CustomerDetail {
 
 async function getCustomerDetails(id: string): Promise<CustomerDetail | null> {
   try {
-    const requestHeaders = new Headers(headers());
+    const requestHeaders = new Headers(await headers());
     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/customers/${id}`, {
       cache: 'no-store',
       headers: requestHeaders,

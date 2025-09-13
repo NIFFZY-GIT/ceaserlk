@@ -3,8 +3,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Edit, Trash2, MoreVertical, Loader2 } from 'lucide-react';
-import { ProductSummary } from '../page'; // Import the type from the parent page
+import { Edit, Trash2, Loader2 } from 'lucide-react';
+
+interface ProductSummary {
+  id: string;
+  name: string;
+  shipping_cost: string;
+  is_published: boolean;
+  variant_count: string; // Changed to string to match API response
+  total_stock: string;   // Changed to string to match API response
+  created_at: string;
+}
 
 export default function ProductTable({ products }: { products: ProductSummary[] }) {
   const router = useRouter();

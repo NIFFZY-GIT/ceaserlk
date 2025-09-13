@@ -11,7 +11,7 @@ export interface AdminData {
 
 async function getAdmins(): Promise<AdminData[]> {
   try {
-    const requestHeaders = new Headers(headers());
+    const requestHeaders = new Headers(await headers());
     const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/admins`, {
       cache: 'no-store',
       headers: requestHeaders,

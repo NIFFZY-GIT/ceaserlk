@@ -57,7 +57,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         const updatedOrder = await res.json();
         setOrder(updatedOrder);
         setUpdateMessage({ type: 'success', text: 'Status updated successfully!' });
-    } catch (error) {
+    } catch {
         setUpdateMessage({ type: 'error', text: 'Failed to update status.' });
     } finally {
         setIsUpdating(false);
