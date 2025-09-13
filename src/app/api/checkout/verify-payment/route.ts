@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { sendEmail, generateOrderConfirmationEmail } from '@/lib/email';
+import { generateInvoicePDF, generateInvoiceFilename, InvoiceData } from '@/lib/pdf-invoice';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -78,6 +80,75 @@ export async function POST(request: NextRequest) {
 
       await client.query('DELETE FROM carts WHERE id = $1', [cart_id]);
       await client.query('COMMIT');
+      
+      // Send confirmation email with PDF invoice (don't block the response)
+      try {
+        const items = cartResult.rows.map(item => ({
+          productName: item.product_name,
+          variantColor: item.color_name,
+          variantSize: item.size,
+          quantity: item.quantity,
+          pricePaid: parseFloat(item.variant_price)
+        }));
+
+        const invoiceData: InvoiceData = {
+          orderId,
+          orderDate: new Date(),
+          customerName: customer_name,
+          customerEmail: customer_email,
+          phoneNumber: phone,
+          shippingAddress: {
+            line1: shipping_address,
+            city: shipping_city,
+            postalCode: shipping_postal,
+            country: 'Sri Lanka'
+          },
+          items,
+          subtotal: parseFloat(subtotal),
+          shippingCost: parseFloat(shipping_cost),
+          totalAmount: parseFloat(total_amount)
+        };
+
+        // Generate PDF invoice
+        const pdfBuffer = generateInvoicePDF(invoiceData);
+        const filename = generateInvoiceFilename(orderId);
+
+        // Generate email HTML
+        const emailHtml = generateOrderConfirmationEmail({
+          orderId,
+          customerName: customer_name,
+          customerEmail: customer_email,
+          items,
+          subtotal: parseFloat(subtotal),
+          shippingCost: parseFloat(shipping_cost),
+          totalAmount: parseFloat(total_amount),
+          shippingAddress: {
+            line1: shipping_address,
+            city: shipping_city,
+            postalCode: shipping_postal,
+            country: 'Sri Lanka'
+          }
+        });
+
+        // Send email with invoice attachment
+        await sendEmail({
+          to: customer_email,
+          subject: `Order Confirmation - ${orderId} | Ceaser LK`,
+          html: emailHtml,
+          attachments: [
+            {
+              filename,
+              content: pdfBuffer,
+              contentType: 'application/pdf'
+            }
+          ]
+        });
+
+        console.log(`Order confirmation email sent successfully to ${customer_email}`);
+      } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
+        // Don't fail the order creation if email fails
+      }
       
       return NextResponse.json({ success: true, orderId });
 

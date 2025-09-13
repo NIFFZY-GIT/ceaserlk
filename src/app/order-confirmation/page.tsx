@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext'; // To clear the cart
 
@@ -13,14 +13,40 @@ export default function OrderConfirmationPage() {
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+
+  const handleDownloadInvoice = async () => {
+    if (!orderId) return;
+    
+    try {
+      const response = await fetch(`/api/orders/${orderId}/invoice`);
+      if (!response.ok) {
+        throw new Error('Failed to download invoice');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${orderId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      alert('Failed to download invoice. Please try again.');
+    }
+  };
 
   useEffect(() => {
-    const orderId = searchParams.get('orderId');
+    const orderIdParam = searchParams.get('orderId');
     const paymentIntent = searchParams.get('payment_intent');
 
-    if (orderId) {
+    if (orderIdParam) {
       // Scenario A: We were redirected by our own code after a successful order creation.
       // The order is already in our DB.
+      setOrderId(orderIdParam);
       setStatus('success');
       fetchCart(); // This will fetch a new, empty cart, effectively clearing the old one.
     } else if (paymentIntent) {
@@ -39,14 +65,16 @@ export default function OrderConfirmationPage() {
             throw new Error(errorData.error || "Failed to verify payment and create order.");
           }
           
-          const { orderId } = await res.json();
+          const { orderId: newOrderId } = await res.json();
+          setOrderId(newOrderId);
           setStatus('success');
           fetchCart(); // Clear the cart
           // Optional: update the URL to be clean
-          router.replace(`/order-confirmation?orderId=${orderId}`);
+          router.replace(`/order-confirmation?orderId=${newOrderId}`);
 
-        } catch (err: any) {
-          setErrorMessage(err.message);
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+          setErrorMessage(errorMessage);
           setStatus('error');
         }
       };
@@ -71,10 +99,22 @@ export default function OrderConfirmationPage() {
       <CheckCircle className="w-24 h-24 text-green-500" />
       <h1 className="mt-6 text-3xl font-bold text-gray-900">Thank you for your order!</h1>
       <p className="mt-2 text-lg text-gray-600">Your payment was successful and your order is being processed.</p>
-      <p className="mt-1 text-sm text-gray-500">Order ID: {searchParams.get('orderId')}</p>
-      <Link href="/shop" className="px-6 py-3 mt-8 font-semibold text-white transition-colors bg-black rounded-md hover:bg-gray-800">
-        Continue Shopping
-      </Link>
+      <p className="mt-1 text-sm text-gray-500">Order ID: {orderId}</p>
+      <p className="mt-2 text-sm text-gray-500">A confirmation email with your invoice has been sent to your email address.</p>
+      
+      <div className="flex flex-col gap-4 mt-8 sm:flex-row">
+        <button 
+          onClick={handleDownloadInvoice}
+          className="flex items-center gap-2 px-6 py-3 font-semibold text-gray-700 transition-colors bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+        >
+          <Download className="w-4 h-4" />
+          Download Invoice
+        </button>
+        
+        <Link href="/shop" className="px-6 py-3 font-semibold text-white transition-colors bg-black rounded-md hover:bg-gray-800">
+          Continue Shopping
+        </Link>
+      </div>
     </div>
   );
 }

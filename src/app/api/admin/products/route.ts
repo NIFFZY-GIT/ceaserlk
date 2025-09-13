@@ -12,7 +12,7 @@ type VariantPayload = {
 };
 
 // GET function for the product list page (remains the same)
-export async function GET(request: Request) {
+export async function GET() {
     try {
         const query = `
             SELECT p.id, p.name, p.shipping_cost, p.is_published, p.created_at,
