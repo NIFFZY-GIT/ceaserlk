@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, Truck, ArrowLeft, X } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 import { gsap } from 'gsap';
@@ -29,6 +31,8 @@ type Product = {
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const { addToCart, openCart, error, clearError } = useCart();
+  const { user } = useAuth();
+  const router = useRouter();
   
   // Animation refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -89,6 +93,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   };
   
   const handleAddToCart = async () => {
+    // Check authentication first
+    if (!user) {
+      // Redirect to login page with current product page as return URL
+      const returnUrl = `/product/${params.id}`;
+      router.push(`/login?redirect=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
+
     if (!selectedSize || !selectedVariant) {
       // Animate error feedback
       if (containerRef.current) {

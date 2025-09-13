@@ -27,20 +27,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/auth/me', {
+        method: 'GET',
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData.user);
+        if (userData.user && userData.authenticated) {
+          setUser(userData.user);
+        } else {
+          console.warn('Invalid response format from /api/auth/me');
+          setUser(null);
+        }
+      } else if (response.status === 401) {
+        // Token expired or invalid - this is normal, just set user to null
+        setUser(null);
       } else {
+        // Other errors - log them for debugging
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Auth check failed:', response.status, errorData);
         setUser(null);
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('Auth check network error:', error);
       setUser(null);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const refreshTokenIfNeeded = async () => {
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.refreshed && data.user) {
+          setUser(data.user);
+          console.log('Token refreshed successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
     }
   };
 
@@ -50,10 +87,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', {
+      const response = await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+      
+      if (!response.ok) {
+        console.warn('Logout request failed, but continuing with local logout');
+      }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -63,7 +107,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     checkAuth();
-  }, []);
+    
+    // Set up periodic auth check every 5 minutes to keep session alive
+    const authInterval = setInterval(async () => {
+      // First try to refresh the token if needed
+      await refreshTokenIfNeeded();
+      // Then check auth status
+      await checkAuth();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    // Cleanup interval on unmount
+    return () => clearInterval(authInterval);
+  }, []); // Empty dependency array - only run once on mount
 
   return (
     <AuthContext.Provider value={{

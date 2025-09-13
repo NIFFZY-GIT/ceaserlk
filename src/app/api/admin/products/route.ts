@@ -27,6 +27,7 @@ export async function GET(request: Request) {
             SELECT
                 p.id,
                 p.name,
+                p.shipping_cost,
                 p.is_published,
                 p.created_at,
                 COUNT(DISTINCT pv.id) AS variant_count,
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
             LEFT JOIN
                 stock_keeping_units sku ON pv.id = sku.variant_id
             GROUP BY
-                p.id, p.name, p.is_published, p.created_at
+                p.id, p.name, p.shipping_cost, p.is_published, p.created_at
             ORDER BY
                 p.created_at DESC;
         `;
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
         const formData = await request.formData();
         const productName = formData.get('productName') as string;
         const description = formData.get('description') as string;
+        const shippingCost = formData.get('shippingCost') as string;
         const variantsString = formData.get('variants') as string;
         
         // ... (keep validation) ...
@@ -67,8 +69,8 @@ export async function POST(request: Request) {
         await client.query('BEGIN');
 
         const productResult = await client.query(
-            'INSERT INTO products (name, description, is_published) VALUES ($1, $2, $3) RETURNING id',
-            [productName, description, true]
+            'INSERT INTO products (name, description, shipping_cost, is_published) VALUES ($1, $2, $3, $4) RETURNING id',
+            [productName, description, parseFloat(shippingCost) || 0, true]
         );
         const productId = productResult.rows[0].id;
 

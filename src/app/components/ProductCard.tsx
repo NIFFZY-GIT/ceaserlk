@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 // --- NEW TYPE DEFINITIONS that match your new API response ---
 type StockInfo = { id: string; size: string; stock: number };
@@ -31,11 +33,8 @@ const OutOfStockLine = () => (
 
 export const ProductCard = ({ product }: { product: Product }) => {
   const { addToCart } = useCart();
-
-  // --- ROBUSTNESS CHECK ---
-  if (!product?.variants?.length) {
-    return null; // Don't render a card if there's no data
-  }
+  const { user } = useAuth();
+  const router = useRouter();
 
   // --- REFACTORED STATE MANAGEMENT ---
   const [activeVariantIndex, setActiveVariantIndex] = useState(0);
@@ -43,6 +42,11 @@ export const ProductCard = ({ product }: { product: Product }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+
+  // --- ROBUSTNESS CHECK ---
+  if (!product?.variants?.length) {
+    return null; // Don't render a card if there's no data
+  }
 
   // --- DERIVED VALUES from the active variant ---
   const activeVariant = product.variants[activeVariantIndex];
@@ -68,6 +72,15 @@ export const ProductCard = ({ product }: { product: Product }) => {
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Check authentication first
+    if (!user) {
+      // Redirect to login page with current product page as return URL
+      const returnUrl = `/product/${product.id}`;
+      router.push(`/login?redirect=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
+    
     if (!selectedSize) { 
       alert("Please select a size."); 
       return; 

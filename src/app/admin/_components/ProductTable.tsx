@@ -42,6 +42,7 @@ export default function ProductTable({ products }: { products: ProductSummary[] 
         <thead>
           <tr className="border-b">
             <th className="px-4 py-3 font-medium text-gray-500">Product Name</th>
+            <th className="px-4 py-3 font-medium text-center text-gray-500">Shipping Cost</th>
             <th className="px-4 py-3 font-medium text-gray-500">Status</th>
             <th className="px-4 py-3 font-medium text-center text-gray-500">Variants</th>
             <th className="px-4 py-3 font-medium text-center text-gray-500">Stock</th>
@@ -53,6 +54,15 @@ export default function ProductTable({ products }: { products: ProductSummary[] 
           {products.map((product) => (
             <tr key={product.id} className="border-b hover:bg-gray-50">
               <td className="px-4 py-3 font-medium">{product.name}</td>
+              <td className="px-4 py-3 text-center">
+                <span className="font-semibold">
+                  {parseFloat(product.shipping_cost) === 0 ? (
+                    <span className="text-green-600">Free</span>
+                  ) : (
+                    `LKR ${parseFloat(product.shipping_cost).toFixed(2)}`
+                  )}
+                </span>
+              </td>
               <td className="px-4 py-3">
                 <span className={`px-2 py-1 text-xs font-semibold rounded-full ${product.is_published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                   {product.is_published ? 'Published' : 'Draft'}

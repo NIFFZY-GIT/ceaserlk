@@ -6,6 +6,7 @@ import ProductTable from '@/app/admin/_components/ProductTable'; // We will crea
 export interface ProductSummary {
   id: string;
   name: string;
+  shipping_cost: string; // Comes as string from DB
   is_published: boolean;
   created_at: string;
   variant_count: string; // Comes as string from DB aggregation

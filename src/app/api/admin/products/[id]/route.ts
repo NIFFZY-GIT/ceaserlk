@@ -16,6 +16,7 @@ export async function GET(
         p.id,
         p.name,
         p.description,
+        p.shipping_cost,
         p.is_published,
         (
           SELECT json_agg(variants_agg)
@@ -92,11 +93,13 @@ export async function PUT(
     // --- Parse all data from the form ---
     const productName = formData.get('productName') as string;
     const description = formData.get('description') as string;
+    const shippingCost = formData.get('shippingCost') as string;
     
     // Debug logging to see what we received
     console.log('DEBUG - Form Data Received:', {
       productName,
       description,
+      shippingCost,
       allKeys: Array.from(formData.keys()),
     });
     
@@ -130,8 +133,8 @@ export async function PUT(
 
     // --- 2. Update the Base Product ---
     await client.query(
-      'UPDATE products SET name = $1, description = $2 WHERE id = $3',
-      [productName, description, productId]
+      'UPDATE products SET name = $1, description = $2, shipping_cost = $3 WHERE id = $4',
+      [productName, description, parseFloat(shippingCost) || 0, productId]
     );
 
     // --- 3. Reconcile Variants, Images, and Sizes ---

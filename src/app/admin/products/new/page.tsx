@@ -23,6 +23,7 @@ const AddProductPage = () => {
   const router = useRouter();
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
+  const [shippingCost, setShippingCost] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([
@@ -165,6 +166,7 @@ const AddProductPage = () => {
     // 1. Append the base product data
     formData.append('productName', productName);
     formData.append('description', description);
+    formData.append('shippingCost', shippingCost);
 
     // 2. Prepare and append variant data (without the File objects)
     const variantsForApi = variants.map(variant => ({
@@ -222,6 +224,26 @@ const AddProductPage = () => {
               <label htmlFor="productName" className="block text-sm font-medium text-gray-700">Product Name</label>
               <input type="text" id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary" required />
             </div>
+            
+            {/* NEW SHIPPING COST FIELD */}
+            <div>
+              <label htmlFor="shippingCost" className="block text-sm font-medium text-gray-700">Shipping Cost (LKR)</label>
+              <input 
+                type="number" 
+                id="shippingCost" 
+                value={shippingCost} 
+                onChange={(e) => setShippingCost(e.target.value)} 
+                className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary" 
+                placeholder="e.g., 500.00"
+                min="0"
+                step="0.01"
+                required 
+              />
+               <p className="mt-1 text-xs text-gray-500">
+                  Enter 0 for free shipping on this product.
+                </p>
+            </div>
+            
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
               <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"></textarea>

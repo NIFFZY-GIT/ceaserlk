@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
         p.id,
         p.name,
         p.description,
+        p.shipping_cost,
         (
           SELECT json_agg(variants_agg)
           FROM (

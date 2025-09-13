@@ -7,33 +7,33 @@ import Link from "next/link";
 import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { gsap } from 'gsap';
 
-const FREE_SHIPPING_THRESHOLD = 10000;
+// const FREE_SHIPPING_THRESHOLD = 10000;
 
 // --- Sub-components now correctly access nested data ---
 
-const FreeShippingMeter = ({ subtotal }: { subtotal: number }) => {
-  const percentage = subtotal > 0 ? Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100) : 0;
-  const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
-  return (
-    <div className="px-6 mb-4 md:px-8">
-      {percentage < 100 ? (
-        <p className="mb-2 text-sm text-center text-gray-400">
-          Add <span className="font-bold text-primary">LKR {remaining.toFixed(2)}</span> for free shipping!
-        </p>
-      ) : (
-        <p className="mb-2 text-sm font-bold text-center text-green-400">
-          You&apos;ve unlocked free shipping!
-        </p>
-      )}
-      <div className="relative w-full h-2 bg-gray-800 rounded-full">
-        <div 
-          className="absolute top-0 left-0 h-full transition-all duration-500 ease-out rounded-full bg-primary" 
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  );
-};
+// const FreeShippingMeter = ({ subtotal }: { subtotal: number }) => {
+//   const percentage = subtotal > 0 ? Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100) : 0;
+//   const remaining = FREE_SHIPPING_THRESHOLD - subtotal;
+//   return (
+//     <div className="px-6 mb-4 md:px-8">
+//       {percentage < 100 ? (
+//         <p className="mb-2 text-sm text-center text-gray-400">
+//           Add <span className="font-bold text-primary">LKR {remaining.toFixed(2)}</span> for free shipping!
+//         </p>
+//       ) : (
+//         <p className="mb-2 text-sm font-bold text-center text-green-400">
+//           You&apos;ve unlocked free shipping!
+//         </p>
+//       )}
+//       <div className="relative w-full h-2 bg-gray-800 rounded-full">
+//         <div 
+//           className="absolute top-0 left-0 h-full transition-all duration-500 ease-out rounded-full bg-primary" 
+//           style={{ width: `${percentage}%` }}
+//         />
+//       </div>
+//     </div>
+//   );
+// };
 
 // --- THIS IS THE KEY CHANGE ---
 const CartItemCard = ({ item }: { item: CartItem }) => {
@@ -163,22 +163,22 @@ const CountdownTimer = ({ expiresAt }: { expiresAt: string | null }) => {
         {isClearing ? "Clearing expired cart" : isExpired ? "Cart has expired" : "Cart expires in"}
       </p>
       {timeLeft <= 10 && timeLeft > 0 && (
-        <div className="mt-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full">
-          <p className="text-xs text-red-400 font-medium">
+        <div className="px-3 py-1 mt-2 border rounded-full bg-red-500/10 border-red-500/20">
+          <p className="text-xs font-medium text-red-400">
             ⚠️ Cart expires soon!
           </p>
         </div>
       )}
       {isExpired && !isClearing && (
-        <div className="mt-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full">
-          <p className="text-xs text-red-400 font-medium">
+        <div className="px-3 py-1 mt-2 border rounded-full bg-red-500/10 border-red-500/20">
+          <p className="text-xs font-medium text-red-400">
             🕒 Cart expired - Items returned to stock
           </p>
         </div>
       )}
       {isClearing && (
-        <div className="mt-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
-          <p className="text-xs text-blue-400 font-medium">
+        <div className="px-3 py-1 mt-2 border rounded-full bg-blue-500/10 border-blue-500/20">
+          <p className="text-xs font-medium text-blue-400">
             🔄 Clearing cart automatically...
           </p>
         </div>
@@ -208,7 +208,7 @@ export const CartDrawer = () => {
               <ShoppingBag className="text-primary" size={28}/>
               <h2 className="text-2xl font-bold tracking-wider uppercase">
                 Cart 
-                <span className="ml-2 px-2 py-1 text-sm font-bold text-black bg-primary rounded-full">
+                <span className="px-2 py-1 ml-2 text-sm font-bold text-black rounded-full bg-primary">
                   {cartCount}
                 </span>
               </h2>
@@ -236,7 +236,7 @@ export const CartDrawer = () => {
           )}
           {hasItems && (
             <div className="p-6 bg-black border-t border-gray-800 md:p-8 cart-footer-gsap">
-              <FreeShippingMeter subtotal={subtotal} />
+              {/* <FreeShippingMeter subtotal={subtotal} /> */}
               <CountdownTimer expiresAt={cart.expiresAt} />
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-400">

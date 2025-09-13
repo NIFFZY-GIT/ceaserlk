@@ -1,7 +1,9 @@
 ﻿"use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 // --- TYPE DEFINITIONS FOR THE FULLY-FETCHED CART ---
 export interface CartItem {
@@ -17,6 +19,7 @@ export interface CartItem {
       product: {
         id: string;
         name: string;
+        shipping_cost: string;
       };
     };
   };
@@ -26,6 +29,8 @@ export interface Cart {
   id: string | null;
   expiresAt: string | null;
   items: CartItem[];
+  subtotal: number;
+  totalShipping: number;
   totalAmount: number;
 }
 
@@ -57,6 +62,11 @@ const getSessionId = (): string => {
 };
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router; // Keep ref current
+  
   const [cart, setCart] = useState<Cart | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -64,14 +74,43 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearError = () => setError(null);
 
+  // Helper function to handle authentication errors
+  const handleAuthError = useCallback((error: { status: number }, action: string) => {
+    if (error.status === 401) {
+      setError(`Please log in to ${action}`);
+      // Redirect to login page with return URL
+      const currentPath = window.location.pathname;
+      routerRef.current.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      return true;
+    }
+    return false;
+  }, []); // No dependencies needed with ref
+
   const fetchCart = useCallback(async () => {
+    // Don't fetch cart if user is not authenticated
+    if (!user) {
+      setCart(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     const sessionId = getSessionId();
-    if (!sessionId) { setLoading(false); return; }
+    if (!sessionId) { 
+      setLoading(false); 
+      return; 
+    }
+    
     try {
       const res = await fetch(`/api/cart?sessionId=${sessionId}`);
-      if (!res.ok) throw new Error("Failed to fetch cart");
+      if (!res.ok) {
+        if (res.status === 401) {
+          handleAuthError({ status: 401 }, 'view cart');
+          return;
+        }
+        throw new Error("Failed to fetch cart");
+      }
       const data: Cart = await res.json();
       setCart(data);
     } catch (error) {
@@ -80,17 +119,87 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user, handleAuthError]);
 
+  // Separate effect for initial load and user changes
+  const lastUserIdRef = useRef<number | null>(null);
+  
   useEffect(() => {
-    fetchCart();
-  }, [fetchCart]);
+    let isMounted = true;
+    
+    // Prevent unnecessary fetches if user ID hasn't changed
+    if (lastUserIdRef.current === (user?.userId || null)) {
+      return;
+    }
+    lastUserIdRef.current = user?.userId || null;
+    
+    const loadCart = async () => {
+      const currentUser = user; // Capture user at the time of effect
+      
+      if (!currentUser) {
+        if (isMounted) {
+          setCart(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setLoading(true);
+        setError(null);
+      }
+      
+      const sessionId = getSessionId();
+      if (!sessionId) { 
+        if (isMounted) setLoading(false); 
+        return; 
+      }
+      
+      try {
+        const res = await fetch(`/api/cart?sessionId=${sessionId}`);
+        if (!isMounted) return; // Component unmounted
+        
+        if (!res.ok) {
+          if (res.status === 401) {
+            handleAuthError({ status: 401 }, 'view cart');
+            return;
+          }
+          throw new Error("Failed to fetch cart");
+        }
+        const data: Cart = await res.json();
+        if (isMounted) {
+          setCart(data);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("Cart fetch error:", error);
+          setError("Failed to load cart");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadCart();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [user, handleAuthError]); // Include user since we use it
 
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 
   // --- ENHANCED MUTATION FUNCTIONS WITH STOCK VALIDATION ---
   const addToCart = async (skuId: string, quantity: number): Promise<boolean> => {
+    // Check authentication first
+    if (!user) {
+      handleAuthError({ status: 401 }, 'add items to cart');
+      return false;
+    }
+
     setLoading(true);
     setError(null);
     const sessionId = getSessionId();
@@ -103,6 +212,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       
       if (!res.ok) {
         const errorData = await res.json();
+        if (res.status === 401) {
+          handleAuthError({ status: 401 }, 'add items to cart');
+          return false;
+        }
         if (res.status === 409) {
           setError(errorData.error || "Not enough stock available");
           return false;
@@ -122,6 +235,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const updateQuantity = async (cartItemId: string, newQuantity: number): Promise<boolean> => {
+    // Check authentication first
+    if (!user) {
+      handleAuthError({ status: 401 }, 'update cart');
+      return false;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -147,6 +266,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       
       if (!res.ok) {
         const errorData = await res.json();
+        if (res.status === 401) {
+          handleAuthError({ status: 401 }, 'update cart');
+          return false;
+        }
         if (res.status === 500 && errorData.error?.includes('stock')) {
           setError(errorData.error || "Not enough stock available");
           await fetchCart(); // Revert optimistic update on error
@@ -168,6 +291,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeFromCart = async (cartItemId: string): Promise<boolean> => {
+    // Check authentication first
+    if (!user) {
+      handleAuthError({ status: 401 }, 'remove items from cart');
+      return false;
+    }
+
     setLoading(true);
     setError(null);
     
@@ -189,6 +318,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       
       if (!res.ok) {
         const errorData = await res.json();
+        if (res.status === 401) {
+          handleAuthError({ status: 401 }, 'remove items from cart');
+          return false;
+        }
         await fetchCart(); // Revert optimistic update on error
         throw new Error(errorData.error || 'Failed to remove item');
       }

@@ -1,18 +1,44 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 import { z } from 'zod';
-
-// Constant for cookie expiration (e.g., 30 days)
-const MAX_AGE = 60 * 60 * 24 * 30; // in seconds
+import { createJWT, getSecureCookieOptions } from '@/lib/auth';
 
 // Zod schema for login validation
 const loginSchema = z.object({
   email: z.string().email({ message: 'A valid email is required.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
 });
+
+// Rate limiting for login attempts (simple in-memory store)
+const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+
+function checkRateLimit(email: string): { allowed: boolean; remaining?: number } {
+  const now = Date.now();
+  const attempts = loginAttempts.get(email);
+  
+  if (!attempts || now - attempts.lastAttempt > LOCKOUT_DURATION) {
+    // Reset or create new record
+    loginAttempts.set(email, { count: 1, lastAttempt: now });
+    return { allowed: true, remaining: MAX_LOGIN_ATTEMPTS - 1 };
+  }
+  
+  if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+    return { allowed: false };
+  }
+  
+  attempts.count++;
+  attempts.lastAttempt = now;
+  
+  return { allowed: true, remaining: MAX_LOGIN_ATTEMPTS - attempts.count };
+}
+
+function resetRateLimit(email: string) {
+  loginAttempts.delete(email);
+}
 
 export async function POST(request: Request) {
   try {
@@ -21,54 +47,64 @@ export async function POST(request: Request) {
     // 1. Validate input
     const validation = loginSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json({ error: 'Invalid input.' }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Invalid input.',
+        details: validation.error.issues
+      }, { status: 400 });
     }
+    
     const { email, password } = validation.data;
+    const normalizedEmail = email.toLowerCase();
 
-    // 2. Find user in the database
-    // We select all the fields we need for the JWT and the response
+    // 2. Check rate limiting
+    const rateCheck = checkRateLimit(normalizedEmail);
+    if (!rateCheck.allowed) {
+      return NextResponse.json({ 
+        error: 'Too many login attempts. Please try again in 15 minutes.',
+        code: 'RATE_LIMITED'
+      }, { status: 429 });
+    }
+
+    // 3. Find user in the database
     const userResult = await db.query(
       'SELECT id, first_name, email, role, password_hash FROM users WHERE email = $1',
-      [email.toLowerCase()]
+      [normalizedEmail]
     );
 
     if (userResult.rows.length === 0) {
       // Use a generic error message for security (prevents email enumeration)
-      return NextResponse.json({ error: 'Invalid credentials.' }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'Invalid credentials.',
+        code: 'INVALID_CREDENTIALS'
+      }, { status: 401 });
     }
 
     const user = userResult.rows[0];
 
-    // 3. Compare submitted password with the stored hash
+    // 4. Compare submitted password with the stored hash
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
-      return NextResponse.json({ error: 'Invalid credentials.' }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'Invalid credentials.',
+        code: 'INVALID_CREDENTIALS'
+      }, { status: 401 });
     }
 
-    // 4. Create JWT token with user data in the payload
-    // This payload is exactly what your frontend needs
+    // 5. Reset rate limiting on successful login
+    resetRateLimit(normalizedEmail);
+
+    // 6. Create JWT token using the new auth library
     const tokenPayload = {
       userId: user.id,
       email: user.email,
-      firstName: user.first_name, // Map snake_case from DB to camelCase for JS
-      role: user.role, // The crucial field for redirection
+      firstName: user.first_name,
+      role: user.role,
     };
     
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, {
-      expiresIn: MAX_AGE,
-    });
+    const token = await createJWT(tokenPayload);
 
-    // 5. Serialize the cookie
-    const cookie = serialize('session-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: MAX_AGE,
-      sameSite: 'lax',
-      path: '/',
-    });
-
-    // 6. Prepare the user data for the response body (WITHOUT the password hash)
+    // 7. Prepare the user data for the response body (WITHOUT the password hash)
     const responseUser = {
       userId: user.id,
       email: user.email,
@@ -76,17 +112,24 @@ export async function POST(request: Request) {
       role: user.role,
     };
     
+    // 8. Create response with secure cookie
     const response = NextResponse.json({
       message: 'Logged in successfully.',
-      user: responseUser, // Send user data back to the frontend
+      user: responseUser,
     }, { status: 200 });
 
-    // 7. Set the cookie on the response header and return
+    // 9. Set the secure cookie
+    const cookieOptions = getSecureCookieOptions();
+    const cookie = serialize('session-token', token, cookieOptions);
     response.headers.set('Set-Cookie', cookie);
+
     return response;
 
   } catch (error) {
     console.error('API_LOGIN_ERROR:', error);
-    return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'An internal server error occurred.',
+      code: 'INTERNAL_ERROR'
+    }, { status: 500 });
   }
 }

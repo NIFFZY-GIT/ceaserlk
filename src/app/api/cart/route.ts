@@ -1,8 +1,9 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { PoolClient } from 'pg';
+import { verifyAuth, createUnauthorizedResponse } from '@/lib/auth';
 
-const CART_EXPIRATION_SECONDS = 300;
+const CART_EXPIRATION_SECONDS = 1800;
 
 // --- HELPER FUNCTION: Cleanup expired carts and restore stock ---
 async function cleanupExpiredCarts(client: PoolClient): Promise<void> {
@@ -59,6 +60,12 @@ async function getOrCreateCartId(sessionId: string, client: PoolClient): Promise
 // --- Your existing route handlers now have access to the helper ---
 
 export async function GET(request: NextRequest) {
+  // Check authentication
+  const user = await verifyAuth(request);
+  if (!user) {
+    return createUnauthorizedResponse();
+  }
+
   const { searchParams } = new URL(request.url);
   const sessionId = searchParams.get('sessionId');
 
@@ -90,7 +97,8 @@ export async function GET(request: NextRequest) {
                   'color_name', v.color_name,
                   'product', json_build_object(
                     'id', p.id,
-                    'name', p.name
+                    'name', p.name,
+                    'shipping_cost', p.shipping_cost
                   )
                 )
               )
@@ -116,6 +124,8 @@ export async function GET(request: NextRequest) {
         id: cartId,
         items: [],
         expiresAt: cartInfo.rows[0].expires_at,
+        subtotal: 0,
+        totalShipping: 0,
         totalAmount: 0,
       });
     }
@@ -123,14 +133,23 @@ export async function GET(request: NextRequest) {
     const cartData = result.rows[0];
     const items = cartData.items || [];
     
-    const totalAmount = items.reduce((total: number, item: { sku: { variant: { price: string } }, quantity: number }) => {
+    const subtotal = items.reduce((total: number, item: { sku: { variant: { price: string } }, quantity: number }) => {
       const price = parseFloat(item.sku.variant.price);
       return total + (price * item.quantity);
     }, 0);
 
+    const totalShipping = items.reduce((total: number, item: { sku: { variant: { product: { shipping_cost: string } } }, quantity: number }) => {
+      const shippingCost = parseFloat(item.sku.variant.product.shipping_cost) || 0;
+      return total + (shippingCost * item.quantity);
+    }, 0);
+
+    const totalAmount = subtotal + totalShipping;
+
     const cart = {
       id: cartData.cartId,
       items: items,
+      subtotal: subtotal,
+      totalShipping: totalShipping,
       totalAmount: totalAmount,
       expiresAt: cartData.expiresAt
     };
@@ -146,6 +165,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const user = await verifyAuth(request);
+  if (!user) {
+    return createUnauthorizedResponse();
+  }
+
   const { skuId, quantity, sessionId } = await request.json();
   if (!skuId || !quantity || !sessionId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -188,6 +213,12 @@ export async function POST(request: NextRequest) {
 
 // --- UPDATED: Update an item's quantity WITH stock management ---
 export async function PUT(request: NextRequest) {
+  // Check authentication
+  const user = await verifyAuth(request);
+  if (!user) {
+    return createUnauthorizedResponse();
+  }
+
   const { cartItemId, newQuantity } = await request.json();
 
   if (!cartItemId || newQuantity === undefined) {
@@ -238,6 +269,12 @@ export async function PUT(request: NextRequest) {
 
 // --- UPDATED: Remove an item from the cart WITH stock restoration ---
 export async function DELETE(request: NextRequest) {
+  // Check authentication
+  const user = await verifyAuth(request);
+  if (!user) {
+    return createUnauthorizedResponse();
+  }
+
   const { cartItemId } = await request.json();
   if (!cartItemId) return NextResponse.json({ error: 'Cart item ID is required' }, { status: 400 });
 

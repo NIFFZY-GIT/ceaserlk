@@ -15,6 +15,7 @@ interface ProductVariant {
 }
 interface FullProduct {
   id: string; name: string; description: string;
+  shipping_cost: string; // Add shipping cost
   variants: ProductVariant[];
 }
 
@@ -38,6 +39,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   // Form State
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
+  const [shippingCost, setShippingCost] = useState('');
   const [variants, setVariants] = useState<VariantFormState[]>([]);
 
   // State to track items to be deleted on the backend
@@ -58,6 +60,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
         setProductName(data.name);
         setDescription(data.description || '');
+        setShippingCost(data.shipping_cost?.toString() || '0');
         setVariants(data.variants.map(v => ({
           ...v,
           compareAtPrice: v.compareAtPrice || '', sku: v.sku || '',
@@ -98,6 +101,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     const formData = new FormData();
     formData.append('productName', productName);
     formData.append('description', description);
+    formData.append('shippingCost', shippingCost);
     formData.append('variantsToDelete', JSON.stringify(variantsToDelete));
     formData.append('imagesToDelete', JSON.stringify(imagesToDelete));
     formData.append('sizesToDelete', JSON.stringify(sizesToDelete));
@@ -161,6 +165,28 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 required 
               />
             </div>
+            
+            {/* SHIPPING COST FIELD */}
+            <div>
+              <label htmlFor="shippingCost" className="block text-sm font-medium text-gray-700">
+                Shipping Cost (LKR)
+              </label>
+              <input 
+                type="number" 
+                id="shippingCost" 
+                value={shippingCost} 
+                onChange={(e) => setShippingCost(e.target.value)} 
+                className="block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary" 
+                placeholder="e.g., 500.00"
+                min="0"
+                step="0.01"
+                required 
+              />
+               <p className="mt-1 text-xs text-gray-500">
+                  Enter 0 for free shipping on this product.
+                </p>
+            </div>
+            
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700">
                 Description
