@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, Users, PackagePlus } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, PackagePlus,Shield } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Products', href: '/admin/products', icon: ShoppingBag },
   { name: 'Orders', href: '/admin/orders', icon: PackagePlus },
   { name: 'Customers', href: '/admin/customers', icon: Users },
+  { name: 'Admins', href: '/admin/admins', icon: Shield },
 ];
 
 const Sidebar = () => {

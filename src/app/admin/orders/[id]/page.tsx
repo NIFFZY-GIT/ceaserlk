@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { notFound } from 'next/navigation';
 import { Loader2, ArrowLeft, Check, Package, Truck, Home, XCircle, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
@@ -13,10 +13,10 @@ interface FullOrder { id: string; created_at: string; status: OrderStatus; full_
 const statusFlow: OrderStatus[] = ['PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED'];
 const statusIcons = { PAID: Package, PROCESSING: Package, PACKED: Package, SHIPPED: Truck, DELIVERED: Home, CANCELLED: XCircle, REFUNDED: RefreshCw, PENDING: Loader2 };
 
-export default function OrderDetailPage({ params }: { params: { id: string } }) {
-  // --- THIS IS THE KEY CHANGE ---
-  // Destructure 'id' from 'params' immediately to create a stable variable.
-  const { id } = params;
+export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  // --- THIS IS THE KEY CHANGE FOR NEXT.JS 15 ---
+  // Unwrap the params Promise using React.use()
+  const { id } = use(params);
   // --- END OF CHANGE ---
 
   const [order, setOrder] = useState<FullOrder | null>(null);
@@ -90,8 +90,23 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           <div className="p-6 bg-white rounded-lg shadow-md"><h2 className="mb-4 text-xl font-semibold">Update Status</h2><select value={newStatus} onChange={e => setNewStatus(e.target.value as FullOrder['status'])} className="w-full border-gray-300 rounded-md shadow-sm"><option value="PAID">Paid</option><option value="PROCESSING">Processing</option><option value="PACKED">Packed</option><option value="SHIPPED">Shipped</option><option value="DELIVERED">Delivered</option><option value="CANCELLED">Cancelled</option><option value="REFUNDED">Refunded</option></select><button onClick={handleStatusUpdate} disabled={isUpdating || newStatus === order.status} className="w-full px-4 py-2 mt-4 font-semibold text-white transition-colors rounded-md bg-primary hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed">{isUpdating ? <Loader2 className="mx-auto animate-spin"/> : 'Save Changes'}</button>{updateMessage && <p className={`mt-2 text-sm text-center ${updateMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>{updateMessage.text}</p>}</div>
         </div>
         <div className="p-6 bg-white rounded-lg shadow-md lg:col-span-2">
-          <h2 className="mb-4 text-xl font-semibold">Order Items ({order.items.length})</h2>
-          <div className="space-y-4">{order.items.map((item: OrderItem) => (<div key={item.id} className="flex justify-between p-4 border rounded-md"><div><p className="font-semibold text-gray-900">{item.product_name}</p><p className="text-sm text-gray-500">{item.variant_size} / {item.variant_color}</p><p className="text-sm text-gray-500">{item.quantity} x LKR {Number(item.price_paid).toFixed(2)}</p></div><p className="font-semibold text-gray-900">LKR {(Number(item.price_paid) * item.quantity).toFixed(2)}</p></div>))}</div>
+          <h2 className="mb-4 text-xl font-semibold">Order Items ({order.items?.length || 0})</h2>
+          <div className="space-y-4">
+            {order.items && order.items.length > 0 ? (
+              order.items.map((item: OrderItem) => (
+                <div key={item.id} className="flex justify-between p-4 border rounded-md">
+                  <div>
+                    <p className="font-semibold text-gray-900">{item.product_name}</p>
+                    <p className="text-sm text-gray-500">{item.variant_size} / {item.variant_color}</p>
+                    <p className="text-sm text-gray-500">{item.quantity} x LKR {Number(item.price_paid).toFixed(2)}</p>
+                  </div>
+                  <p className="font-semibold text-gray-900">LKR {(Number(item.price_paid) * item.quantity).toFixed(2)}</p>
+                </div>
+              ))
+            ) : (
+              <p className="py-8 text-center text-gray-500">No items found for this order.</p>
+            )}
+          </div>
           <div className="pt-6 mt-6 border-t"><div className="space-y-2 text-sm"><div className="flex justify-between"><span>Subtotal</span><span className="font-medium text-gray-700">LKR {Number(order.subtotal).toFixed(2)}</span></div><div className="flex justify-between"><span>Shipping</span><span className="font-medium text-gray-700">LKR {Number(order.shipping_cost).toFixed(2)}</span></div></div><div className="flex justify-between pt-4 mt-4 text-lg font-bold border-t"><span>Total Paid</span><span>LKR {Number(order.total_amount).toFixed(2)}</span></div></div>
         </div>
       </div>
