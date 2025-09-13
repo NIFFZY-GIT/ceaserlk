@@ -1,87 +1,88 @@
-// src/app/profile/page.tsx
-
 "use client";
 
-import { useState } from 'react';
-import { LayoutDashboard, Package, MapPin, User, LogOut, Lock } from 'lucide-react';
-import Image from 'next/image';
+import { useState, useEffect } from 'react';
+import { LayoutDashboard, Package, MapPin, User, LogOut, Lock, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
-// --- MOCK DATA (In a real app, this would come from your database) ---
-const mockUser = {
-  name: 'Alex Rider',
-  email: 'alex.rider@example.com',
-  avatarUrl: '/images/image.jpg', // A placeholder avatar image
-};
+// --- TYPE DEFINITIONS for our fetched data ---
+interface Order {
+  id: string;
+  created_at: string;
+  total_amount: string;
+  status: string;
+}
 
-const mockOrders = [
-  { id: '#CEASER-8462', date: '2024-04-15', total: 74.98, status: 'Delivered' },
-  { id: '#CEASER-8134', date: '2024-03-22', total: 35.00, status: 'Delivered' },
-  { id: '#CEASER-7981', date: '2024-02-10', total: 104.97, status: 'Cancelled' },
-];
+interface UserProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  orders: Order[];
+}
 
-const mockAddresses = [
-  { id: 1, type: 'Shipping', isDefault: true, line1: '123 Ambition Ave', line2: 'Apt 4B', city: 'New York', state: 'NY', zip: '10001' },
-  { id: 2, type: 'Billing', isDefault: false, line1: '456 Grind St', city: 'Los Angeles', state: 'CA', zip: '90001' },
-];
-// -------------------------------------------------------------------
+type Tab = 'dashboard' | 'orders' | 'details';
 
-type Tab = 'dashboard' | 'orders' | 'addresses' | 'details';
-
-const ProfileDashboard = () => {
-  const { user } = useAuth();
+export default function ProfilePage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  
+  // State for fetched profile data
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      const fetchProfileData = async () => {
+        setLoadingProfile(true);
+        try {
+          const res = await fetch('/api/profile');
+          if (!res.ok) throw new Error('Failed to fetch profile data');
+          const data: UserProfile = await res.json();
+          setProfileData(data);
+        } catch (error) {
+          console.error(error);
+        } finally {
+          setLoadingProfile(false);
+        }
+      };
+      fetchProfileData();
+    }
+  }, [user]);
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    // This will effectively log the user out by clearing context and redirecting
+    window.location.href = '/login'; 
+  };
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'orders', label: 'Order History', icon: Package },
-    { id: 'addresses', label: 'Addresses', icon: MapPin },
     { id: 'details', label: 'Account Details', icon: User },
   ];
 
-  // If user is not authenticated, show login prompt
+  if (authLoading || (user && loadingProfile)) {
+    return <div className="flex items-center justify-center min-h-screen bg-brand-black"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
+  }
+
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-black to-gray-900">
-        <div className="container px-6 py-20 mx-auto">
-          <div className="max-w-md mx-auto text-center">
-            <div className="p-8 border border-gray-800 bg-gray-900/50 rounded-xl">
-              <Lock className="w-16 h-16 mx-auto mb-6 text-gray-400" />
-              <h1 className="mb-4 text-3xl font-bold text-white">Sign In Required</h1>
-              <p className="mb-6 text-gray-400">
-                Please sign in to view your profile, order history, and manage your account.
-              </p>
-              <div className="space-y-3">
-                <Link 
-                  href="/login" 
-                  className="block w-full py-3 font-bold text-white transition-colors duration-300 rounded-md bg-primary hover:bg-primary/90"
-                >
-                  Sign In
-                </Link>
-                <Link 
-                  href="/signup" 
-                  className="block w-full py-3 font-bold text-white transition-colors duration-300 border border-gray-600 rounded-md hover:bg-gray-800"
-                >
-                  Create Account
-                </Link>
-              </div>
-              <div className="mt-6 text-sm text-gray-500">
-                <p>Sign in to access your profile, order history, and saved preferences.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div className="min-h-screen bg-gradient-to-b from-black to-gray-900"><div className="container px-6 py-20 mx-auto"><div className="max-w-md mx-auto text-center"><div className="p-8 border border-gray-800 bg-gray-900/50 rounded-xl"><Lock className="w-16 h-16 mx-auto mb-6 text-gray-400" /><h1 className="mb-4 text-3xl font-bold text-white">Sign In Required</h1><p className="mb-6 text-gray-400">Please sign in to view your profile and order history.</p><div className="space-y-3"><Link href="/login" className="block w-full py-3 font-bold text-white transition-colors duration-300 rounded-md bg-primary hover:bg-primary/90">Sign In</Link><Link href="/signup" className="block w-full py-3 font-bold text-white transition-colors duration-300 border border-gray-600 rounded-md hover:bg-gray-800">Create Account</Link></div></div></div></div></div>
     );
+  }
+  
+  if (!profileData) {
+    return <div className="text-center text-white">Could not load profile data. Please try logging in again.</div>;
   }
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'orders': return <OrderHistoryContent />;
-      case 'addresses': return <AddressesContent />;
-      case 'details': return <AccountDetailsContent />;
-      default: return <DashboardContent />;
+      case 'orders': return <OrderHistoryContent orders={profileData.orders} />;
+      case 'details': return <AccountDetailsContent user={profileData} />;
+      default: return <DashboardContent user={profileData} setActiveTab={setActiveTab}/>;
     }
   };
 
@@ -90,40 +91,22 @@ const ProfileDashboard = () => {
       <div className="container px-6 py-16 mx-auto">
         <h1 className="mb-12 text-4xl font-bold tracking-wider uppercase md:text-5xl">My Account</h1>
         <div className="grid grid-cols-1 gap-12 md:grid-cols-4">
-          
-          {/* Sidebar Navigation */}
           <aside className="md:col-span-1">
             <div className="p-6 border border-gray-800 bg-gray-900/50 rounded-xl">
               <div className="flex items-center gap-4 mb-6">
-                <Image src={mockUser.avatarUrl} alt="User Avatar" width={64} height={64} className="rounded-full" />
+                <div className="flex items-center justify-center w-16 h-16 text-2xl font-bold text-white bg-gray-700 rounded-full">{profileData.first_name[0]}{profileData.last_name[0]}</div>
                 <div>
-                  <p className="text-lg font-bold">{mockUser.name}</p>
-                  <p className="text-sm text-gray-400">{mockUser.email}</p>
+                  <p className="text-lg font-bold">{profileData.first_name} {profileData.last_name}</p>
+                  <p className="text-sm text-gray-400 break-all">{profileData.email}</p>
                 </div>
               </div>
               <nav className="space-y-2">
-                {navItems.map(item => (
-                  <button 
-                    key={item.id} 
-                    onClick={() => setActiveTab(item.id as Tab)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition-colors ${activeTab === item.id ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                  >
-                    <item.icon size={20} />
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-                <button className="flex items-center w-full gap-3 px-4 py-3 text-sm font-semibold text-gray-400 rounded-md hover:bg-gray-800 hover:text-white">
-                  <LogOut size={20} />
-                  <span>Logout</span>
-                </button>
+                {navItems.map(item => (<button key={item.id} onClick={() => setActiveTab(item.id as Tab)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition-colors ${activeTab === item.id ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}><item.icon size={20} /><span>{item.label}</span></button>))}
+                <button onClick={handleLogout} className="flex items-center w-full gap-3 px-4 py-3 text-sm font-semibold text-gray-400 rounded-md hover:bg-gray-800 hover:text-white"><LogOut size={20} /><span>Logout</span></button>
               </nav>
             </div>
           </aside>
-
-          {/* Main Content Area */}
-          <section className="md:col-span-3">
-            {renderContent()}
-          </section>
+          <section className="md:col-span-3">{renderContent()}</section>
         </div>
       </div>
     </main>
@@ -131,100 +114,64 @@ const ProfileDashboard = () => {
 };
 
 
-// --- Content Components for each tab ---
+// --- UPDATED Content Components (Now accept real data via props) ---
 
-const DashboardContent = () => (
+const DashboardContent = ({ user, setActiveTab }: { user: UserProfile, setActiveTab: (tab: Tab) => void }) => (
   <div className="space-y-8">
-    <h2 className="text-3xl font-bold">Welcome back, {mockUser.name.split(' ')[0]}!</h2>
+    <h2 className="text-3xl font-bold">Welcome back, {user.first_name}!</h2>
     <div className="p-8 border border-gray-800 bg-gray-900/50 rounded-xl">
-      <h3 className="mb-4 text-xl font-bold">Recent Orders</h3>
-      <div className="space-y-4">
-        {mockOrders.slice(0, 2).map(order => (
-          <div key={order.id} className="flex items-center justify-between p-4 bg-gray-900 rounded-lg">
+      <h3 className="mb-4 text-xl font-bold">Recent Order</h3>
+      {user.orders && user.orders.length > 0 ? (
+        <div className="p-4 bg-gray-900 rounded-lg">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="font-bold">{order.id}</p>
-              <p className="text-sm text-gray-400">{order.date}</p>
+              <p className="font-bold">#{user.orders[0].id.split('-')[0].toUpperCase()}</p>
+              <p className="text-sm text-gray-400">{new Date(user.orders[0].created_at).toLocaleDateString()}</p>
             </div>
             <div className="text-right">
-              <p className="font-bold">${order.total.toFixed(2)}</p>
-              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${order.status === 'Delivered' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{order.status}</span>
+              <p className="font-bold">LKR {Number(user.orders[0].total_amount).toFixed(2)}</p>
+              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${user.orders[0].status === 'DELIVERED' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{user.orders[0].status}</span>
             </div>
           </div>
-        ))}
-      </div>
-       <Link href="#" onClick={() => (document.querySelector('button[data-id="orders"]') as HTMLButtonElement)?.click()} className="inline-block mt-6 font-semibold text-primary">View all orders →</Link>
+        </div>
+      ) : (
+        <p className="text-gray-400">You haven't placed any orders yet.</p>
+      )}
+      <button onClick={() => setActiveTab('orders')} className="inline-block mt-6 font-semibold text-primary hover:underline">View all orders →</button>
     </div>
   </div>
 );
 
-const OrderHistoryContent = () => (
+const OrderHistoryContent = ({ orders }: { orders: Order[] }) => (
    <div className="p-8 border border-gray-800 bg-gray-900/50 rounded-xl">
       <h2 className="mb-6 text-3xl font-bold">Order History</h2>
-      <div className="space-y-4">
-        {mockOrders.map(order => (
-           <div key={order.id} className="grid items-center grid-cols-4 gap-4 p-4 bg-gray-900 rounded-lg">
-            <p className="font-bold">{order.id}</p>
-            <p className="text-sm text-gray-400">{order.date}</p>
-            <p className="font-bold text-center">${order.total.toFixed(2)}</p>
-            <div className="flex items-center justify-end gap-2">
-              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${order.status === 'Delivered' ? 'bg-green-500/20 text-green-400' : order.status === 'Cancelled' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{order.status}</span>
-              <button className="text-sm font-semibold text-primary">Details</button>
+      {orders && orders.length > 0 ? (
+        <div className="space-y-4">
+          {orders.map(order => (
+            <div key={order.id} className="grid items-center grid-cols-2 gap-4 p-4 bg-gray-900 rounded-lg md:grid-cols-4">
+              <p className="font-bold">#{order.id.split('-')[0].toUpperCase()}</p>
+              <p className="text-sm text-gray-400">{new Date(order.created_at).toLocaleDateString()}</p>
+              <p className="font-bold text-center">LKR {Number(order.total_amount).toFixed(2)}</p>
+              <div className="flex justify-end"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${order.status === 'DELIVERED' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{order.status}</span></div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-400">You haven't placed any orders yet.</p>
+      )}
    </div>
 );
 
-const AddressesContent = () => (
-  <div className="p-8 border border-gray-800 bg-gray-900/50 rounded-xl">
-    <div className="flex items-center justify-between mb-6">
-      <h2 className="text-3xl font-bold">Addresses</h2>
-      <button className="px-4 py-2 text-sm font-bold text-white rounded-md bg-primary">Add New Address</button>
-    </div>
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      {mockAddresses.map(addr => (
-        <div key={addr.id} className="p-6 bg-gray-900 rounded-lg">
-          <div className="flex items-start justify-between mb-2">
-            <h3 className="font-bold">{addr.type} Address</h3>
-            {addr.isDefault && <span className="px-2 py-1 text-xs font-semibold rounded-full bg-primary/20 text-primary">Default</span>}
-          </div>
-          <address className="text-sm not-italic text-gray-400">
-            {addr.line1}<br/>
-            {addr.line2 && <>{addr.line2}<br/></>}
-            {addr.city}, {addr.state} {addr.zip}
-          </address>
-          <div className="flex gap-4 mt-4 text-sm">
-            <button className="font-semibold text-primary">Edit</button>
-            <button className="font-semibold text-accent">Delete</button>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-const AccountDetailsContent = () => (
+const AccountDetailsContent = ({ user }: { user: UserProfile }) => (
   <div className="p-8 border border-gray-800 bg-gray-900/50 rounded-xl">
     <h2 className="mb-6 text-3xl font-bold">Account Details</h2>
     <form className="max-w-lg space-y-6">
-      <div>
-        <label htmlFor="name" className="block mb-2 text-sm font-medium text-gray-300">Full Name</label>
-        <input type="text" id="name" defaultValue={mockUser.name} className="w-full p-3 text-white bg-gray-900 border border-gray-700 rounded-md focus:ring-2 focus:ring-primary" />
+      <div className="grid grid-cols-2 gap-4">
+        <div><label htmlFor="firstName" className="block mb-2 text-sm font-medium text-gray-300">First Name</label><input type="text" id="firstName" defaultValue={user.first_name} className="w-full p-3 text-white bg-gray-900 border border-gray-700 rounded-md" /></div>
+        <div><label htmlFor="lastName" className="block mb-2 text-sm font-medium text-gray-300">Last Name</label><input type="text" id="lastName" defaultValue={user.last_name} className="w-full p-3 text-white bg-gray-900 border border-gray-700 rounded-md" /></div>
       </div>
-      <div>
-        <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-300">Email Address</label>
-        <input type="email" id="email" defaultValue={mockUser.email} className="w-full p-3 text-white bg-gray-900 border border-gray-700 rounded-md focus:ring-2 focus:ring-primary" />
-      </div>
-      <div>
-        <button type="button" className="text-sm font-semibold text-primary">Change Password</button>
-      </div>
-      <div className="pt-4">
-        <button type="submit" className="px-6 py-3 font-bold text-white rounded-md bg-accent">Save Changes</button>
-      </div>
+      <div><label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-300">Email Address</label><input type="email" id="email" defaultValue={user.email} className="w-full p-3 text-white bg-gray-900 border border-gray-700 rounded-md" /></div>
+      <div className="pt-4"><button type="submit" className="px-6 py-3 font-bold text-white rounded-md bg-accent">Save Changes</button></div>
     </form>
   </div>
 );
-
-
-export default ProfileDashboard;
