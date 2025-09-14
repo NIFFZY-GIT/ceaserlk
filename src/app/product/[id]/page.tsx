@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { notFound, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
@@ -56,6 +56,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Fake stock drop system
+  const [fakeStockReduction, setFakeStockReduction] = useState(0);
+  const stockDropIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [showStockDropAlert, setShowStockDropAlert] = useState(false);
+  const [recentPurchases, setRecentPurchases] = useState<string[]>([]);
 
   // Entrance animations - Optimized to prevent double animation
   useEffect(() => {
@@ -230,6 +236,101 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     setIsAudioPlaying(false);
   };
 
+  // Fake stock drop system to create urgency
+  const startFakeStockDrop = useCallback(() => {
+    if (stockDropIntervalRef.current) {
+      clearTimeout(stockDropIntervalRef.current);
+    }
+
+    const scheduleNextDrop = () => {
+      // Random interval between 4-6 seconds
+      const randomInterval = Math.floor(Math.random() * 3000) + 4000; // 4000-7000ms
+      
+      stockDropIntervalRef.current = setTimeout(() => {
+        setFakeStockReduction(prev => {
+          // Don't reduce stock to 0, keep minimum of 2
+          const currentSelectedStock = selectedSize ? selectedSize.stock : 0;
+          const effectiveStock = currentSelectedStock - prev;
+          
+          if (effectiveStock > 2) {
+            const reduction = Math.floor(Math.random() * 2) + 1; // Reduce by 1 or 2
+            const newReduction = prev + reduction;
+            
+            // Show alert for stock drop
+            setShowStockDropAlert(true);
+            setTimeout(() => setShowStockDropAlert(false), 3000);
+            
+            // Add a fake recent purchase
+            const cities = ['Colombo', 'Kandy', 'Galle', 'Jaffna', 'Negombo', 'Matara', 'Anuradhapura'];
+            const timeAgo = ['2 minutes', '5 minutes', '8 minutes', '12 minutes'];
+            const city = cities[Math.floor(Math.random() * cities.length)];
+            const time = timeAgo[Math.floor(Math.random() * timeAgo.length)];
+            const newPurchase = `Someone in ${city} bought this ${time} ago`;
+            
+            setRecentPurchases(prev => {
+              const updated = [newPurchase, ...prev.slice(0, 2)]; // Keep only last 3
+              return updated;
+            });
+            
+            // Schedule next drop
+            scheduleNextDrop();
+            
+            return newReduction;
+          }
+          
+          // Stop dropping if we're at minimum stock
+          return prev;
+        });
+      }, randomInterval);
+    };
+
+    // Start first drop after 5 seconds
+    setTimeout(() => {
+      scheduleNextDrop();
+    }, 5000);
+  }, [selectedSize]);
+
+  // Start fake stock drop when product loads and has variants
+  useEffect(() => {
+    if (selectedVariant && selectedSize && selectedSize.stock > 2) {
+      // Add some initial fake purchases when product loads
+      const cities = ['Colombo', 'Kandy', 'Galle', 'Jaffna', 'Negombo', 'Matara'];
+      const timeAgo = ['15 minutes', '23 minutes', '31 minutes', '45 minutes', '1 hour'];
+      const initialPurchases = [];
+      
+      for (let i = 0; i < Math.floor(Math.random() * 3) + 1; i++) {
+        const city = cities[Math.floor(Math.random() * cities.length)];
+        const time = timeAgo[Math.floor(Math.random() * timeAgo.length)];
+        initialPurchases.push(`Someone in ${city} bought this ${time} ago`);
+      }
+      
+      setRecentPurchases(initialPurchases);
+      startFakeStockDrop();
+    }
+
+    // Cleanup interval on unmount
+    return () => {
+      if (stockDropIntervalRef.current) {
+        clearTimeout(stockDropIntervalRef.current);
+      }
+    };
+  }, [selectedVariant, selectedSize, startFakeStockDrop]);
+
+  // Reset fake stock when variant or size changes
+  useEffect(() => {
+    setFakeStockReduction(0);
+    setRecentPurchases([]);
+    setShowStockDropAlert(false);
+    if (stockDropIntervalRef.current) {
+      clearTimeout(stockDropIntervalRef.current);
+    }
+    
+    // Restart fake stock drop for new selection
+    if (selectedVariant && selectedSize && selectedSize.stock > 2) {
+      startFakeStockDrop();
+    }
+  }, [selectedVariant, selectedSize, startFakeStockDrop]);
+
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
   if (!product || !selectedVariant) return notFound();
 
@@ -237,7 +338,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const price = parseFloat(selectedVariant.price);
   const compareAtPrice = selectedVariant.compareAtPrice ? parseFloat(selectedVariant.compareAtPrice) : null;
   const isOnSale = compareAtPrice && compareAtPrice > price;
-  const currentStockForSelectedSize = selectedSize ? selectedSize.stock : 0;
+  const originalStock = selectedSize ? selectedSize.stock : 0;
+  const currentStockForSelectedSize = Math.max(0, originalStock - fakeStockReduction);
   const isSoldOut = selectedVariant.stock.reduce((sum, s) => sum + s.stock, 0) === 0;
 
   return (
@@ -445,6 +547,16 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             
             {/* Quantity & Add to Cart */}
             <div className="space-y-4">
+              {/* Stock Drop Alert */}
+              {showStockDropAlert && (
+                <div className="p-3 text-sm font-medium text-red-800 bg-red-50 border border-red-200 rounded-lg animate-pulse">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                    <span>⚡ Stock level updated! Someone just purchased this item.</span>
+                  </div>
+                </div>
+              )}
+
               {/* Error Message */}
               {error && (
                 <div className="p-4 text-sm font-medium text-red-800 bg-red-100 border border-red-200 rounded-lg">
@@ -496,10 +608,32 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               </div>
               
               {/* Stock Warning */}
-              {selectedSize && currentStockForSelectedSize > 0 && currentStockForSelectedSize < 10 && (
-                <p className="text-sm font-medium text-orange-600">
-                  ⚡ Only {currentStockForSelectedSize} left in stock
-                </p>
+              {selectedSize && currentStockForSelectedSize > 0 && currentStockForSelectedSize <= 10 && (
+                <div className="space-y-2">
+                  <p className={`text-sm font-bold ${
+                    currentStockForSelectedSize <= 3 
+                      ? 'text-red-600 animate-pulse' 
+                      : currentStockForSelectedSize <= 5 
+                        ? 'text-orange-600' 
+                        : 'text-yellow-600'
+                  }`}>
+                    {currentStockForSelectedSize <= 3 
+                      ? `🔥 ALMOST GONE! Only ${currentStockForSelectedSize} left - Order now!` 
+                      : `⚡ Only ${currentStockForSelectedSize} left in stock - Don't miss out!`
+                    }
+                  </p>
+                  
+                  {/* Recent Purchase Notifications */}
+                  {recentPurchases.length > 0 && (
+                    <div className="space-y-1">
+                      {recentPurchases.slice(0, 2).map((purchase, index) => (
+                        <p key={index} className="text-xs text-gray-600 bg-gray-50 p-2 rounded border-l-2 border-orange-400">
+                          🛒 {purchase}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

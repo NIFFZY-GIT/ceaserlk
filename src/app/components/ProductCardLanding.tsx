@@ -89,7 +89,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex flex-col h-full p-4 transition-all duration-300 bg-white border border-gray-100 rounded-xl hover:shadow-xl hover:-translate-y-1">
+      <div className="flex flex-col h-full p-4 transition-all duration-300 bg-white border border-gray-100 rounded-xl ">
         <Link 
           href={`/product/${product.id}?variant=${activeVariant.variantId}`} 
           className="relative block w-full overflow-hidden rounded-md aspect-square"

@@ -31,10 +31,20 @@ export async function GET(
         (
           SELECT json_agg(
             json_build_object(
-              'id', oi.id, 'product_name', oi.product_name, 'variant_color', oi.variant_color,
-              'variant_size', oi.variant_size, 'price_paid', oi.price_paid, 'quantity', oi.quantity
+              'id', oi.id, 
+              'product_name', oi.product_name, 
+              'variant_color', oi.variant_color,
+              'variant_size', oi.variant_size, 
+              'price_paid', oi.price_paid, 
+              'quantity', oi.quantity,
+              'product_id', oi.product_id,
+              'imageUrl', COALESCE(pv.thumbnail_url, '/images/image.jpg')
             )
-          ) FROM order_items oi WHERE oi.order_id = o.id
+          ) 
+          FROM order_items oi 
+          LEFT JOIN product_variants pv ON oi.product_id = pv.product_id 
+            AND oi.variant_color = pv.color_name
+          WHERE oi.order_id = o.id
         ) as items
       FROM orders o
       WHERE o.id = $1::uuid;

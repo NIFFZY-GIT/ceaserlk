@@ -2,31 +2,64 @@
 
 "use client";
 
-import { useRef, useLayoutEffect } from 'react';
+import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ProductCard } from '@/app/components/ProductCard';
+import { ProductCard } from '@/app/components/ProductCardLanding';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// --- FIX 1: Ensure all product IDs are unique ---
-const featuredProducts = [
-    { id: 1, name: 'Conquer Tee', price: 35.00, salePrice: 29.99, images: [{image_id: 1, url: '/images/image.jpg', color_id: null}, {image_id: 2, url: '/images/image1.jpg', color_id: null}], colors: [{ color_id: 1, name: 'Black', hex_code: '#000000' }, { color_id: 2, name: 'White', hex_code: '#FFFFFF' }], sizes: ['S', 'M', 'L', 'XL'], stock: { 'S': 10, 'M': 15, 'L': 0, 'XL': 5 } },
-    { id: 2, name: 'Unleash Tee', price: 29.99, salePrice: null, images:  [{image_id: 3, url: '/images/image.jpg', color_id: null}, {image_id: 4, url: '/images/image1.jpg', color_id: null}], colors: [{ color_id: 3, name: 'Forest Green', hex_code: '#107D3F' }, { color_id: 1, name: 'Black', hex_code: '#000000' }], sizes: ['S', 'M', 'L', 'XL'], stock: { 'S': 8, 'M': 10, 'L': 12, 'XL': 3 } },
-    { id: 3, name: 'Grind Tee', price: 39.99, salePrice: 29.99, images:  [{image_id: 5, url: '/images/image.jpg', color_id: null}, {image_id: 6, url: '/images/image1.jpg', color_id: null}], colors: [{ color_id: 4, name: 'Crimson Red', hex_code: '#EF3D4C' }, { color_id: 2, name: 'White', hex_code: '#FFFFFF' }], sizes: ['S', 'M', 'L', 'XL'], stock: { 'S': 0, 'M': 1, 'L': 0, 'XL': 0 } },
-    { id: 4, name: 'Hustle Tee', price: 29.99, salePrice: null, images: [{image_id: 7, url: '/images/image.jpg', color_id: null}, {image_id: 8, url: '/images/image1.jpg', color_id: null}], colors: [{ color_id: 1, name: 'Black', hex_code: '#000000' }, { color_id: 3, name: 'Forest Green', hex_code: '#107D3F' }], sizes: ['S', 'M', 'L', 'XL'], stock: { 'S': 0, 'M': 0, 'L': 5, 'XL': 8 } },
-    { id: 5, name: 'Dominate Hoodie', price: 59.99, salePrice: null, images: [{image_id: 9, url: '/images/image.jpg', color_id: null}, {image_id: 10, url: '/images/image1.jpg', color_id: null}], colors: [{ color_id: 1, name: 'Black', hex_code: '#000000' }, { color_id: 3, name: 'Forest Green', hex_code: '#107D3F' }], sizes: ['S', 'M', 'L', 'XL'], stock: { 'S': 0, 'M': 0, 'L': 5, 'XL': 8 } },
-    { id: 6, name: 'Legacy Joggers', price: 49.99, salePrice: null, images: [{image_id: 11, url: '/images/image.jpg', color_id: null}, {image_id: 12, url: '/images/image1.jpg', color_id: null}], colors: [{ color_id: 1, name: 'Black', hex_code: '#000000' }, { color_id: 3, name: 'Forest Green', hex_code: '#107D3F' }], sizes: ['S', 'M', 'L', 'XL'], stock: { 'S': 0, 'M': 0, 'L': 5, 'XL': 8 } },
-    { id: 7, name: 'Apex Shorts', price: 39.99, salePrice: null, images: [{image_id: 13, url: '/images/image.jpg', color_id: null}, {image_id: 14, url: '/images/image1.jpg', color_id: null}], colors: [{ color_id: 1, name: 'Black', hex_code: '#000000' }, { color_id: 3, name: 'Forest Green', hex_code: '#107D3F' }], sizes: ['S', 'M', 'L', 'XL'], stock: { 'S': 0, 'M': 0, 'L': 5, 'XL': 8 } },
-];
+// Type definitions for the product structure
+type StockInfo = { id: string; size: string; stock: number };
+type ProductVariant = {
+  variantId: string;
+  price: string;
+  compareAtPrice: string | null;
+  thumbnailUrl: string;
+  colorName: string;
+  colorHex: string;
+  images: { id: string, url: string }[];
+  stock: StockInfo[];
+};
+type Product = {
+  id: string;
+  name: string;
+  variants: ProductVariant[];
+};
 
 
 const FeaturedProducts = () => {
-  // Your TypeScript types for the refs are incorrect, let's fix them.
+  // Refs for GSAP animations
   const sectionRef = useRef<HTMLElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null); // Ref for the horizontal track
+  const trackRef = useRef<HTMLDivElement>(null);
+  
+  // State for products
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch featured products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/featured-products');
+        if (response.ok) {
+          const data = await response.json();
+          setProducts(data.products || []);
+        } else {
+          console.error('Failed to fetch featured products');
+        }
+      } catch (error) {
+        console.error('Error fetching featured products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -63,7 +96,7 @@ const FeaturedProducts = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} className="py-24 overflow-hidden text-white bg-brand-black md:py-32">
+    <section ref={sectionRef} className="overflow-hidden text-white py-28 bg-brand-black md:py-32">
       <div className="container flex flex-col justify-center h-full px-6 mx-auto">
         <div className="flex items-end justify-between mb-16">
           <div>
@@ -80,21 +113,53 @@ const FeaturedProducts = () => {
           </Link>
         </div>
 
-        <div className="w-full pb-4 -mb-4 overflow-x-auto overscroll-behavior-x-contain modern-scrollbar">
-          <div ref={trackRef} className="flex gap-8 pr-6 w-max md:pr-0">
-            {/* --- FIX 2: Use the array index to create a guaranteed unique key --- */}
-            {featuredProducts.map((product, index) => (
-              <div key={`featured-product-${product.id}-${index}`} className="flex-shrink-0 w-64 p-4 transition-transform duration-300 bg-white shadow-lg rounded-xl md:w-80 hover:-translate-y-2">
-                <ProductCard product={product} />
+        <div className="w-full pb-6 -mb-6 overflow-x-auto min-h-[640px] overscroll-behavior-x-contain modern-scrollbar">
+          <div ref={trackRef} className="flex items-start gap-6 pr-8 w-max md:pr-0 md:gap-8">
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 6 }).map((_, index) => (
+                <div key={`skeleton-${index}`} className="flex-shrink-0 bg-white shadow-xl w-80 h-[580px] rounded-2xl animate-pulse overflow-hidden border border-gray-100">
+                  <div className="p-6">
+                    <div className="w-full bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl aspect-square"></div>
+                    <div className="mt-6 space-y-3">
+                      <div className="h-6 rounded-lg bg-gradient-to-r from-gray-200 to-gray-300"></div>
+                      <div className="w-4/5 h-5 rounded-lg bg-gradient-to-r from-gray-200 to-gray-300"></div>
+                      <div className="w-3/5 rounded-full h-9 bg-gradient-to-r from-gray-200 to-gray-300"></div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : products.length > 0 ? (
+              products.map((product, index) => (
+                <div key={`featured-product-${product.id}-${index}`} className="flex-shrink-0 transition-all duration-500 ease-out bg-white shadow-xl w-80 min-h-[580px] rounded-2xl hover:-translate-y-3 hover:shadow-2xl hover:shadow-black/10 group border border-gray-100/50 backdrop-blur-sm">
+                  <ProductCard product={product} />
+                </div>
+              ))
+            ) : (
+              // No products fallback
+              <div className="flex items-center justify-center flex-shrink-0 p-10 text-center text-gray-400 w-80 min-h-[480px] bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-lg border border-gray-200">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center w-16 h-16 mx-auto bg-gray-200 rounded-full">
+                    <ArrowRight className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-lg font-medium text-gray-600">No featured products available</p>
+                  <Link href="/shop" className="inline-block px-6 py-3 text-sm font-semibold text-white transition-colors duration-300 rounded-full bg-primary hover:bg-primary-dark hover:shadow-lg">Browse all products</Link>
+                </div>
               </div>
-            ))}
-            <div className="flex items-center justify-center flex-shrink-0 w-64 md:w-80">
-              <Link href="/shop" className="flex flex-col items-center justify-center w-full h-full transition-colors duration-300 border-2 border-gray-600 border-dashed bg-gray-900/50 rounded-xl group hover:bg-primary hover:border-primary">
-                 <span className="text-xl font-bold text-center text-white">Explore the<br/>Full Collection</span>
-                  <div className="flex items-center gap-2 mt-4 font-semibold text-primary group-hover:text-white">
+            )}
+            
+            <div className="flex items-center justify-center flex-shrink-0 w-80 min-h-[580px]">
+              <Link href="/shop" className="flex flex-col items-center justify-center w-full h-full transition-all duration-500 ease-out border-2 border-dashed border-gray-600/30 bg-gradient-to-br from-gray-900/60 to-gray-800/40 backdrop-blur-sm rounded-2xl group hover:bg-gradient-to-br hover:from-primary/90 hover:to-primary-dark/90 hover:border-primary/50 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20">
+                <div className="p-8 space-y-6 text-center">
+                  <div className="flex items-center justify-center w-16 h-16 mx-auto transition-all duration-300 rounded-full bg-white/10 group-hover:bg-white/20">
+                    <ArrowRight className="w-8 h-8 transition-colors duration-300 text-primary group-hover:text-white" />
+                  </div>
+                  <span className="text-xl font-bold leading-tight text-center text-white">Explore the<br/>Full Collection</span>
+                  <div className="flex items-center justify-center gap-3 px-6 py-3 font-semibold transition-all duration-300 rounded-full text-primary group-hover:text-white bg-white/10 group-hover:bg-white/20">
                     <span>View All</span>
                     <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                   </div>
+                </div>
               </Link>
             </div>
           </div>
