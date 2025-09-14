@@ -1,3 +1,28 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+// Temporary placeholder for AI virtual try-on functionality
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function POST(request: NextRequest) {
+  try {
+    return NextResponse.json({ 
+      error: 'Virtual try-on feature is currently under development' 
+    }, { status: 501 });
+  } catch (error) {
+    console.error('Virtual try-on API error:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error' 
+    }, { status: 500 });
+  }
+}
+
+/* 
+TODO: Implement AI virtual try-on functionality
+The commented code below contains the original implementation
+that needs to be completed and properly configured.
+
+Original implementation (commented out):
+*/
+
 // import { NextRequest, NextResponse } from 'next/server';
 // import { VertexAI } from '@google-cloud/vertex-ai';
 //     console.log('🔍 Analyzing images with Gemini Vision...');

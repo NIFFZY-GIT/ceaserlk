@@ -5,7 +5,6 @@ import { X, Trash2, Plus, Minus, ShoppingBag, Loader2, Clock } from "lucide-reac
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useLayoutEffect, useState, useEffect } from 'react';
-import { gsap } from 'gsap';
 
 // const FREE_SHIPPING_THRESHOLD = 10000;
 

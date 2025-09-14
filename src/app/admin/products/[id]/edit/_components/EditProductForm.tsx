@@ -2,8 +2,41 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusCircle, Trash2, ImagePlus, X, Star, Loader2 } from 'lucide-react';
-import { FullProduct } from '../page';
+import Image from 'next/image';
+import { ImagePlus, Loader2 } from 'lucide-react';
+
+// Define types locally since they're not exported from parent
+interface ProductImage { 
+  id: string; 
+  imageUrl: string; 
+}
+
+interface ProductSize { 
+  id: string; 
+  size: string; 
+  stock: number; 
+}
+
+interface ProductVariant {
+  id: string; 
+  colorName: string; 
+  colorHex: string; 
+  price: string;
+  compareAtPrice: string | null; 
+  sku: string | null; 
+  thumbnailUrl: string | null;
+  images: ProductImage[]; 
+  sizes: ProductSize[];
+}
+
+interface FullProduct {
+  id: string; 
+  name: string; 
+  description: string;
+  audio_url: string | null;
+  shipping_cost: string;
+  variants: ProductVariant[];
+}
 
 // Define the shape of our form's state
 type ImageState = File | { id: string; imageUrl: string };
@@ -30,22 +63,19 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
   const [variants, setVariants] = useState<VariantFormState[]>([]);
-  const [variantsToDelete, setVariantsToDelete] = useState<string[]>([]);
-  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
-  const [sizesToDelete, setSizesToDelete] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading] = useState(false);
+  const [error] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) {
       setProductName(initialData.name);
       setDescription(initialData.description || '');
-      setVariants(initialData.variants.map(v => ({
+      setVariants(initialData.variants.map((v: ProductVariant) => ({
         ...v,
         compareAtPrice: v.compareAtPrice || '',
         sku: v.sku || '',
         images: v.images || [],
-        sizes: (v.sizes || []).map(s => ({ ...s, id: s.id })),
+        sizes: (v.sizes || []).map((s: ProductSize) => ({ ...s, id: s.id })),
         thumbnailImageUrl: v.thumbnailUrl,
       })));
     }
@@ -105,7 +135,13 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                       const isThumbnail = variant.thumbnailImageUrl === imageUrl;
                       return (
                         <div key={isExisting ? image.id : image.name} className="relative group">
-                          <img src={imageUrl} alt="product" className={`object-cover w-24 h-24 rounded-md border-2 ${isThumbnail ? 'border-primary' : 'border-transparent'}`} />
+                          <Image 
+                            src={imageUrl} 
+                            alt="product" 
+                            width={96}
+                            height={96}
+                            className={`object-cover w-24 h-24 rounded-md border-2 ${isThumbnail ? 'border-primary' : 'border-transparent'}`} 
+                          />
                           <div className="absolute inset-0 flex items-center justify-center gap-2 transition-opacity bg-black rounded-md opacity-0 bg-opacity-60 group-hover:opacity-100">
                              {/* Buttons for setting thumbnail and removing */}
                           </div>

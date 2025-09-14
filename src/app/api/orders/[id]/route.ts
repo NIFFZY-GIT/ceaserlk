@@ -4,8 +4,10 @@ import { verifyAuth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  
   // Verify authentication
   try {
     const authResult = await verifyAuth(request);
@@ -18,9 +20,7 @@ export async function GET(
   }
 
   try {
-    const orderId = params.id;
-    
-    if (!orderId) {
+    if (!id) {
       return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
 
@@ -49,7 +49,7 @@ export async function GET(
         GROUP BY o.id
       `;
       
-      const result = await client.query(orderQuery, [orderId]);
+      const result = await client.query(orderQuery, [id]);
       
       if (result.rows.length === 0) {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 });

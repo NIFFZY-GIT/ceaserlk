@@ -5,8 +5,10 @@ import { verifyAuth } from '@/lib/auth';
 // PUT - Update a user's role (Demote from ADMIN to USER)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: targetUserId } = await params;
+  
   let authResult;
   try {
     authResult = await verifyAuth(request);
@@ -17,8 +19,6 @@ export async function PUT(
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
   
-  const { id: targetUserId } = params;
-
   // --- CRITICAL SECURITY CHECK: Prevent an admin from demoting themselves ---
   if (authResult.userId.toString() === targetUserId) {
     return NextResponse.json({ error: "You cannot change your own role." }, { status: 400 });

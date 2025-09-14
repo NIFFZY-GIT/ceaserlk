@@ -14,7 +14,20 @@ const ProductImage = ({ src, alt }: { src: string | null; alt: string }) => {
     </div>);
 };
 
-const getStatusBadge = (status: Order['status']) => { /* ... (same as before) ... */ };
+const getStatusBadge = (status: Order['status']) => {
+  const statusColors: { [key: string]: string } = {
+    PAID: 'bg-blue-900 text-blue-300 border-blue-700',
+    PROCESSING: 'bg-purple-900 text-purple-300 border-purple-700',
+    PACKED: 'bg-gray-700 text-gray-300 border-gray-600',
+    SHIPPED: 'bg-indigo-900 text-indigo-300 border-indigo-700',
+    DELIVERED: 'bg-green-900 text-green-300 border-green-700',
+    CANCELLED: 'bg-red-900 text-red-300 border-red-700',
+    REFUNDED: 'bg-yellow-900 text-yellow-300 border-yellow-700',
+    PENDING: 'bg-yellow-900 text-yellow-300 border-yellow-700',
+  };
+  
+  return `px-3 py-1 text-sm font-semibold rounded-full border ${statusColors[status] || 'bg-gray-700 text-gray-300 border-gray-600'}`;
+};
 
 const OrderCard = ({ order }: { order: Order }) => {
   const [isOpen, setIsOpen] = useState(false);

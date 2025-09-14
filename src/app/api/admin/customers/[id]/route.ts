@@ -5,8 +5,10 @@ import { verifyAuth } from '@/lib/auth';
 // GET a single customer's details and their order history
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  
   try {
     const authResult = await verifyAuth(request);
     if (!authResult || authResult.role !== 'ADMIN') {
@@ -16,7 +18,6 @@ export async function GET(
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
   
-  const { id } = params;
   try {
     // A single query to get the user and all their associated orders nested as a JSON array
     const query = `
@@ -62,8 +63,10 @@ export async function GET(
 // PUT - Update a customer's details (e.g., promote to admin)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  
   try {
     const authResult = await verifyAuth(request);
     if (!authResult || authResult.role !== 'ADMIN') {
@@ -73,7 +76,6 @@ export async function PUT(
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
   
-  const { id } = params;
   try {
     const { role } = await request.json();
 

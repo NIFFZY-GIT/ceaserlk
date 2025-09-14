@@ -5,16 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, Loader2, Package, Download, ShoppingBag, User, Sparkles, Gift, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
-import VirtualTryOn from '@/app/profile/components/VirtualTryOn'; // Adjust path if you placed it elsewhere
-
-// Define the shape of the data we'll fetch
-interface OrderItem {
-    product_name: string;
-    imageUrl?: string; // This needs to be added to the order details API response
-}
-interface FullOrder {
-    items: OrderItem[];
-}
 
 function OrderConfirmationContent() {
   const router = useRouter();
@@ -24,7 +14,6 @@ function OrderConfirmationContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
-  const [order, setOrder] = useState<FullOrder | null>(null); // State for full order details
 
   useEffect(() => {
     const processOrder = async (id: string) => {
@@ -36,10 +25,9 @@ function OrderConfirmationContent() {
       try {
         const res = await fetch(`/api/admin/orders/${id}`); // We can reuse the admin route for now
         if (res.ok) {
-          const orderData: FullOrder = await res.json();
+          const orderData = await res.json();
           // The API now returns the actual product image URLs
           console.log('Order data fetched for virtual try-on:', orderData);
-          setOrder(orderData);
         }
       } catch (e) { console.error("Could not fetch order details for AI feature", e); }
     };

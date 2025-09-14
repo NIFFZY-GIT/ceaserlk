@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       WHERE p.is_published = TRUE
     `;
 
-    const queryParams: any[] = [];
+    const queryParams: (string | number | string[])[] = [];
     let paramIndex = 1;
 
     // Dynamically add WHERE clauses based on filters

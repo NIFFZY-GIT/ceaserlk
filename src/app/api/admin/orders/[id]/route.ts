@@ -67,9 +67,9 @@ export async function GET(
 // --- PUT - Update an order's status (with corrected signature) ---
 export async function PUT(
   request: NextRequest, 
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params; // Now correctly destructured
+  const { id } = await params; // Now correctly destructured
 
   try {
     // TEMPORARY: BYPASS AUTH FOR TESTING - REMOVE IN PRODUCTION
