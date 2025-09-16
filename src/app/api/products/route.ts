@@ -56,9 +56,11 @@ export async function GET(request: NextRequest) {
       queryParams.push(sizes);
     }
     
-    if (colors && colors.length > 0) {
-        query += ` AND EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.color_name = ANY($${paramIndex++}::text[]))`;
-        queryParams.push(colors);
+      if (colors && colors.length > 0) {
+          // Normalize color names to lowercase for case-insensitive matching
+          const lowerColors = colors.map(c => c.toLowerCase());
+          query += ` AND EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND LOWER(pv.color_name) = ANY($${paramIndex++}::text[]))`;
+          queryParams.push(lowerColors);
     }
     
     query += ` GROUP BY p.id ORDER BY p.created_at DESC;`;

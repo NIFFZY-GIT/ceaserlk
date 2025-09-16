@@ -57,8 +57,10 @@ export const ProductCard = ({ product }: { product: Product }) => {
   const price = parseFloat(activeVariant.price);
   const compareAtPrice = activeVariant.compareAtPrice ? parseFloat(activeVariant.compareAtPrice) : null;
   const isOnSale = compareAtPrice && compareAtPrice > price;
-  const mainImage = activeVariant.thumbnailUrl || '/images/image.jpg';
-  const hoverImage = activeVariant.images?.find(img => img.url !== mainImage)?.url || mainImage;
+  // --- Improved image logic ---
+  const imagesArr = Array.isArray(activeVariant.images) && activeVariant.images.length > 0 ? activeVariant.images : [];
+  const mainImage = imagesArr[0]?.url || activeVariant.thumbnailUrl || '/images/image.jpg';
+  const hoverImage = imagesArr[1]?.url || mainImage;
   const currentImageUrl = isHovered ? hoverImage : mainImage;
   const totalStock = activeVariant.stock.reduce((sum, s) => sum + s.stock, 0);
 

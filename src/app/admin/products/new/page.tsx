@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PlusCircle, Trash2, ImagePlus, X, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 // --- TYPE DEFINITIONS ---
+type ExistingColor = { colorName: string; colorHex: string };
+
 type SizeStock = { size: string; stock: number };
 type ProductVariant = {
   id: number; // Temporary client-side ID
@@ -17,6 +19,7 @@ type ProductVariant = {
   images: File[];
   sizes: SizeStock[];
   thumbnailImageName: string | null;
+  useExistingColor?: boolean; // flag to indicate using an existing color
 };
 
 const AddProductPage = () => {
@@ -30,23 +33,47 @@ const AddProductPage = () => {
   // --- NEW STATE for the audio file ---
   const [audioFile, setAudioFile] = useState<File | null>(null);
 
+  // --- NEW: existing colors from API ---
+  const [existingColors, setExistingColors] = useState<ExistingColor[]>([]);
+
+  useEffect(() => {
+    let ignore = false;
+    async function fetchColors() {
+      try {
+        const res = await fetch('/api/admin/products/colors', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data: ExistingColor[] = await res.json();
+        if (!ignore) setExistingColors(data);
+      } catch (e) {
+        console.warn('Failed to load colors', e);
+      }
+    }
+    fetchColors();
+    return () => { ignore = true; };
+  }, []);
+
   const [variants, setVariants] = useState<ProductVariant[]>([
     {
       id: Date.now(),
       colorName: '', colorHex: '#000000', price: '',
       compareAtPrice: '', sku: '', images: [],
       sizes: [{ size: 'S', stock: 0 }], thumbnailImageName: null,
+      useExistingColor: false,
     },
   ]);
 
-  const addVariant = () => setVariants([...variants, { id: Date.now(), colorName: '', colorHex: '#000000', price: '', compareAtPrice: '', sku: '', images: [], sizes: [{ size: 'S', stock: 0 }], thumbnailImageName: null }]);
+  const addVariant = () => setVariants([...variants, { id: Date.now(), colorName: '', colorHex: '#000000', price: '', compareAtPrice: '', sku: '', images: [], sizes: [{ size: 'S', stock: 0 }], thumbnailImageName: null, useExistingColor: false }]);
   const removeVariant = (id: number) => setVariants(variants.filter((v) => v.id !== id));
-  const handleVariantChange = (id: number, field: keyof ProductVariant, value: string | File[] | SizeStock[] | null) => setVariants(variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)));
-  const handleSizeChange = (variantId: number, index: number, field: keyof SizeStock, value: string | number) => setVariants(variants.map(v => v.id === variantId ? { ...v, sizes: v.sizes.map((s, i) => (i === index ? {...s, [field]: value} : s)) } : v));
-  const addSize = (variantId: number) => setVariants(variants.map(v => v.id === variantId ? { ...v, sizes: [...v.sizes, {size: '', stock: 0}] } : v));
-  const removeSize = (variantId: number, index: number) => setVariants(variants.map(v => v.id === variantId ? { ...v, sizes: v.sizes.filter((_, i) => i !== index)} : v));
+
+  function handleVariantChange<K extends keyof ProductVariant>(id: number, field: K, value: ProductVariant[K]) {
+    setVariants(variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)));
+  }
+
+  const handleSizeChange = (variantId: number, index: number, field: keyof SizeStock, value: string | number) => setVariants(variants.map(v => v.id === variantId ? { ...v, sizes: v.sizes.map((s, i) => (i === index ? { ...s, [field]: value } : s)) } : v));
+  const addSize = (variantId: number) => setVariants(variants.map(v => v.id === variantId ? { ...v, sizes: [...v.sizes, { size: '', stock: 0 }] } : v));
+  const removeSize = (variantId: number, index: number) => setVariants(variants.map(v => v.id === variantId ? { ...v, sizes: v.sizes.filter((_, i) => i !== index) } : v));
   const setThumbnail = (variantId: number, imageName: string) => setVariants(variants.map(v => v.id === variantId ? { ...v, thumbnailImageName: imageName } : v));
-  
+
   const handleImageChange = (id: number, files: FileList | null) => {
     if (!files || files.length === 0) return;
     const variant = variants.find(v => v.id === id);
@@ -67,10 +94,25 @@ const AddProductPage = () => {
     setVariants(variants.map(v => v.id === variantId ? { ...v, images: newImages, thumbnailImageName: newThumbnail } : v));
   };
 
+  // --- NEW: compute duplicate color names within the current variants ---
+  const duplicateColorNames = useMemo(() => {
+    const names = variants.map(v => v.colorName.trim().toLowerCase()).filter(Boolean);
+    const counts: Record<string, number> = {};
+    names.forEach(n => { counts[n] = (counts[n] ?? 0) + 1; });
+    return new Set(Object.entries(counts).filter(([, c]) => c > 1).map(([n]) => n));
+  }, [variants]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    // --- Prevent duplicate colors among variants ---
+    if (duplicateColorNames.size > 0) {
+      setIsLoading(false);
+      setError('Duplicate color variants detected. Please ensure each variant uses a unique color.');
+      return;
+    }
 
     const formData = new FormData();
     formData.append('productName', productName);
@@ -81,8 +123,17 @@ const AddProductPage = () => {
     if (audioFile) {
       formData.append('audioFile', audioFile);
     }
-    
+
     const variantsForApi = variants.map(variant => ({ ...variant, images: variant.images.map(img => img.name) }));
+    
+    // Debug: Log the variants being sent to API
+    console.log('Sending variants to API:', variantsForApi.map(v => ({ 
+        id: v.id, 
+        colorName: v.colorName, 
+        colorHex: v.colorHex,
+        useExistingColor: v.useExistingColor 
+    })));
+    
     formData.append('variants', JSON.stringify(variantsForApi));
     variants.forEach(variant => { variant.images.forEach(imageFile => { formData.append(`images_variant_${variant.id}`, imageFile); }); });
 
@@ -126,29 +177,123 @@ const AddProductPage = () => {
         </div>
 
         <div>
-            <h2 className="mb-4 text-xl font-semibold text-gray-800">Product Variants</h2>
-            <div className="space-y-6">
-                {variants.map((variant) => (
-                <div key={variant.id} className="relative p-6 bg-white rounded-lg shadow">
-                    {variants.length > 1 && <button type="button" onClick={() => removeVariant(variant.id)} className="absolute text-gray-400 top-4 right-4 hover:text-red-500"><Trash2 size={20} /></button>}
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700">Color</label><div className="flex items-center gap-4 mt-1"><input type="color" value={variant.colorHex} onChange={e => handleVariantChange(variant.id, 'colorHex', e.target.value)} className="w-10 h-10 p-1 border-gray-300 rounded-md shadow-sm" /><input type="text" value={variant.colorName} onChange={e => handleVariantChange(variant.id, 'colorName', e.target.value)} className="block w-full border-gray-300 rounded-md shadow-sm" placeholder="e.g., Ocean Blue" required /></div></div>
-                        <div><label className="block text-sm font-medium text-gray-700">Price (Sale Price)</label><input type="number" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="e.g., 49.99" required /></div>
-                        <div><label className="block text-sm font-medium text-gray-700">Compare At Price (Original)</label><input type="number" value={variant.compareAtPrice} onChange={e => handleVariantChange(variant.id, 'compareAtPrice', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="Optional: e.g., 59.99" /><p className="mt-1 text-xs text-gray-500">If set, will be shown as crossed out.</p></div>
-                        <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700">SKU</label><input type="text" value={variant.sku} onChange={e => handleVariantChange(variant.id, 'sku', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="e.g., TSH-OB-001" /></div>
-                        <div className="md:col-span-2"><label className="block mb-2 text-sm font-medium text-gray-700">Images</label><div className="flex flex-wrap gap-4">{variant.images.map((image, index) => { const isThumbnail = variant.thumbnailImageName === image.name; return (<div key={index} className="relative group"><Image src={URL.createObjectURL(image)} alt="upload preview" width={96} height={96} className={`object-cover w-24 h-24 rounded-md border-2 ${isThumbnail ? 'border-primary' : 'border-transparent'}`} /><div className="absolute inset-0 flex items-center justify-center gap-2 transition-opacity bg-black rounded-md opacity-0 bg-opacity-60 group-hover:opacity-100"><button type="button" title="Set as thumbnail" onClick={() => setThumbnail(variant.id, image.name)} className="p-1.5 text-white bg-black/50 rounded-full hover:bg-primary"><Star size={14} fill={isThumbnail ? 'currentColor' : 'none'} /></button><button type="button" title="Remove image" onClick={() => removeImage(variant.id, image)} className="p-1.5 text-white bg-black/50 rounded-full hover:bg-red-500"><X size={14} /></button></div></div>); })}<label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:bg-gray-50"><ImagePlus size={24} className="text-gray-400" /><span className="mt-1 text-xs text-gray-500">Add Images</span>                                    <input type="file" multiple accept="image/*" onChange={(e) => { 
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">Product Variants</h2>
+          <div className="space-y-6">
+            {variants.map((variant) => (
+              <div key={variant.id} className="relative p-6 bg-white rounded-lg shadow">
+                {variants.length > 1 && (
+                  <button type="button" onClick={() => removeVariant(variant.id)} className="absolute text-gray-400 top-4 right-4 hover:text-red-500">
+                    <Trash2 size={20} />
+                  </button>
+                )}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {/* Color selection: existing or new */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700">Color</label>
+                    <div className="flex flex-col gap-2 mt-2">
+                      <label className="inline-flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={!!variant.useExistingColor}
+                          onChange={(e) => {
+                            const useExisting = e.target.checked;
+                            handleVariantChange(variant.id, 'useExistingColor', useExisting);
+                            // Only clear fields when switching TO existing color mode
+                            // When switching FROM existing color, keep the current values
+                            if (useExisting) {
+                              handleVariantChange(variant.id, 'colorName', '');
+                              handleVariantChange(variant.id, 'colorHex', '#000000');
+                            }
+                          }}
+                        />
+                        Use existing color
+                      </label>
+
+                      {variant.useExistingColor ? (
+                        <div className="flex items-center gap-4">
+                          <select
+                            className="w-full border-gray-300 rounded-md shadow-sm"
+                            value={variant.colorName}
+                            onChange={(e) => {
+                              const name = e.target.value;
+                              const found = existingColors.find(c => c.colorName === name);
+                              
+                              // Debug: Log the color selection
+                              console.log('Selected existing color:', { name, found });
+                              
+                              handleVariantChange(variant.id, 'colorName', name);
+                              if (found) {
+                                handleVariantChange(variant.id, 'colorHex', found.colorHex);
+                                console.log('Set colorHex to:', found.colorHex);
+                              }
+                            }}
+                          >
+                            <option value="">Select a color</option>
+                            {existingColors.map(c => (
+                              <option key={c.colorName} value={c.colorName}>
+                                {c.colorName}
+                              </option>
+                            ))}
+                          </select>
+                          {variant.colorName && variant.colorHex && (
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="inline-block w-6 h-6 border rounded" style={{ backgroundColor: variant.colorHex }} />
+                              <span className="text-gray-500">{variant.colorName} - {variant.colorHex}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="color"
+                            value={variant.colorHex}
+                            onChange={e => handleVariantChange(variant.id, 'colorHex', e.target.value)}
+                            className="w-10 h-10 p-1 border-gray-300 rounded-md shadow-sm"
+                          />
+                          <input
+                            type="text"
+                            value={variant.colorName}
+                            onChange={e => handleVariantChange(variant.id, 'colorName', e.target.value)}
+                            className="block w-full border-gray-300 rounded-md shadow-sm"
+                            placeholder="e.g., Ocean Blue"
+                            required
+                          />
+                        </div>
+                      )}
+
+                      {/* Duplicate warning */}
+                      {variant.colorName.trim() && duplicateColorNames.has(variant.colorName.trim().toLowerCase()) && (
+                        <p className="text-xs text-red-600">Duplicate color: another variant already uses &quot;{variant.colorName}&quot;.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div><label className="block text-sm font-medium text-gray-700">Price (Sale Price)</label><input type="number" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="e.g., 49.99" required /></div>
+                  <div><label className="block text-sm font-medium text-gray-700">Compare At Price (Original)</label><input type="number" value={variant.compareAtPrice} onChange={e => handleVariantChange(variant.id, 'compareAtPrice', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="Optional: e.g., 59.99" /><p className="mt-1 text-xs text-gray-500">If set, will be shown as crossed out.</p></div>
+                  <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700">SKU</label><input type="text" value={variant.sku} onChange={e => handleVariantChange(variant.id, 'sku', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="e.g., TSH-OB-001" /></div>
+                  <div className="md:col-span-2"><label className="block mb-2 text-sm font-medium text-gray-700">Images</label><div className="flex flex-wrap gap-4">{variant.images.map((image, index) => { const isThumbnail = variant.thumbnailImageName === image.name; return (<div key={index} className="relative group"><Image src={URL.createObjectURL(image)} alt="upload preview" width={96} height={96} className={`object-cover w-24 h-24 rounded-md border-2 ${isThumbnail ? 'border-primary' : 'border-transparent'}`} /><div className="absolute inset-0 flex items-center justify-center gap-2 transition-opacity bg-black rounded-md opacity-0 bg-opacity-60 group-hover:opacity-100"><button type="button" title="Set as thumbnail" onClick={() => setThumbnail(variant.id, image.name)} className="p-1.5 text-white bg-black/50 rounded-full hover:bg-primary"><Star size={14} fill={isThumbnail ? 'currentColor' : 'none'} /></button><button type="button" title="Remove image" onClick={() => removeImage(variant.id, image)} className="p-1.5 text-white bg-black/50 rounded-full hover:bg-red-500"><X size={14} /></button></div></div>); })}<label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:bg-gray-50"><ImagePlus size={24} className="text-gray-400" /><span className="mt-1 text-xs text-gray-500">Add Images</span>                                    <input type="file" multiple accept="image/*" onChange={(e) => { 
                                         handleImageChange(variant.id, e.target.files);
                                         // Reset the input value so the same files can be selected again
                                         e.target.value = '';
                                     }} className="hidden" /></label></div></div>
-                        <div className="md:col-span-2"><label className="block mb-2 text-sm font-medium text-gray-700">Sizes & Stock</label><div className="space-y-2">{variant.sizes.map((sizeStock, index) => (<div key={index} className="flex items-center gap-4"><input type="text" placeholder="Size (e.g., M, 32x34)" value={sizeStock.size} onChange={e => handleSizeChange(variant.id, index, 'size', e.target.value)} className="block w-full border-gray-300 rounded-md shadow-sm" required /><input type="number" placeholder="Stock" value={sizeStock.stock} onChange={e => handleSizeChange(variant.id, index, 'stock', parseInt(e.target.value) || 0)} className="block w-full border-gray-300 rounded-md shadow-sm" /><>{variant.sizes.length > 1 && <button type="button" onClick={() => removeSize(variant.id, index)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button>}</></div>))}<button type="button" onClick={() => addSize(variant.id)} className="flex items-center gap-1 mt-2 text-sm font-medium text-primary hover:text-primary-dark"><PlusCircle size={16} /> Add Size</button></div></div>
-                    </div>
+                  <div className="md:col-span-2"><label className="block mb-2 text-sm font-medium text-gray-700">Sizes & Stock</label><div className="space-y-2">{variant.sizes.map((sizeStock, index) => (<div key={index} className="flex items-center gap-4"><input type="text" placeholder="Size (e.g., M, 32x34)" value={sizeStock.size} onChange={e => handleSizeChange(variant.id, index, 'size', e.target.value)} className="block w-full border-gray-300 rounded-md shadow-sm" required /><input type="number" placeholder="Stock" value={sizeStock.stock} onChange={e => handleSizeChange(variant.id, index, 'stock', parseInt(e.target.value) || 0)} className="block w-full border-gray-300 rounded-md shadow-sm" /><>{variant.sizes.length > 1 && <button type="button" onClick={() => removeSize(variant.id, index)} className="text-gray-400 hover:text-red-500"><Trash2 size={18} /></button>}</></div>))}<button type="button" onClick={() => addSize(variant.id)} className="flex items-center gap-1 mt-2 text-sm font-medium text-primary hover:text-primary-dark"><PlusCircle size={16} /> Add Size</button></div></div>
                 </div>
-                ))}
-            </div>
-            <button type="button" onClick={addVariant} className="flex items-center gap-2 px-4 py-2 mt-6 text-sm font-medium text-white bg-gray-600 border border-transparent rounded-md shadow-sm hover:bg-gray-700"><PlusCircle size={20} /> Add Another Variant</button>
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={addVariant} className="flex items-center gap-2 px-4 py-2 mt-6 text-sm font-medium text-white bg-gray-600 border border-transparent rounded-md shadow-sm hover:bg-gray-700">
+            <PlusCircle size={20} /> Add Another Variant
+          </button>
         </div>
-        <div className="flex justify-end pt-4"><button type="button" onClick={() => router.push('/admin/products')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">Cancel</button><button type="submit" disabled={isLoading} className="inline-flex justify-center px-6 py-2 ml-3 text-sm font-medium text-white border border-transparent rounded-md shadow-sm bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed">{isLoading ? 'Saving...' : 'Save Product'}</button></div>
+
+        <div className="flex justify-end pt-4">
+          <button type="button" onClick={() => router.push('/admin/products')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="submit" disabled={isLoading} className="inline-flex justify-center px-6 py-2 ml-3 text-sm font-medium text-white border border-transparent rounded-md shadow-sm bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed">
+            {isLoading ? 'Saving...' : 'Save Product'}
+          </button>
+        </div>
       </form>
     </div>
   );

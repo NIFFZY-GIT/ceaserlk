@@ -63,6 +63,13 @@ export async function POST(request: Request) {
         }
 
         const variants: VariantPayload[] = JSON.parse(variantsString);
+        
+        // Debug: Log the received variants to check color data
+        console.log('Received variants:', variants.map(v => ({ 
+            id: v.id, 
+            colorName: v.colorName, 
+            colorHex: v.colorHex 
+        })));
 
         await client.query('BEGIN');
 
@@ -75,6 +82,15 @@ export async function POST(request: Request) {
 
         for (const variant of variants) {
             const compareAtPriceValue = variant.compareAtPrice ? parseFloat(variant.compareAtPrice) : null;
+            
+            // Debug: Log the data being inserted
+            console.log('Inserting variant:', {
+                productId,
+                colorName: variant.colorName,
+                colorHex: variant.colorHex,
+                price: parseFloat(variant.price)
+            });
+            
             const variantResult = await client.query(
                 `INSERT INTO product_variants (product_id, color_name, color_hex_code, price, compare_at_price, sku) 
                  VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,

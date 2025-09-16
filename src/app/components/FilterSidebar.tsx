@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from 'lucide-react';
+import { useMemo } from 'react';
 
 // Define the shape of the filters object that will be passed around
 export interface Filters {
@@ -47,6 +48,14 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   // Calculate active filter count
   const activeFilterCount = filters.sizes.length + filters.colors.length + (filters.maxPrice < maxPrice ? 1 : 0);
 
+  // Colors are already deduplicated from the API, so use them directly
+  const uniqueColors: AvailableColors[] = useMemo(() => {
+    console.log('FilterSidebar received colors:', availableColors);
+    const filtered = availableColors.filter(c => c.name && c.name.trim());
+    console.log('FilterSidebar filtered colors:', filtered);
+    return filtered;
+  }, [availableColors]);
+
   const FilterContent = () => (
     <>
       {/* Category Filter (static for now) */}
@@ -85,7 +94,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         <h3 className="mb-4 font-semibold text-gray-800">
           Size 
           {filters.sizes.length > 0 && (
-            <span className="px-2 py-1 ml-2 text-xs text-primary bg-green-100 rounded-full">
+            <span className="px-2 py-1 ml-2 text-xs bg-green-100 rounded-full text-primary">
               {filters.sizes.length} selected
             </span>
           )}
@@ -117,13 +126,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         <h3 className="mb-4 font-semibold text-gray-800">
           Color
           {filters.colors.length > 0 && (
-            <span className="px-2 py-1 ml-2 text-xs text-primary bg-green-100 rounded-full">
+            <span className="px-2 py-1 ml-2 text-xs bg-green-100 rounded-full text-primary">
               {filters.colors.length} selected
             </span>
           )}
         </h3>
         <div className="flex flex-wrap gap-3">
-          {availableColors.map(color => (
+          {uniqueColors.map(color => (
             <div key={color.name} className="flex flex-col items-center">
               <button
                 title={color.name}

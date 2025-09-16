@@ -48,6 +48,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [selectedSize, setSelectedSize] = useState<StockInfo | null>(null);
   const [selectedImage, setSelectedImage] = useState<ImageInfo | null>(null);
+  const [loadedImageId, setLoadedImageId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -62,6 +63,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const stockDropIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [showStockDropAlert, setShowStockDropAlert] = useState(false);
   const [recentPurchases, setRecentPurchases] = useState<string[]>([]);
+  const lastAlertAtRef = useRef<number>(0);
 
   // Entrance animations - Optimized to prevent double animation
   useEffect(() => {
@@ -107,6 +109,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             
             setSelectedVariant(initialVariant);
             setSelectedImage(initialVariant.images?.[0] || null);
+            setLoadedImageId(null);
             setSelectedSize(initialVariant.stock?.find(s => s.stock > 0) || null);
           }
         }
@@ -127,6 +130,18 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     };
   }, [params.id, searchParams]);
 
+  // Preload images for the currently selected variant to reduce flicker
+  const selectedVariantId = selectedVariant?.variantId;
+  useEffect(() => {
+    if (!selectedVariant || !selectedVariant.images) return;
+    try {
+      selectedVariant.images.forEach(img => {
+        const pre = new window.Image();
+        pre.src = img.url;
+      });
+    } catch {}
+  }, [selectedVariant, selectedVariantId]);
+
   // Auto-play audio when product loads
   useEffect(() => {
     if (product?.audio_url && audioRef.current && !isAudioPlaying) {
@@ -146,6 +161,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const handleVariantSelect = (variant: Variant) => {
     setSelectedVariant(variant);
     setSelectedImage(variant.images?.[0] || null);
+    setLoadedImageId(null);
     setSelectedSize(variant.stock?.find(s => s.stock > 0) || null);
     setQuantity(1);
     
@@ -236,58 +252,86 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     setIsAudioPlaying(false);
   };
 
-  // Fake stock drop system to create urgency
+  // Fake stock drop system to create urgency (more realistic, less sudden)
   const startFakeStockDrop = useCallback(() => {
     if (stockDropIntervalRef.current) {
       clearTimeout(stockDropIntervalRef.current);
     }
 
     const scheduleNextDrop = () => {
-      // Random interval between 4-6 seconds
-      const randomInterval = Math.floor(Math.random() * 3000) + 4000; // 4000-7000ms
-      
+      // Variable interval with jitter (5s - 12s)
+      const minInterval = 5000;
+      const maxInterval = 12000;
+      const randomInterval = Math.floor(Math.random() * (maxInterval - minInterval + 1)) + minInterval;
+
       stockDropIntervalRef.current = setTimeout(() => {
         setFakeStockReduction(prev => {
-          // Don't reduce stock to 0, keep minimum of 2
+          const now = Date.now();
           const currentSelectedStock = selectedSize ? selectedSize.stock : 0;
           const effectiveStock = currentSelectedStock - prev;
-          
-          if (effectiveStock > 2) {
-            const reduction = Math.floor(Math.random() * 2) + 1; // Reduce by 1 or 2
-            const newReduction = prev + reduction;
-            
-            // Show alert for stock drop
+
+          // If too low, stop manipulation
+          if (effectiveStock <= 2) {
+            return prev;
+          }
+
+          // Drop probability based on remaining stock
+          const dropChance = effectiveStock > 12 ? 0.6 : effectiveStock > 6 ? 0.45 : 0.25;
+          const shouldDrop = Math.random() < dropChance;
+
+          if (!shouldDrop) {
+            // No change this tick, but schedule the next
+            scheduleNextDrop();
+            return prev;
+          }
+
+          // Weighted reduction: mostly 1, sometimes 2, rarely 3 when high stock
+          let reduction = 1;
+          const roll = Math.random();
+          if (effectiveStock > 10) {
+            reduction = roll < 0.75 ? 1 : roll < 0.95 ? 2 : 3;
+          } else if (effectiveStock > 6) {
+            reduction = roll < 0.85 ? 1 : 2;
+          } else {
+            reduction = 1;
+          }
+
+          // Ensure we never go below 2 effective stock
+          const maxAllowedReduction = Math.max(0, effectiveStock - 2);
+          reduction = Math.min(reduction, maxAllowedReduction);
+
+          const newReduction = prev + reduction;
+
+          // Rate-limit alert visibility (cooldown 6-10s)
+          const alertCooldown = Math.floor(Math.random() * 4000) + 6000; // 6-10s
+          if (now - lastAlertAtRef.current > alertCooldown) {
+            lastAlertAtRef.current = now;
             setShowStockDropAlert(true);
-            setTimeout(() => setShowStockDropAlert(false), 3000);
-            
-            // Add a fake recent purchase
+            setTimeout(() => setShowStockDropAlert(false), 2000 + Math.floor(Math.random() * 1500));
+          }
+
+          // Occasionally add a recent purchase (50% chance)
+          if (Math.random() < 0.5) {
             const cities = ['Colombo', 'Kandy', 'Galle', 'Jaffna', 'Negombo', 'Matara', 'Anuradhapura'];
-            const timeAgo = ['2 minutes', '5 minutes', '8 minutes', '12 minutes'];
+            const timeAgo = ['2 minutes', '4 minutes', '7 minutes', '11 minutes'];
             const city = cities[Math.floor(Math.random() * cities.length)];
             const time = timeAgo[Math.floor(Math.random() * timeAgo.length)];
             const newPurchase = `Someone in ${city} bought this ${time} ago`;
-            
-            setRecentPurchases(prev => {
-              const updated = [newPurchase, ...prev.slice(0, 2)]; // Keep only last 3
-              return updated;
-            });
-            
-            // Schedule next drop
-            scheduleNextDrop();
-            
-            return newReduction;
+            setRecentPurchases(prevPurch => [newPurchase, ...prevPurch].slice(0, 3));
           }
-          
-          // Stop dropping if we're at minimum stock
-          return prev;
+
+          // Schedule the next tick regardless
+          scheduleNextDrop();
+          return newReduction;
         });
       }, randomInterval);
     };
 
-    // Start first drop after 5 seconds
+    // Start first drop after a soft delay (4-8s)
+    const initialDelay = Math.floor(Math.random() * 4000) + 4000;
     setTimeout(() => {
       scheduleNextDrop();
-    }, 5000);
+    }, initialDelay);
   }, [selectedSize]);
 
   // Start fake stock drop when product loads and has variants
@@ -368,13 +412,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 {selectedImage ? (
                   <>
                     <Image
-                      key={selectedImage.id}
                       src={selectedImage.url}
                       alt={`${product.name} - ${selectedVariant.colorName}`}
                       fill
                       priority
                       sizes="(max-width: 1024px) 100vw, 50vw"
-                      className="object-cover transition-all duration-500 group-hover:scale-105"
+                      className={`object-cover transition-all duration-500 group-hover:scale-105 ${loadedImageId === selectedImage.id ? 'opacity-100' : 'opacity-0'} transition-opacity`}
+                      onLoadingComplete={() => setLoadedImageId(selectedImage.id)}
+                      placeholder="empty"
                     />
                     {/* Overlay Icons */}
                     <div className="absolute flex gap-2 transition-opacity opacity-0 top-4 right-4 group-hover:opacity-100">
@@ -382,7 +427,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                         onClick={() => setIsWishlisted(!isWishlisted)}
                         className="p-2 transition-colors rounded-full shadow-lg bg-white/90 backdrop-blur-sm hover:bg-white"
                       >
-                        <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+                        <Heart className={`${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600'} w-5 h-5`} />
                       </button>
                       <button className="p-2 transition-colors rounded-full shadow-lg bg-white/90 backdrop-blur-sm hover:bg-white">
                         <Share2 className="w-5 h-5 text-gray-600" />
@@ -410,7 +455,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 {selectedVariant.images.map((image, index) => (
                   <button
                     key={image.id}
-                    onClick={() => setSelectedImage(image)}
+                    onClick={() => { setSelectedImage(image); setLoadedImageId(null); }}
                     className={`relative overflow-hidden bg-gray-50 rounded-lg aspect-square border-2 transition-all ${
                       selectedImage?.id === image.id 
                         ? 'border-black' 
@@ -421,7 +466,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                       src={image.url} 
                       alt={`View ${index + 1}`} 
                       fill 
-                      className="object-cover" 
+                      className="object-cover"
                       sizes="(max-width: 768px) 25vw, 12.5vw" 
                     />
                   </button>
