@@ -16,6 +16,7 @@ interface FullProduct {
   name: string; 
   description: string;
   audio_url: string | null;
+  trading_card_image: string | null;
   shipping_cost: string;
   variants: ProductVariant[];
 }

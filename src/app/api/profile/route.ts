@@ -25,6 +25,7 @@ export async function GET() {
                 'total_amount', o.total_amount,
                 'createdAt', o.created_at,
                 'created_at', o.created_at,
+                'customerEmail', o.customer_email,
                 'shipping_address', CONCAT(o.full_name, ', ', o.shipping_address_line1, ', ', o.shipping_city, ', ', o.shipping_postal_code, ', ', o.shipping_country),
                 'shippingAddress', json_build_object(
                     'fullName', o.full_name,
@@ -43,8 +44,11 @@ export async function GET() {
                       'pricePaid', oi.price_paid::text,
                       'price', oi.price_paid,
                       'quantity', oi.quantity,
+                      'product_id', oi.product_id,
                       -- Join to get the thumbnail URL for the specific variant ordered
                       'imageUrl', pv.thumbnail_url,
+                      -- Join to get trading card image from products table
+                      'trading_card_image', p.trading_card_image,
                       'product', json_build_object(
                         'name', oi.product_name,
                         'images', ARRAY[pv.thumbnail_url]
@@ -53,6 +57,7 @@ export async function GET() {
                   ) FROM order_items oi
                   LEFT JOIN stock_keeping_units sku ON oi.sku_id = sku.id
                   LEFT JOIN product_variants pv ON sku.variant_id = pv.id
+                  LEFT JOIN products p ON oi.product_id = p.id
                   WHERE oi.order_id = o.id
                 )
               ) ORDER BY o.created_at DESC

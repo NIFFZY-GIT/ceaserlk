@@ -32,6 +32,9 @@ const AddProductPage = () => {
   // --- NEW STATE for the audio file ---
   const [audioFile, setAudioFile] = useState<File | null>(null);
 
+  // --- NEW STATE for the trading image ---
+  const [tradingImage, setTradingImage] = useState<File | null>(null);
+
   // --- NEW: existing colors from API ---
   const [existingColors, setExistingColors] = useState<ExistingColor[]>([]);
 
@@ -122,6 +125,11 @@ const AddProductPage = () => {
       formData.append('audioFile', audioFile);
     }
 
+    // --- NEW: Append the trading image if it exists ---
+    if (tradingImage) {
+      formData.append('tradingImage', tradingImage);
+    }
+
     const variantsForApi = variants.map(variant => ({ ...variant, images: variant.images.map(img => img.name) }));
     
     // Debug: Log the variants being sent to API
@@ -167,6 +175,30 @@ const AddProductPage = () => {
               <input type="file" id="audioFile" accept="audio/mpeg, audio/wav, audio/ogg" onChange={(e) => setAudioFile(e.target.files ? e.target.files[0] : null)} className="block w-full mt-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
               {audioFile && <p className="mt-2 text-xs text-gray-500">Selected: {audioFile.name}</p>}
               <p className="mt-1 text-xs text-gray-500">Optional: Upload an MP3, WAV, or OGG file.</p>
+            </div>
+
+            {/* --- NEW TRADING IMAGE INPUT --- */}
+            <div>
+              <label htmlFor="tradingImage" className="block text-sm font-medium text-gray-700">Trading Card Image</label>
+              <input type="file" id="tradingImage" accept="image/jpeg, image/jpg, image/png, image/webp" onChange={(e) => setTradingImage(e.target.files ? e.target.files[0] : null)} className="block w-full mt-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
+              {tradingImage && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-500">Selected: {tradingImage.name}</p>
+                  <div className="mt-2">
+                    <Image
+                      src={URL.createObjectURL(tradingImage)}
+                      alt="Trading card preview"
+                      width={150}
+                      height={200}
+                      className="object-cover border border-gray-300 rounded-md"
+                    />
+                  </div>
+                </div>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                <strong>Special Trading Card:</strong> Upload a high-quality image that customers can download after purchase. 
+                Supports JPG, PNG, and WebP formats.
+              </p>
             </div>
             
             <div><label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label><textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm"></textarea></div>

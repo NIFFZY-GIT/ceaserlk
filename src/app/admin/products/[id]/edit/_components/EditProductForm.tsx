@@ -37,6 +37,7 @@ interface FullProduct {
   name: string; 
   description: string;
   audio_url: string | null;
+  trading_card_image: string | null;
   shipping_cost: string;
   variants: ProductVariant[];
 }
@@ -64,6 +65,11 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
   const [description, setDescription] = useState('');
   const [shippingCost, setShippingCost] = useState('');
   const [variants, setVariants] = useState<VariantFormState[]>([]);
+  const [tradingCardImage, setTradingCardImage] = useState<File | null>(null);
+  const [currentTradingCardImage, setCurrentTradingCardImage] = useState<string | null>(null);
+  const [removeTradingCard, setRemoveTradingCard] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [removeAudio, setRemoveAudio] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -93,6 +99,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
       setProductName(initialData.name);
       setDescription(initialData.description || '');
       setShippingCost(initialData.shipping_cost || '');
+      setCurrentTradingCardImage(initialData.trading_card_image);
       setVariants(initialData.variants.map((v: ProductVariant) => ({
         ...v,
         compareAtPrice: v.compareAtPrice || '',
@@ -208,9 +215,75 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
     }
 
     try {
-      // TODO: Implement the actual PUT request to update the product
-      console.log('Updating product:', { productName, description, shippingCost, variants });
-      alert('Product updated successfully! (PUT request implementation needed)');
+      const formData = new FormData();
+      
+      // Add base product data
+      formData.append('productName', productName);
+      formData.append('description', description);
+      formData.append('shippingCost', shippingCost);
+      
+      // Convert variants to the format expected by the API
+      const variantsData = variants.map(variant => ({
+        id: variant.id,
+        colorName: variant.colorName,
+        colorHex: variant.colorHex,
+        price: variant.price,
+        compareAtPrice: variant.compareAtPrice || null,
+        sku: variant.sku || null,
+        thumbnailImageUrl: variant.thumbnailImageUrl,
+        images: variant.images.map(image => 
+          'imageUrl' in image 
+            ? { id: image.id, imageUrl: image.imageUrl }
+            : { name: image.name }
+        ),
+        sizes: variant.sizes.map(size => ({
+          id: size.id,
+          size: size.size,
+          stock: size.stock
+        }))
+      }));
+
+      formData.append('variants', JSON.stringify(variantsData));
+      formData.append('variantsToDelete', JSON.stringify([]));
+      formData.append('imagesToDelete', JSON.stringify([]));
+      formData.append('sizesToDelete', JSON.stringify([]));
+
+      // Add trading card image data
+      if (tradingCardImage) {
+        formData.append('tradingCardFile', tradingCardImage);
+      }
+      if (removeTradingCard) {
+        formData.append('removeTradingCard', 'true');
+      }
+
+      // Add audio file data
+      if (audioFile) {
+        formData.append('audioFile', audioFile);
+      }
+      if (removeAudio) {
+        formData.append('removeAudio', 'true');
+      }
+
+      // Add new image files
+      variants.forEach((variant) => {
+        variant.images.forEach((image) => {
+          if (image instanceof File) {
+            formData.append(`image_${variant.id}_${image.name}`, image);
+          }
+        });
+      });
+
+      const response = await fetch(`/api/admin/products/${initialData.id}`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update product');
+      }
+
+      // Success - redirect to admin products page
       router.push('/admin/products');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -242,6 +315,113 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
               <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm"></textarea>
+            </div>
+
+            {/* Audio File Section */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Audio File</label>
+              {initialData.audio_url && !removeAudio ? (
+                <div className="mt-2">
+                  <div className="flex items-center gap-4 p-3 rounded-md bg-gray-50">
+                    <audio controls className="flex-1">
+                      <source src={initialData.audio_url} type="audio/mpeg" />
+                      Your browser does not support the audio element.
+                    </audio>
+                    <button
+                      type="button"
+                      onClick={() => setRemoveAudio(true)}
+                      className="px-3 py-1 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {removeAudio && (
+                <div className="p-2 mt-2 border border-red-200 rounded bg-red-50">
+                  <p className="text-sm text-red-700">✓ Audio file will be removed when you save</p>
+                  <button
+                    type="button"
+                    onClick={() => setRemoveAudio(false)}
+                    className="mt-1 text-xs text-red-600 underline hover:no-underline"
+                  >
+                    Undo removal
+                  </button>
+                </div>
+              )}
+              <div className="mt-2">
+                <input
+                  type="file"
+                  accept="audio/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setAudioFile(file);
+                      setRemoveAudio(false);
+                    }
+                  }}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary-dark"
+                />
+                <p className="mt-1 text-xs text-gray-500">Upload a new audio file (MP3, WAV, etc.)</p>
+                {audioFile && (
+                  <div className="p-2 mt-2 border border-green-200 rounded bg-green-50">
+                    <p className="text-sm text-green-700">✓ New audio file selected: {audioFile.name}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Trading Card Image Section */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Trading Card Image</label>
+              {currentTradingCardImage ? (
+                <div className="mt-2">
+                  <div className="flex items-start gap-4 p-3 rounded-md bg-gray-50">
+                    <div className="relative">
+                      <Image
+                        src={currentTradingCardImage}
+                        alt="Current trading card"
+                        width={120}
+                        height={168}
+                        className="object-cover rounded-md shadow-sm"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="mb-2 text-sm text-gray-600">Current trading card image</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRemoveTradingCard(true);
+                          setCurrentTradingCardImage(null);
+                        }}
+                        className="px-3 py-1 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50"
+                      >
+                        Remove Current Image
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <div className="mt-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setTradingCardImage(file);
+                      setRemoveTradingCard(false);
+                    }
+                  }}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary-dark"
+                />
+                <p className="mt-1 text-xs text-gray-500">Upload a new trading card image (PNG, JPG, etc.)</p>
+                {tradingCardImage && (
+                  <div className="p-2 mt-2 border border-green-200 rounded bg-green-50">
+                    <p className="text-sm text-green-700">✓ New trading card selected: {tradingCardImage.name}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

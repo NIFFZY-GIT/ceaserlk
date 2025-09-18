@@ -59,6 +59,8 @@ export interface OrderItem {
   pricePaid: string;
   quantity: number;
   imageUrl: string | null; // The image for the specific variant
+  product_id?: string; // Added for trading card downloads
+  trading_card_image?: string; // Added for trading card functionality
   product?: {
     name: string;
     images?: string[];
@@ -74,6 +76,7 @@ export interface Order {
   created_at: string; // Keep both for compatibility
   total_amount: number; // For compatibility with OrderCard component
   shipping_address?: string; // For compatibility with OrderCard component
+  customerEmail?: string; // Added for trading card downloads
   shippingAddress: {
     fullName: string;
     line1: string;

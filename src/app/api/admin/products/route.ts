@@ -46,6 +46,10 @@ export async function POST(request: Request) {
         const audioFile = formData.get('audioFile') as File | null;
         let audioUrl: string | null = null;
 
+        // --- NEW: Get the trading image file ---
+        const tradingImage = formData.get('tradingImage') as File | null;
+        let tradingImageUrl: string | null = null;
+
         if (!productName || !variantsString || shippingCost === null) {
             return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
         }
@@ -62,6 +66,18 @@ export async function POST(request: Request) {
             audioUrl = `/uploads/audio/${filename}`; // Public URL to save in DB
         }
 
+        // --- NEW: Handle trading image upload ---
+        if (tradingImage) {
+            const buffer = Buffer.from(await tradingImage.arrayBuffer());
+            const filename = `${Date.now()}-${tradingImage.name.replace(/\s+/g, '-')}`;
+            const uploadDir = path.join(process.cwd(), 'public/uploads/trading-cards');
+            
+            await fs.mkdir(uploadDir, { recursive: true }); // Ensure directory exists
+            await fs.writeFile(path.join(uploadDir, filename), buffer); // Write file
+            
+            tradingImageUrl = `/uploads/trading-cards/${filename}`; // Public URL to save in DB
+        }
+
         const variants: VariantPayload[] = JSON.parse(variantsString);
         
         // Debug: Log the received variants to check color data
@@ -73,10 +89,10 @@ export async function POST(request: Request) {
 
         await client.query('BEGIN');
 
-        // --- UPDATE INSERT QUERY to include audio_url ---
+        // --- UPDATE INSERT QUERY to include audio_url and trading_card_image ---
         const productResult = await client.query(
-            'INSERT INTO products (name, description, shipping_cost, audio_url, is_published) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-            [productName, description, parseFloat(shippingCost) || 0, audioUrl, true]
+            'INSERT INTO products (name, description, shipping_cost, audio_url, trading_card_image, is_published) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+            [productName, description, parseFloat(shippingCost) || 0, audioUrl, tradingImageUrl, true]
         );
         const productId = productResult.rows[0].id;
 

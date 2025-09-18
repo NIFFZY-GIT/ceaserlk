@@ -18,6 +18,7 @@ export async function GET(
         p.description,
         p.audio_url,
         p.shipping_cost,
+        p.trading_card_image,
         p.is_published,
         (
           SELECT json_agg(variants_agg)
@@ -97,6 +98,8 @@ export async function PUT(
     const shippingCost = formData.get('shippingCost') as string;
     const audioFile = formData.get('audioFile') as File | null;
     const removeAudio = formData.get('removeAudio') === 'true';
+    const tradingCardFile = formData.get('tradingCardFile') as File | null;
+    const removeTradingCard = formData.get('removeTradingCard') === 'true';
     
     // Debug logging to see what we received
     console.log('DEBUG - Form Data Received:', {
@@ -139,8 +142,9 @@ export async function PUT(
     let shouldUpdateAudio = false;
 
     // Get the current product to check if there's an existing audio file
-    const currentProduct = await client.query('SELECT audio_url FROM products WHERE id = $1', [productId]);
+    const currentProduct = await client.query('SELECT audio_url, trading_card_image FROM products WHERE id = $1', [productId]);
     const oldAudioUrl = currentProduct.rows[0]?.audio_url;
+    const oldTradingCardImage = currentProduct.rows[0]?.trading_card_image;
 
     if (removeAudio && oldAudioUrl) {
       // Remove existing audio file
@@ -176,11 +180,59 @@ export async function PUT(
       shouldUpdateAudio = true;
     }
 
+    // --- 2.5. Handle Trading Card Image Upload ---
+    let tradingCardImageUrl: string | null = null;
+    let shouldUpdateTradingCard = false;
+
+    if (removeTradingCard && oldTradingCardImage) {
+      // Remove existing trading card image
+      const oldFilePath = path.join(process.cwd(), 'public', oldTradingCardImage);
+      try {
+        await fs.unlink(oldFilePath);
+      } catch (e) {
+        console.error(`Failed to delete old trading card image: ${oldFilePath}`, e);
+      }
+      tradingCardImageUrl = null;
+      shouldUpdateTradingCard = true;
+    } else if (tradingCardFile && tradingCardFile.size > 0) {
+      // Delete old trading card image if it exists when replacing with new one
+      if (oldTradingCardImage) {
+        const oldFilePath = path.join(process.cwd(), 'public', oldTradingCardImage);
+        try {
+          await fs.unlink(oldFilePath);
+        } catch (e) {
+          console.error(`Failed to delete old trading card image: ${oldFilePath}`, e);
+        }
+      }
+      
+      const buffer = Buffer.from(await tradingCardFile.arrayBuffer());
+      const filename = `${Date.now()}-${tradingCardFile.name.replace(/\s+/g, '-')}`;
+      const uploadPath = path.join(process.cwd(), 'public/uploads/trading-cards', filename);
+      
+      // Ensure the trading card directory exists
+      const tradingCardDir = path.join(process.cwd(), 'public/uploads/trading-cards');
+      await fs.mkdir(tradingCardDir, { recursive: true });
+      
+      await fs.writeFile(uploadPath, buffer);
+      tradingCardImageUrl = `/uploads/trading-cards/${filename}`;
+      shouldUpdateTradingCard = true;
+    }
+
     // --- 3. Update the Base Product ---
-    if (shouldUpdateAudio) {
+    if (shouldUpdateAudio && shouldUpdateTradingCard) {
+      await client.query(
+        'UPDATE products SET name = $1, description = $2, shipping_cost = $3, audio_url = $4, trading_card_image = $5 WHERE id = $6',
+        [productName, description, parseFloat(shippingCost) || 0, audioUrl, tradingCardImageUrl, productId]
+      );
+    } else if (shouldUpdateAudio) {
       await client.query(
         'UPDATE products SET name = $1, description = $2, shipping_cost = $3, audio_url = $4 WHERE id = $5',
         [productName, description, parseFloat(shippingCost) || 0, audioUrl, productId]
+      );
+    } else if (shouldUpdateTradingCard) {
+      await client.query(
+        'UPDATE products SET name = $1, description = $2, shipping_cost = $3, trading_card_image = $4 WHERE id = $5',
+        [productName, description, parseFloat(shippingCost) || 0, tradingCardImageUrl, productId]
       );
     } else {
       await client.query(

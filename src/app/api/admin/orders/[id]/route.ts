@@ -38,12 +38,14 @@ export async function GET(
               'price_paid', oi.price_paid, 
               'quantity', oi.quantity,
               'product_id', oi.product_id,
-              'imageUrl', COALESCE(pv.thumbnail_url, '/images/image.jpg')
+              'imageUrl', COALESCE(pv.thumbnail_url, '/images/image.jpg'),
+              'trading_card_image', p.trading_card_image
             )
           ) 
           FROM order_items oi 
           LEFT JOIN product_variants pv ON oi.product_id = pv.product_id 
             AND oi.variant_color = pv.color_name
+          LEFT JOIN products p ON oi.product_id = p.id
           WHERE oi.order_id = o.id
         ) as items
       FROM orders o

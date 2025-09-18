@@ -17,29 +17,56 @@ const rateLimitStore = new Map<string, { count: number; lastReset: number }>();
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
 const RATE_LIMIT_MAX_ATTEMPTS = 100; // per IP per window
 
+// Enhanced rate limiting for sensitive endpoints
+const sensitiveEndpointsLimits = new Map<string, { count: number; lastReset: number }>();
+const SENSITIVE_RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes
+const SENSITIVE_RATE_LIMIT_MAX = 10; // much stricter for auth endpoints
+
+// CSRF token storage (in production, use Redis or database)
+const csrfTokens = new Map<string, { token: string; expires: number }>();
+
 function getRateLimitKey(request: NextRequest): string {
-  // Use IP address for rate limiting (fallback to a default for localhost)
+  // Use IP address for rate limiting with better fallback handling
   const forwarded = request.headers.get('x-forwarded-for');
   const realIp = request.headers.get('x-real-ip');
-  return forwarded || realIp || 'unknown';
+  const cfConnectingIp = request.headers.get('cf-connecting-ip'); // Cloudflare
+  return cfConnectingIp || forwarded?.split(',')[0] || realIp || 'unknown';
 }
 
-function isRateLimited(key: string): boolean {
+function isRateLimited(key: string, isSensitive: boolean = false): boolean {
   const now = Date.now();
-  const record = rateLimitStore.get(key);
+  const store = isSensitive ? sensitiveEndpointsLimits : rateLimitStore;
+  const window = isSensitive ? SENSITIVE_RATE_LIMIT_WINDOW : RATE_LIMIT_WINDOW;
+  const maxAttempts = isSensitive ? SENSITIVE_RATE_LIMIT_MAX : RATE_LIMIT_MAX_ATTEMPTS;
   
-  if (!record || now - record.lastReset > RATE_LIMIT_WINDOW) {
+  const record = store.get(key);
+  
+  if (!record || now - record.lastReset > window) {
     // Reset or create new record
-    rateLimitStore.set(key, { count: 1, lastReset: now });
+    store.set(key, { count: 1, lastReset: now });
     return false;
   }
   
-  if (record.count >= RATE_LIMIT_MAX_ATTEMPTS) {
+  if (record.count >= maxAttempts) {
     return true;
   }
   
   record.count++;
   return false;
+}
+
+// Generate secure random string for CSRF tokens
+function generateSecureToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let result = '';
+  const randomArray = new Uint8Array(32);
+  crypto.getRandomValues(randomArray);
+  
+  for (let i = 0; i < randomArray.length; i++) {
+    result += chars[randomArray[i] % chars.length];
+  }
+  
+  return result;
 }
 
 async function verifyJWT(token: string): Promise<UserJwtPayload | null> {
@@ -67,11 +94,29 @@ async function verifyJWT(token: string): Promise<UserJwtPayload | null> {
 function createSecureRedirectResponse(url: string, request: NextRequest): NextResponse {
   const response = NextResponse.redirect(new URL(url, request.url));
   
-  // Add security headers
+  // Enhanced security headers following OWASP recommendations
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('X-XSS-Protection', '0'); // Disable XSS filtering to avoid issues, rely on CSP instead
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  
+  // Content Security Policy - restrictive but functional
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://api.stripe.com https://checkout.stripe.com",
+    "frame-src https://checkout.stripe.com https://js.stripe.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join('; ');
+  
+  response.headers.set('Content-Security-Policy', csp);
   
   return response;
 }
@@ -79,11 +124,48 @@ function createSecureRedirectResponse(url: string, request: NextRequest): NextRe
 function createSecureNextResponse(): NextResponse {
   const response = NextResponse.next();
   
-  // Add security headers
+  // Enhanced security headers following OWASP recommendations
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('X-XSS-Protection', '0'); // Disable XSS filtering, rely on CSP
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  
+  // Content Security Policy
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://api.stripe.com https://checkout.stripe.com",
+    "frame-src https://checkout.stripe.com https://js.stripe.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join('; ');
+  
+  response.headers.set('Content-Security-Policy', csp);
+  
+  return response;
+}
+
+function createSecureErrorResponse(message: string, status: number): NextResponse {
+  const response = NextResponse.json(
+    { 
+      error: message,
+      timestamp: new Date().toISOString(),
+      // Don't expose internal details in production
+      ...(process.env.NODE_ENV === 'development' && { dev: true })
+    },
+    { status }
+  );
+  
+  // Add security headers to error responses
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   
   return response;
 }
@@ -91,93 +173,128 @@ function createSecureNextResponse(): NextResponse {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Apply rate limiting to admin routes and API routes (but exclude auth endpoints)
-  if ((pathname.startsWith('/admin') || pathname.startsWith('/api/')) && 
-      !pathname.startsWith('/api/auth/')) {
+  // Security logging (in production, use structured logging)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`${new Date().toISOString()} - ${request.method} ${pathname} - IP: ${getRateLimitKey(request)}`);
+  }
+
+  // Apply enhanced rate limiting based on endpoint sensitivity
+  const isSensitiveEndpoint = pathname.startsWith('/api/auth/') || 
+                              pathname.startsWith('/api/admin/') ||
+                              pathname.includes('password') ||
+                              pathname.includes('login');
+
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/')) {
     const rateLimitKey = getRateLimitKey(request);
-    if (isRateLimited(rateLimitKey)) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429 }
+    
+    if (isRateLimited(rateLimitKey, isSensitiveEndpoint)) {
+      const response = createSecureErrorResponse(
+        'Too many requests. Please try again later.',
+        429
       );
+      response.headers.set('Retry-After', '900'); // 15 minutes
+      return response;
     }
   }
 
-  // Handle API route protection
-  if (pathname.startsWith('/api/admin') || pathname.startsWith('/api/cart') || pathname.startsWith('/api/orders')) {
+  // Validate Content-Type for POST/PUT/PATCH requests to prevent CSRF
+  if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
+    const contentType = request.headers.get('content-type');
+    const isApiRoute = pathname.startsWith('/api/');
+    
+    if (isApiRoute && contentType && !contentType.includes('application/json') && !contentType.includes('multipart/form-data')) {
+      return createSecureErrorResponse('Invalid content type', 400);
+    }
+  }
+
+  // Enhanced API route protection
+  if (pathname.startsWith('/api/admin') || 
+      pathname.startsWith('/api/cart') || 
+      pathname.startsWith('/api/orders') ||
+      pathname.startsWith('/api/user') ||
+      pathname.startsWith('/api/profile')) {
+    
     const sessionToken = request.cookies.get('session-token')?.value;
     
     if (!sessionToken) {
-      return NextResponse.json(
-        { error: 'Authentication required. Please log in to continue.' },
-        { status: 401 }
+      return createSecureErrorResponse(
+        'Authentication required. Please log in to continue.',
+        401
       );
     }
 
     const payload = await verifyJWT(sessionToken);
     
     if (!payload) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token. Please log in again.' },
-        { status: 401 }
+      return createSecureErrorResponse(
+        'Invalid or expired token. Please log in again.',
+        401
       );
     }
 
     // Check admin access for admin API routes
     if (pathname.startsWith('/api/admin') && payload.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Access denied. Admin privileges required.' },
-        { status: 403 }
+      return createSecureErrorResponse(
+        'Access denied. Admin privileges required.',
+        403
       );
     }
 
-    // Continue with the request
-    return createSecureNextResponse();
+    // Add user context to request headers for downstream use
+    const response = createSecureNextResponse();
+    response.headers.set('X-User-ID', payload.userId.toString());
+    response.headers.set('X-User-Role', payload.role);
+    
+    return response;
   }
 
-  // If the user is trying to access an admin route
+  // Enhanced admin route protection
   if (pathname.startsWith('/admin')) {
     const sessionToken = request.cookies.get('session-token')?.value;
     
     if (!sessionToken) {
-      // If there's no token, redirect to the login page
       return createSecureRedirectResponse('/login', request);
     }
 
     const payload = await verifyJWT(sessionToken);
     
     if (!payload) {
-      // If the token is invalid or expired, redirect to login and clear the cookie
       const response = createSecureRedirectResponse('/login', request);
+      // Clear invalid cookie
       response.cookies.set('session-token', '', { 
         maxAge: 0, 
         path: '/',
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production'
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
       });
       return response;
     }
 
-    // Check if the user's role is ADMIN
+    // Check admin role
     if (payload.role !== 'ADMIN') {
-      // If not an admin, redirect to the homepage
       return createSecureRedirectResponse('/', request);
     }
 
-    // If the user is an admin, allow the request to proceed with security headers
     return createSecureNextResponse();
   }
 
-  // Allow all other requests to pass through with security headers
+  // Apply security headers to all responses
   return createSecureNextResponse();
 }
 
-// Configure the middleware to run on admin routes and protected API routes
+// Configure the middleware to run on protected routes with enhanced coverage
 export const config = {
   matcher: [
+    // Admin routes
     '/admin/:path*',
+    // API routes that need protection
     '/api/admin/:path*',
     '/api/cart/:path*',
-    '/api/orders/:path*'
+    '/api/orders/:path*',
+    '/api/user/:path*',
+    '/api/profile/:path*',
+    // Apply security headers to all routes
+    '/((?!_next/static|_next/image|favicon.ico|images|uploads).*)',
   ],
 };
