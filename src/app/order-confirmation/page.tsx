@@ -21,15 +21,14 @@ function OrderConfirmationContent() {
       setStatus('success');
       fetchCart(); // Clear the client-side cart
 
-      // NEW: Fetch full order details to get the purchased item info
+      // Fetch full order details
       try {
-        const res = await fetch(`/api/admin/orders/${id}`); // We can reuse the admin route for now
+        const res = await fetch(`/api/admin/orders/${id}`);
         if (res.ok) {
           const orderData = await res.json();
-          // The API now returns the actual product image URLs
-          console.log('Order data fetched for virtual try-on:', orderData);
+          console.log('Order data fetched:', orderData);
         }
-      } catch (e) { console.error("Could not fetch order details for AI feature", e); }
+      } catch (e) { console.error("Could not fetch order details", e); }
     };
     
     const orderIdParam = searchParams.get('orderId');

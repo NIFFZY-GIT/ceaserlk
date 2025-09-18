@@ -19,7 +19,6 @@ type ProductVariant = {
   images: File[];
   sizes: SizeStock[];
   thumbnailImageName: string | null;
-  useExistingColor?: boolean; // flag to indicate using an existing color
 };
 
 const AddProductPage = () => {
@@ -58,11 +57,10 @@ const AddProductPage = () => {
       colorName: '', colorHex: '#000000', price: '',
       compareAtPrice: '', sku: '', images: [],
       sizes: [{ size: 'S', stock: 0 }], thumbnailImageName: null,
-      useExistingColor: false,
     },
   ]);
 
-  const addVariant = () => setVariants([...variants, { id: Date.now(), colorName: '', colorHex: '#000000', price: '', compareAtPrice: '', sku: '', images: [], sizes: [{ size: 'S', stock: 0 }], thumbnailImageName: null, useExistingColor: false }]);
+  const addVariant = () => setVariants([...variants, { id: Date.now(), colorName: '', colorHex: '#000000', price: '', compareAtPrice: '', sku: '', images: [], sizes: [{ size: 'S', stock: 0 }], thumbnailImageName: null }]);
   const removeVariant = (id: number) => setVariants(variants.filter((v) => v.id !== id));
 
   function handleVariantChange<K extends keyof ProductVariant>(id: number, field: K, value: ProductVariant[K]) {
@@ -130,8 +128,7 @@ const AddProductPage = () => {
     console.log('Sending variants to API:', variantsForApi.map(v => ({ 
         id: v.id, 
         colorName: v.colorName, 
-        colorHex: v.colorHex,
-        useExistingColor: v.useExistingColor 
+        colorHex: v.colorHex
     })));
     
     formData.append('variants', JSON.stringify(variantsForApi));
@@ -187,69 +184,38 @@ const AddProductPage = () => {
                   </button>
                 )}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  {/* Color selection: existing or new */}
+                  {/* Color selection: existing colors display and new color picker */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700">Color</label>
-                    <div className="flex flex-col gap-2 mt-2">
-                      <label className="inline-flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={!!variant.useExistingColor}
-                          onChange={(e) => {
-                            const useExisting = e.target.checked;
-                            handleVariantChange(variant.id, 'useExistingColor', useExisting);
-                            // Only clear fields when switching TO existing color mode
-                            // When switching FROM existing color, keep the current values
-                            if (useExisting) {
-                              handleVariantChange(variant.id, 'colorName', '');
-                              handleVariantChange(variant.id, 'colorHex', '#000000');
-                            }
-                          }}
-                        />
-                        Use existing color
-                      </label>
-
-                      {variant.useExistingColor ? (
-                        <div className="flex items-center gap-4">
-                          <select
-                            className="w-full border-gray-300 rounded-md shadow-sm"
-                            value={variant.colorName}
-                            onChange={(e) => {
-                              const name = e.target.value;
-                              const found = existingColors.find(c => c.colorName === name);
-                              
-                              // Debug: Log the color selection
-                              console.log('Selected existing color:', { name, found });
-                              
-                              handleVariantChange(variant.id, 'colorName', name);
-                              if (found) {
-                                handleVariantChange(variant.id, 'colorHex', found.colorHex);
-                                console.log('Set colorHex to:', found.colorHex);
-                              }
-                            }}
-                          >
-                            <option value="">Select a color</option>
-                            {existingColors.map(c => (
-                              <option key={c.colorName} value={c.colorName}>
-                                {c.colorName}
-                              </option>
-                            ))}
-                          </select>
-                          {variant.colorName && variant.colorHex && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="inline-block w-6 h-6 border rounded" style={{ backgroundColor: variant.colorHex }} />
-                              <span className="text-gray-500">{variant.colorName} - {variant.colorHex}</span>
+                    
+                    {/* Display all existing colors for reference */}
+                    {existingColors.length > 0 && (
+                      <div className="mt-3 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">Existing Colors Reference</h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                          {existingColors.map(color => (
+                            <div key={color.colorName} className="flex items-center gap-2 p-2 bg-white rounded border">
+                              <div 
+                                className="w-6 h-6 rounded border border-gray-300 flex-shrink-0" 
+                                style={{ backgroundColor: color.colorHex }}
+                                title={`${color.colorName} - ${color.colorHex}`}
+                              />
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-medium text-gray-700 truncate">{color.colorName}</span>
+                                <span className="text-xs text-gray-500">{color.colorHex}</span>
+                              </div>
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-4">
-                          <input
-                            type="color"
-                            value={variant.colorHex}
-                            onChange={e => handleVariantChange(variant.id, 'colorHex', e.target.value)}
-                            className="w-10 h-10 p-1 border-gray-300 rounded-md shadow-sm"
-                          />
+                      </div>
+                    )}
+
+                    {/* New/Current Color Input */}
+                    <div className="mt-4 space-y-3">
+                      <h4 className="text-sm font-medium text-gray-700">Add New Color</h4>
+                      <div className="flex flex-col gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Color Name</label>
                           <input
                             type="text"
                             value={variant.colorName}
@@ -259,11 +225,62 @@ const AddProductPage = () => {
                             required
                           />
                         </div>
-                      )}
+                        
+                        <div className="flex gap-4 items-end">
+                          <div className="flex-1">
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Hex Color Code</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={variant.colorHex}
+                                onChange={e => {
+                                  let value = e.target.value;
+                                  if (!value.startsWith('#') && value.length > 0) {
+                                    value = '#' + value;
+                                  }
+                                  // Validate hex format
+                                  if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})?$/.test(value) || value === '#') {
+                                    handleVariantChange(variant.id, 'colorHex', value);
+                                  }
+                                }}
+                                className="block w-full border-gray-300 rounded-md shadow-sm font-mono text-sm"
+                                placeholder="#000000"
+                                pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                                required
+                              />
+                              <input
+                                type="color"
+                                value={variant.colorHex}
+                                onChange={e => handleVariantChange(variant.id, 'colorHex', e.target.value)}
+                                className="w-12 h-10 border border-gray-300 rounded-md cursor-pointer"
+                                title="Click to open color picker"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">Preview:</span>
+                            <div 
+                              className="w-10 h-10 border-2 border-gray-300 rounded-md shadow-sm"
+                              style={{ backgroundColor: variant.colorHex }}
+                              title={`${variant.colorName || 'Unnamed'} - ${variant.colorHex}`}
+                            />
+                          </div>
+                        </div>
+                      </div>
 
                       {/* Duplicate warning */}
                       {variant.colorName.trim() && duplicateColorNames.has(variant.colorName.trim().toLowerCase()) && (
-                        <p className="text-xs text-red-600">Duplicate color: another variant already uses &quot;{variant.colorName}&quot;.</p>
+                        <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                          ⚠️ Duplicate color: another variant already uses &quot;{variant.colorName}&quot;.
+                        </p>
+                      )}
+
+                      {/* Color validation */}
+                      {variant.colorHex && !/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(variant.colorHex) && (
+                        <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                          ⚠️ Invalid hex color format. Please use format like #FF0000 or #F00.
+                        </p>
                       )}
                     </div>
                   </div>

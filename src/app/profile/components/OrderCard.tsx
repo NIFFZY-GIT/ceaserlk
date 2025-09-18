@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import type { Order } from '@/lib/types';
 import { MapPin, ChevronDown, Banknote, Package, ImageOff } from 'lucide-react';
-import VirtualTryOn from './VirtualTryOn'; // <-- IMPORT THE NEW COMPONENT
 
 const ProductImage = ({ src, alt }: { src: string | null; alt: string }) => {
     const [error, setError] = useState(false);
@@ -51,14 +50,6 @@ const OrderCard = ({ order }: { order: Order }) => {
                   <div className="flex-grow"><p className="font-semibold text-gray-200">{item.productName}</p><p className="text-sm text-gray-400">Qty: {item.quantity}</p></div>
                   <p className="font-medium text-gray-300">LKR {parseFloat(item.pricePaid).toFixed(2)}</p>
                 </div>
-                
-                {/* --- VIRTUAL TRY-ON FEATURE INTEGRATED HERE --- */}
-                {item.imageUrl && ( // Only show if the item has an image
-                  <VirtualTryOn 
-                    productName={item.productName} 
-                    productImageUrl={item.imageUrl} 
-                  />
-                )}
               </div>
             ))}
           </div>

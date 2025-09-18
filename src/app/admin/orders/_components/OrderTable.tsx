@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Eye } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 
 // Define the shape of the order data for the list
 export interface OrderSummary {
@@ -26,10 +26,43 @@ const statusColors: { [key in OrderSummary['status']]: string } = {
 };
 // --- END OF UPDATE ---
 
-export default function OrderTable({ orders }: { orders: OrderSummary[] }) {
+export default function OrderTable({ orders, onOrderDeleted }: { 
+  orders: OrderSummary[]; 
+  onOrderDeleted?: () => void;
+}) {
   // --- DEBUGGING STEP ---
   // You can add this log to confirm data is arriving in the component
   // console.log("Orders received in table component:", orders);
+
+  const handleDeleteOrder = async (orderId: string, customerName: string) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the order for ${customerName}? This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete order');
+      }
+
+      // If callback is provided, call it to refresh the list
+      if (onOrderDeleted) {
+        onOrderDeleted();
+      } else {
+        // Fallback to page refresh if no callback
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      alert('Failed to delete order. Please try again.');
+    }
+  };
 
   if (!orders || orders.length === 0) {
     return (
@@ -75,13 +108,22 @@ export default function OrderTable({ orders }: { orders: OrderSummary[] }) {
               </td>
               <td className="px-4 py-3 text-center text-gray-600">{order.item_count}</td>
               <td className="px-4 py-3">
-                <Link 
-                  href={`/admin/orders/${order.id}`} 
-                  className="inline-flex items-center p-2 text-gray-500 rounded-md hover:bg-gray-100 hover:text-primary"
-                  title="View Details"
-                >
-                  <Eye size={16} />
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link 
+                    href={`/admin/orders/${order.id}`} 
+                    className="inline-flex items-center p-2 text-gray-500 rounded-md hover:bg-gray-100 hover:text-primary"
+                    title="View Details"
+                  >
+                    <Eye size={16} />
+                  </Link>
+                  <button
+                    onClick={() => handleDeleteOrder(order.id, order.full_name)}
+                    className="inline-flex items-center p-2 text-gray-500 rounded-md hover:bg-red-100 hover:text-red-600"
+                    title="Delete Order"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
