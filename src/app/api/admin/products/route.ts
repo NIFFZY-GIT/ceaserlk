@@ -34,6 +34,7 @@ export async function GET() {
 
 // POST function to create a new product
 export async function POST(request: Request) {
+    console.log('=== Product creation API called ===');
     const client = await db.connect();
     try {
         const formData = await request.formData();
@@ -78,6 +79,10 @@ export async function POST(request: Request) {
             tradingImageUrl = `/uploads/trading-cards/${filename}`; // Public URL to save in DB
         }
 
+        // --- NEW: Handle variant-specific product images ---
+        // Product images are now stored per variant with keys like: productImage_${variant.id}_${index}
+        // We'll collect them later when processing each variant
+
         const variants: VariantPayload[] = JSON.parse(variantsString);
         
         // Debug: Log the received variants to check color data
@@ -96,6 +101,8 @@ export async function POST(request: Request) {
         );
         const productId = productResult.rows[0].id;
 
+        // Process variants with variant-specific images
+
         for (const variant of variants) {
             const compareAtPriceValue = variant.compareAtPrice ? parseFloat(variant.compareAtPrice) : null;
             
@@ -113,30 +120,45 @@ export async function POST(request: Request) {
                 [productId, variant.colorName, variant.colorHex, parseFloat(variant.price), compareAtPriceValue, variant.sku || null]
             );
             const variantId = variantResult.rows[0].id;
-            let thumbnailUrl: string | null = null;
 
-            const imageFiles = formData.getAll(`images_variant_${variant.id}`) as File[];
-            for (const imageFile of imageFiles) {
-                const buffer = Buffer.from(await imageFile.arrayBuffer());
-                const filename = `${Date.now()}-${imageFile.name.replace(/\s+/g, '-')}`;
-                const uploadDir = path.join(process.cwd(), 'public/uploads/products');
-                await fs.mkdir(uploadDir, { recursive: true });
-                await fs.writeFile(path.join(uploadDir, filename), buffer);
-                const imageUrl = `/uploads/products/${filename}`;
-
-                if (imageFile.name === variant.thumbnailImageName) {
-                    thumbnailUrl = imageUrl;
+            // --- Handle variant-specific variant images with keys: variantImage_${variant.id} ---
+            console.log(`\n🖼️ Processing variant images for variant ${variant.id} (${variant.colorName})`);
+            const variantImageFiles = formData.getAll(`variantImage_${variant.id}`) as File[];
+            console.log(`📁 Found ${variantImageFiles.length} variant image files`);
+            
+            for (let index = 0; index < variantImageFiles.length; index++) {
+                const imageFile = variantImageFiles[index];
+                console.log(`🔄 Processing image ${index + 1}: ${imageFile.name} (${imageFile.size} bytes)`);
+                
+                if (imageFile) {
+                    try {
+                        const buffer = Buffer.from(await imageFile.arrayBuffer());
+                        const filename = `${Date.now()}-variant-${index}-${imageFile.name.replace(/\s+/g, '-')}`;
+                        const uploadDir = path.join(process.cwd(), 'public/uploads/products');
+                        const fullPath = path.join(uploadDir, filename);
+                        
+                        console.log(`💾 Saving to: ${fullPath}`);
+                        await fs.mkdir(uploadDir, { recursive: true });
+                        await fs.writeFile(fullPath, buffer);
+                        console.log(`✅ File saved successfully`);
+                        
+                        const imageUrl = `/uploads/products/${filename}`;
+                        console.log(`📝 Inserting into database: ${imageUrl}`);
+                        
+                        await client.query(
+                            'INSERT INTO variant_images (variant_id, image_url, alt_text) VALUES ($1, $2, $3)',
+                            [variantId, imageUrl, `${productName} - ${variant.colorName} - Variant Image ${index + 1}`]
+                        );
+                        
+                        console.log(`✅ Database record created`);
+                    } catch (error) {
+                        console.error(`❌ Error processing image ${index + 1}:`, error);
+                        throw error;
+                    }
                 }
-                await client.query(
-                    'INSERT INTO variant_images (variant_id, image_url, alt_text) VALUES ($1, $2, $3)',
-                    [variantId, imageUrl, `${productName} - ${variant.colorName}`]
-                );
             }
 
-            if (thumbnailUrl) {
-                await client.query('UPDATE product_variants SET thumbnail_url = $1 WHERE id = $2', [thumbnailUrl, variantId]);
-            }
-
+            // Handle stock keeping units (sizes)
             for (const sizeStock of variant.sizes) {
                 await client.query(
                     'INSERT INTO stock_keeping_units (variant_id, size, stock_quantity) VALUES ($1, $2, $3)',

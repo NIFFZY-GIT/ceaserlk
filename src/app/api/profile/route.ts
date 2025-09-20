@@ -47,17 +47,34 @@ export async function GET() {
                       'product_id', oi.product_id,
                       -- Join to get the thumbnail URL for the specific variant ordered
                       'imageUrl', pv.thumbnail_url,
+                      'thumbnailUrl', pv.thumbnail_url,
+                      -- Include variant images from variant_images table
+                      'variant_images', COALESCE(vi.images, '[]'::json),
                       -- Join to get trading card image from products table
                       'trading_card_image', p.trading_card_image,
                       'product', json_build_object(
                         'name', oi.product_name,
-                        'images', ARRAY[pv.thumbnail_url]
+                        'images', COALESCE(vi.images, json_build_array(pv.thumbnail_url))
                       )
                     )
                   ) FROM order_items oi
                   LEFT JOIN stock_keeping_units sku ON oi.sku_id = sku.id
                   LEFT JOIN product_variants pv ON sku.variant_id = pv.id
                   LEFT JOIN products p ON oi.product_id = p.id
+                  LEFT JOIN (
+                    SELECT 
+                      variant_id,
+                      json_agg(
+                        json_build_object(
+                          'id', id,
+                          'image_url', image_url,
+                          'alt_text', alt_text,
+                          'display_order', display_order
+                        ) ORDER BY display_order ASC
+                      ) as images
+                    FROM variant_images
+                    GROUP BY variant_id
+                  ) vi ON pv.id = vi.variant_id
                   WHERE oi.order_id = o.id
                 )
               ) ORDER BY o.created_at DESC

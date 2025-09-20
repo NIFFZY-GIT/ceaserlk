@@ -36,8 +36,9 @@ async function getCustomerDetails(id: string): Promise<CustomerDetail | null> {
   }
 }
 
-export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
-  const customer = await getCustomerDetails(params.id);
+export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const customer = await getCustomerDetails(id);
 
   if (!customer) {
     notFound();

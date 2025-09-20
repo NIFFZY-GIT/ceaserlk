@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     // This query ensures a cart exists before we try to select from it.
     const cartId = await getOrCreateCartId(sessionId, client);
 
-    // --- THIS IS THE CORRECTED QUERY ---
+    // --- THIS IS THE CORRECTED QUERY WITH VARIANT IMAGES ---
     const cartQuery = `
       SELECT
         c.id as "cartId",
@@ -95,6 +95,7 @@ export async function GET(request: NextRequest) {
                   'price', v.price,
                   'thumbnail_url', v.thumbnail_url,
                   'color_name', v.color_name,
+                  'variant_images', COALESCE(vi.images, '[]'::json),
                   'product', json_build_object(
                     'id', p.id,
                     'name', p.name,
@@ -111,6 +112,20 @@ export async function GET(request: NextRequest) {
       LEFT JOIN stock_keeping_units s ON ci.sku_id = s.id
       LEFT JOIN product_variants v ON s.variant_id = v.id
       LEFT JOIN products p ON v.product_id = p.id
+      LEFT JOIN (
+        SELECT 
+          variant_id,
+          json_agg(
+            json_build_object(
+              'id', id,
+              'image_url', image_url,
+              'alt_text', alt_text,
+              'display_order', display_order
+            ) ORDER BY display_order ASC
+          ) as images
+        FROM variant_images
+        GROUP BY variant_id
+      ) vi ON v.id = vi.variant_id
       WHERE c.id = $1
       GROUP BY c.id, c.expires_at;
     `;

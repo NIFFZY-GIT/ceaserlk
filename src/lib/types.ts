@@ -50,6 +50,13 @@ export type DbUser = z.infer<typeof UserSchema>;
 
 // This file will hold the data shapes used across your application.
 
+export interface VariantImage {
+  id: string;
+  image_url: string;
+  alt_text: string | null;
+  display_order: number;
+}
+
 export interface OrderItem {
   id: string;
   productName: string;
@@ -59,6 +66,8 @@ export interface OrderItem {
   pricePaid: string;
   quantity: number;
   imageUrl: string | null; // The image for the specific variant
+  thumbnailUrl?: string | null; // Fallback thumbnail URL
+  variant_images?: VariantImage[]; // Array of variant images
   product_id?: string; // Added for trading card downloads
   trading_card_image?: string; // Added for trading card functionality
   product?: {

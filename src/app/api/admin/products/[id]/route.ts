@@ -3,6 +3,20 @@ import { db } from '@/lib/db';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+// Type definitions for the data sent from frontend
+type VariantUpdateData = {
+  id: string;
+  colorName: string;
+  colorHex: string;
+  price: string;
+  compareAtPrice: string;
+  sku: string;
+  thumbnailUrl: string | null;
+  existingImageIds: string[];
+  newImageNames: string[];
+  sizes: { id: string; size: string; stock: number; }[];
+};
+
 // --- NEW: GET A SINGLE PRODUCT ---
 export async function GET(
   request: Request,
@@ -118,7 +132,10 @@ export async function PUT(
     const variantsToDelete = JSON.parse(formData.get('variantsToDelete') as string || '[]');
     const imagesToDelete = JSON.parse(formData.get('imagesToDelete') as string || '[]');
     const sizesToDelete = JSON.parse(formData.get('sizesToDelete') as string || '[]');
-    const variants = JSON.parse(formData.get('variants') as string);
+    const variants: VariantUpdateData[] = JSON.parse(formData.get('variants') as string);
+
+    // Debug logging for variants structure
+    console.log('DEBUG - Parsed variants:', JSON.stringify(variants, null, 2));
 
     // --- 1. Perform Deletions First ---
     if (imagesToDelete.length > 0) {
@@ -244,7 +261,7 @@ export async function PUT(
     // --- 4. Reconcile Variants, Images, and Sizes ---
     for (const variant of variants) {
       let variantId = variant.id;
-      let thumbnailUrl: string | null = variant.thumbnailImageUrl; // Start with the existing one
+      const thumbnailUrl: string | null = variant.thumbnailUrl; // Start with the existing one
 
       // A) Handle Variant (INSERT or UPDATE)
       if (variant.id.startsWith('temp_')) {
@@ -255,21 +272,32 @@ export async function PUT(
       }
       
       // B) Handle Images for this variant
-      for (const image of variant.images) {
-        if (!image.id) { // This is a new file to upload
-          const imageFile = formData.get(`image_${variant.id}_${image.name}`) as File;
-          if (imageFile) {
-            const buffer = Buffer.from(await imageFile.arrayBuffer());
-            const filename = `${Date.now()}-${imageFile.name.replace(/\s+/g, '-')}`;
-            const uploadPath = path.join(process.cwd(), 'public/uploads/products', filename);
-            await fs.writeFile(uploadPath, buffer);
-            const imageUrl = `/uploads/products/${filename}`;
-            
-            await client.query('INSERT INTO variant_images (variant_id, image_url, alt_text) VALUES ($1, $2, $3)', [variantId, imageUrl, productName]);
-            if (image.name === variant.thumbnailImageName) thumbnailUrl = imageUrl;
-          }
+      // Frontend sends existingImageIds and newImageNames arrays instead of images array
+      const newImageNames = variant.newImageNames || [];
+      
+      // Process new image uploads
+      for (const imageName of newImageNames) {
+        const imageFile = formData.get(`image_${variant.id}_${imageName}`) as File;
+        if (imageFile) {
+          const buffer = Buffer.from(await imageFile.arrayBuffer());
+          const filename = `${Date.now()}-${imageFile.name.replace(/\s+/g, '-')}`;
+          const uploadPath = path.join(process.cwd(), 'public/uploads/products', filename);
+          
+          // Ensure the products directory exists
+          const productsDir = path.join(process.cwd(), 'public/uploads/products');
+          await fs.mkdir(productsDir, { recursive: true });
+          
+          await fs.writeFile(uploadPath, buffer);
+          const imageUrl = `/uploads/products/${filename}`;
+          
+          await client.query('INSERT INTO variant_images (variant_id, image_url, alt_text) VALUES ($1, $2, $3)', [variantId, imageUrl, productName]);
+          // Note: thumbnailUrl handling may need adjustment based on frontend implementation
         }
       }
+      
+      // C) Update the thumbnail URL for the variant
+      const finalThumbnailUrl = thumbnailUrl;
+      await client.query('UPDATE product_variants SET thumbnail_url = $1 WHERE id = $2', [finalThumbnailUrl, variantId]);
       
       // C) Update the thumbnail URL for the variant after all images are processed
       await client.query('UPDATE product_variants SET thumbnail_url = $1 WHERE id = $2', [thumbnailUrl, variantId]);
@@ -308,22 +336,82 @@ export async function DELETE(
     return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
   }
 
+  const client = await db.connect();
+  
   try {
-    // Because of 'ON DELETE CASCADE' in our SQL schema, deleting a product
-    // will automatically delete all its associated product_variants,
-    // variant_images, and stock_keeping_units. This is incredibly powerful.
-    const result = await db.query(
+    await client.query('BEGIN');
+
+    // First, get all image paths that need to be deleted from filesystem
+    console.log(`🗑️ Fetching images for product ${id} to delete from filesystem...`);
+    
+    const imagePathsQuery = `
+      SELECT 
+        vi.image_url as variant_image_url,
+        p.audio_url,
+        p.trading_card_image
+      FROM products p
+      LEFT JOIN product_variants pv ON p.id = pv.product_id
+      LEFT JOIN variant_images vi ON pv.id = vi.variant_id
+      WHERE p.id = $1
+    `;
+    
+    const imagePathsResult = await client.query(imagePathsQuery, [id]);
+    const imagesToDelete: string[] = [];
+    
+    // Collect all image paths
+    imagePathsResult.rows.forEach(row => {
+      if (row.variant_image_url) {
+        imagesToDelete.push(row.variant_image_url);
+      }
+      if (row.audio_url) {
+        imagesToDelete.push(row.audio_url);
+      }
+      if (row.trading_card_image) {
+        imagesToDelete.push(row.trading_card_image);
+      }
+    });
+    
+    console.log(`📁 Found ${imagesToDelete.length} files to delete:`, imagesToDelete);
+    
+    // Delete physical files from filesystem
+    for (const imagePath of imagesToDelete) {
+      try {
+        // Convert URL path to filesystem path
+        const filePath = path.join(process.cwd(), 'public', imagePath);
+        console.log(`🗑️ Deleting file: ${filePath}`);
+        await fs.unlink(filePath);
+        console.log(`✅ Deleted: ${imagePath}`);
+      } catch (fileError) {
+        // Log but don't fail the entire operation if a file doesn't exist
+        console.warn(`⚠️ Could not delete file ${imagePath}:`, fileError);
+      }
+    }
+    
+    // Now delete from database (CASCADE will handle related records)
+    console.log(`🗑️ Deleting product ${id} from database...`);
+    const result = await client.query(
         'DELETE FROM products WHERE id = $1 RETURNING *', 
         [id]
     );
 
     if (result.rowCount === 0) {
+        await client.query('ROLLBACK');
         return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'Product deleted successfully' }, { status: 200 });
+    await client.query('COMMIT');
+    console.log(`✅ Successfully deleted product ${id} and ${imagesToDelete.length} associated files`);
+    
+    return NextResponse.json({ 
+      message: 'Product deleted successfully', 
+      deletedFiles: imagesToDelete.length 
+    }, { status: 200 });
+
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('API DELETE PRODUCT ERROR:', error);
     return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 });
+  } finally {
+    client.release();
   }
 }

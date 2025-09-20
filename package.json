@@ -27,6 +27,7 @@
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "express-validator": "^7.2.1",
+    "formdata-node": "^6.0.3",
     "formidable": "^3.5.4",
     "framer-motion": "^12.23.12",
     "gsap": "^3.13.0",

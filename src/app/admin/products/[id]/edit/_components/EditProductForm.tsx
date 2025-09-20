@@ -1,97 +1,104 @@
+// app/admin/products/[id]/_components/EditProductForm.tsx
+
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ImagePlus, Trash2, PlusCircle, X, Star } from 'lucide-react';
+import { 
+  Plus, 
+  Trash2, 
+  Image as ImageIcon, 
+  X, 
+  Star, 
+  CheckCircle, 
+  AlertCircle,
+  UploadCloud,
+  ArrowLeft,
+  Music,
+  CreditCard
+} from 'lucide-react';
 
 // --- TYPE DEFINITIONS ---
+// Data from API
+interface ProductImage { id: string; imageUrl: string; }
+interface ProductSize { id: string; size: string; stock: number; }
+interface ProductVariant {
+  id: string; colorName: string; colorHex: string; price: string;
+  compareAtPrice: string | null; sku: string | null; thumbnailUrl: string | null;
+  images: ProductImage[]; sizes: ProductSize[];
+}
+export interface FullProduct {
+  id: string; name: string; description: string | null; audio_url: string | null;
+  trading_card_image: string | null; shipping_cost: string; variants: ProductVariant[];
+}
 type ExistingColor = { colorName: string; colorHex: string };
 
-// Define types locally since they're not exported from parent
-interface ProductImage { 
-  id: string; 
-  imageUrl: string; 
-}
-
-interface ProductSize { 
-  id: string; 
-  size: string; 
-  stock: number; 
-}
-
-interface ProductVariant {
-  id: string; 
-  colorName: string; 
-  colorHex: string; 
-  price: string;
-  compareAtPrice: string | null; 
-  sku: string | null; 
-  thumbnailUrl: string | null;
-  images: ProductImage[]; 
-  sizes: ProductSize[];
-}
-
-interface FullProduct {
-  id: string; 
-  name: string; 
-  description: string;
-  audio_url: string | null;
-  trading_card_image: string | null;
-  shipping_cost: string;
-  variants: ProductVariant[];
-}
-
-// Define the shape of our form's state
+// Internal Form State
 type ImageState = File | { id: string; imageUrl: string };
 type SizeState = { id: string; size: string; stock: number };
 type VariantFormState = {
-  id: string; // Can be a real UUID or a temporary ID like `temp_123`
-  colorName: string;
-  colorHex: string;
-  price: string;
-  compareAtPrice: string;
-  sku: string;
-  images: ImageState[];
-  sizes: SizeState[];
-  thumbnailImageUrl: string | null;
+  id: string; // Real UUID or `temp_...` for new variants
+  colorName: string; colorHex: string; price: string; compareAtPrice: string;
+  sku: string; images: ImageState[]; sizes: SizeState[]; thumbnailUrl: string | null;
 };
 
+// --- HELPER COMPONENTS ---
+const Card = ({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) => (
+  <div className="overflow-hidden bg-white border shadow-sm border-slate-200 rounded-2xl">
+    <div className="px-6 py-5 border-b border-slate-200">
+      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+      {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+    </div>
+    <div className="p-6">{children}</div>
+  </div>
+);
+
+const Input = (props: React.InputHTMLAttributes<HTMLInputElement> & { label: string; icon?: React.ReactNode }) => (
+  <div>
+    <label htmlFor={props.id} className="block mb-2 text-sm font-medium text-slate-700">{props.label}</label>
+    <div className="relative">
+      {props.icon && <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">{props.icon}</div>}
+      <input
+        {...props}
+        className={`block w-full px-3 py-2 text-slate-900 bg-slate-50 border border-slate-300 rounded-lg shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${props.icon ? 'pl-10' : ''}`}
+      />
+    </div>
+  </div>
+);
+
+
+// --- MAIN EDIT FORM COMPONENT ---
 export default function EditProductForm({ initialData }: { initialData: FullProduct }) {
   const router = useRouter();
 
-  // Form State
+  // --- FORM STATE ---
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
   const [shippingCost, setShippingCost] = useState('');
-  const [variants, setVariants] = useState<VariantFormState[]>([]);
-  const [tradingCardImage, setTradingCardImage] = useState<File | null>(null);
-  const [currentTradingCardImage, setCurrentTradingCardImage] = useState<string | null>(null);
-  const [removeTradingCard, setRemoveTradingCard] = useState(false);
+  
+  // Media State
+  const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [removeAudio, setRemoveAudio] = useState(false);
+  
+  const [currentTradingCardUrl, setCurrentTradingCardUrl] = useState<string | null>(null);
+  const [tradingImage, setTradingImage] = useState<File | null>(null);
+  const [removeTradingCard, setRemoveTradingCard] = useState(false);
+  
+  // Variants State
+  const [variants, setVariants] = useState<VariantFormState[]>([]);
+  const [activeVariantId, setActiveVariantId] = useState<string | null>(null);
+
+  // Deletion Tracking State
+  const [variantsToDelete, setVariantsToDelete] = useState<string[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+  const [sizesToDelete, setSizesToDelete] = useState<string[]>([]);
+  
+  // API & Loading State
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // --- NEW STATE for existing colors ---
   const [existingColors, setExistingColors] = useState<ExistingColor[]>([]);
-
-  // Load existing colors from API
-  useEffect(() => {
-    let ignore = false;
-    async function fetchColors() {
-      try {
-        const res = await fetch('/api/admin/products/colors', { cache: 'no-store' });
-        if (!res.ok) return;
-        const data: ExistingColor[] = await res.json();
-        if (!ignore) setExistingColors(data);
-      } catch (e) {
-        console.warn('Failed to load colors', e);
-      }
-    }
-    fetchColors();
-    return () => { ignore = true; };
-  }, []);
 
   // Initialize form with existing data
   useEffect(() => {
@@ -99,550 +106,384 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
       setProductName(initialData.name);
       setDescription(initialData.description || '');
       setShippingCost(initialData.shipping_cost || '');
-      setCurrentTradingCardImage(initialData.trading_card_image);
-      setVariants(initialData.variants.map((v: ProductVariant) => ({
+      setCurrentAudioUrl(initialData.audio_url);
+      setCurrentTradingCardUrl(initialData.trading_card_image);
+      
+      const formVariants = initialData.variants.map(v => ({
         ...v,
         compareAtPrice: v.compareAtPrice || '',
         sku: v.sku || '',
         images: v.images || [],
-        sizes: (v.sizes || []).map((s: ProductSize) => ({ ...s, id: s.id })),
-        thumbnailImageUrl: v.thumbnailUrl,
-      })));
+        sizes: (v.sizes || []).map(s => ({ ...s, id: s.id })),
+        thumbnailUrl: v.thumbnailUrl,
+      }));
+      setVariants(formVariants);
+      setActiveVariantId(formVariants[0]?.id || null);
     }
   }, [initialData]);
 
-  // Variant management functions
-  const addVariant = () => {
-    const newVariant: VariantFormState = {
-      id: `temp_${Date.now()}`,
-      colorName: '',
-      colorHex: '#000000',
-      price: '',
-      compareAtPrice: '',
-      sku: '',
-      images: [],
-      sizes: [{ id: `temp_size_${Date.now()}`, size: 'S', stock: 0 }],
-      thumbnailImageUrl: null,
-    };
-    setVariants([...variants, newVariant]);
-  };
-
-  const removeVariant = (id: string) => {
-    setVariants(variants.filter((v) => v.id !== id));
-  };
-
-  function handleVariantChange<K extends keyof VariantFormState>(id: string, field: K, value: VariantFormState[K]) {
-    setVariants(variants.map((v) => (v.id === id ? { ...v, [field]: value } : v)));
-  }
-
-  const handleSizeChange = (variantId: string, sizeId: string, field: keyof SizeState, value: string | number) => {
-    setVariants(variants.map(v => 
-      v.id === variantId 
-        ? { ...v, sizes: v.sizes.map((s) => (s.id === sizeId ? { ...s, [field]: value } : s)) } 
-        : v
-    ));
-  };
-
-  const addSize = (variantId: string) => {
-    const newSize: SizeState = {
-      id: `temp_size_${Date.now()}`,
-      size: '',
-      stock: 0
-    };
-    setVariants(variants.map(v => 
-      v.id === variantId 
-        ? { ...v, sizes: [...v.sizes, newSize] } 
-        : v
-    ));
-  };
-
-  const removeSize = (variantId: string, sizeId: string) => {
-    setVariants(variants.map(v => 
-      v.id === variantId 
-        ? { ...v, sizes: v.sizes.filter((s) => s.id !== sizeId) } 
-        : v
-    ));
-  };
-
-  const handleImageChange = (id: string, files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const variant = variants.find(v => v.id === id);
-    if (!variant) return;
-    const newImages = [...variant.images, ...Array.from(files)];
-    const newThumbnail = variant.thumbnailImageUrl === null && newImages.length > 0 
-      ? (newImages[0] instanceof File ? URL.createObjectURL(newImages[0]) : newImages[0].imageUrl)
-      : variant.thumbnailImageUrl;
-    setVariants(variants.map(v => v.id === id ? { ...v, images: newImages, thumbnailImageUrl: newThumbnail } : v));
-  };
-
-  const removeImage = (variantId: string, imageToRemove: ImageState) => {
-    const variant = variants.find(v => v.id === variantId);
-    if (!variant) return;
-    const newImages = variant.images.filter(img => img !== imageToRemove);
-    const imageUrl = 'imageUrl' in imageToRemove ? imageToRemove.imageUrl : URL.createObjectURL(imageToRemove);
-    let newThumbnail = variant.thumbnailImageUrl;
-    if (variant.thumbnailImageUrl === imageUrl) {
-      newThumbnail = newImages.length > 0 
-        ? (newImages[0] instanceof File ? URL.createObjectURL(newImages[0]) : newImages[0].imageUrl)
-        : null;
+  // Fetch existing colors from API
+  useEffect(() => {
+    async function fetchColors() {
+      try {
+        const res = await fetch('/api/admin/products/colors', { cache: 'no-store' });
+        if (res.ok) setExistingColors(await res.json());
+      } catch (e) { console.warn('Failed to load colors', e); }
     }
-    setVariants(variants.map(v => v.id === variantId ? { ...v, images: newImages, thumbnailImageUrl: newThumbnail } : v));
-  };
+    fetchColors();
+  }, []);
 
-  const setThumbnail = (variantId: string, image: ImageState) => {
-    const imageUrl = 'imageUrl' in image ? image.imageUrl : URL.createObjectURL(image);
-    setVariants(variants.map(v => v.id === variantId ? { ...v, thumbnailImageUrl: imageUrl } : v));
-  };
-
-  // --- NEW: compute duplicate color names within the current variants ---
+  // --- COMPUTED STATE ---
+  const activeVariant = useMemo(() => variants.find(v => v.id === activeVariantId), [variants, activeVariantId]);
+  
   const duplicateColorNames = useMemo(() => {
     const names = variants.map(v => v.colorName.trim().toLowerCase()).filter(Boolean);
-    const counts: Record<string, number> = {};
-    names.forEach(n => { counts[n] = (counts[n] ?? 0) + 1; });
-    return new Set(Object.entries(counts).filter(([, c]) => c > 1).map(([n]) => n));
+    const counts = names.reduce((acc, name) => ({...acc, [name]: (acc[name] || 0) + 1}), {} as Record<string, number>);
+    return new Set(Object.keys(counts).filter(name => counts[name] > 1));
   }, [variants]);
 
+  // --- HANDLER FUNCTIONS ---
+  const updateVariant = useCallback((id: string, field: keyof VariantFormState, value: string | number | ImageState[] | SizeState[] | null) => {
+    setVariants(prev => prev.map(v => (v.id === id ? { ...v, [field]: value } : v)));
+  }, []);
+
+  const addVariant = useCallback(() => {
+    const newId = `temp_${Date.now()}`;
+    const newVariant: VariantFormState = { id: newId, colorName: '', colorHex: '#ffffff', price: '', compareAtPrice: '', sku: '', images: [], sizes: [{ id: `temp_size_${Date.now()}`, size: 'S', stock: 0 }], thumbnailUrl: null };
+    setVariants(prev => [...prev, newVariant]);
+    setActiveVariantId(newId);
+  }, []);
+
+  const removeVariant = useCallback((idToRemove: string) => {
+    // If it's a real variant (not a temp one), track its ID for deletion
+    if (!idToRemove.startsWith('temp_')) {
+      setVariantsToDelete(prev => [...prev, idToRemove]);
+    }
+    setVariants(prev => {
+      const newVariants = prev.filter(v => v.id !== idToRemove);
+      if (activeVariantId === idToRemove) {
+        setActiveVariantId(newVariants[newVariants.length - 1]?.id || null);
+      }
+      return newVariants;
+    });
+  }, [activeVariantId]);
+  
+  const handleImageChange = useCallback((id: string, files: FileList | null) => {
+    if (!files) return;
+    updateVariant(id, 'images', [...(variants.find(v => v.id === id)?.images || []), ...Array.from(files)]);
+  }, [variants, updateVariant]);
+
+  const removeImage = useCallback((variantId: string, imageToRemove: ImageState) => {
+    // If it's an existing image, track its ID for deletion
+    if ('id' in imageToRemove) {
+        setImagesToDelete(prev => [...prev, imageToRemove.id]);
+    }
+    const variant = variants.find(v => v.id === variantId);
+    if (!variant) return;
+    
+    const newImages = variant.images.filter(img => img !== imageToRemove);
+    const imageUrl = 'imageUrl' in imageToRemove ? imageToRemove.imageUrl : URL.createObjectURL(imageToRemove);
+    
+    // If removing the thumbnail, pick a new one
+    let newThumbnail = variant.thumbnailUrl;
+    if (variant.thumbnailUrl === imageUrl) {
+      newThumbnail = newImages.length > 0 ? ('imageUrl' in newImages[0] ? newImages[0].imageUrl : URL.createObjectURL(newImages[0])) : null;
+    }
+
+    setVariants(prev => prev.map(v => v.id === variantId ? { ...v, images: newImages, thumbnailUrl: newThumbnail } : v));
+  }, [variants]);
+  
+  const setThumbnail = useCallback((variantId: string, image: ImageState) => {
+    const imageUrl = 'imageUrl' in image ? image.imageUrl : URL.createObjectURL(image);
+    updateVariant(variantId, 'thumbnailUrl', imageUrl);
+  }, [updateVariant]);
+
+  const addSize = useCallback((variantId: string) => {
+    const newSize = { id: `temp_size_${Date.now()}`, size: '', stock: 0 };
+    setVariants(prev => prev.map(v => v.id === variantId ? { ...v, sizes: [...v.sizes, newSize] } : v));
+  }, []);
+
+  const removeSize = useCallback((variantId: string, sizeId: string) => {
+    if (!sizeId.startsWith('temp_')) {
+      setSizesToDelete(prev => [...prev, sizeId]);
+    }
+    setVariants(prev => prev.map(v => v.id === variantId ? { ...v, sizes: v.sizes.filter(s => s.id !== sizeId) } : v));
+  }, []);
+
+  // --- FORM SUBMISSION ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    // --- Prevent duplicate colors among variants ---
     if (duplicateColorNames.size > 0) {
-      setIsLoading(false);
-      setError('Duplicate color variants detected. Please ensure each variant uses a unique color.');
-      return;
+      setError('Duplicate color variants detected. Each variant must have a unique color name.');
+      setIsLoading(false); return;
     }
 
     try {
       const formData = new FormData();
-      
-      // Add base product data
       formData.append('productName', productName);
       formData.append('description', description);
       formData.append('shippingCost', shippingCost);
-      
-      // Convert variants to the format expected by the API
-      const variantsData = variants.map(variant => ({
-        id: variant.id,
-        colorName: variant.colorName,
-        colorHex: variant.colorHex,
-        price: variant.price,
-        compareAtPrice: variant.compareAtPrice || null,
-        sku: variant.sku || null,
-        thumbnailImageUrl: variant.thumbnailImageUrl,
-        images: variant.images.map(image => 
-          'imageUrl' in image 
-            ? { id: image.id, imageUrl: image.imageUrl }
-            : { name: image.name }
-        ),
-        sizes: variant.sizes.map(size => ({
-          id: size.id,
-          size: size.size,
-          stock: size.stock
-        }))
-      }));
 
-      formData.append('variants', JSON.stringify(variantsData));
-      formData.append('variantsToDelete', JSON.stringify([]));
-      formData.append('imagesToDelete', JSON.stringify([]));
-      formData.append('sizesToDelete', JSON.stringify([]));
+      // Handle file updates
+      if (audioFile) formData.append('audioFile', audioFile);
+      if (removeAudio) formData.append('removeAudio', 'true');
+      if (tradingImage) formData.append('tradingCardFile', tradingImage);
+      if (removeTradingCard) formData.append('removeTradingCard', 'true');
 
-      // Add trading card image data
-      if (tradingCardImage) {
-        formData.append('tradingCardFile', tradingCardImage);
-      }
-      if (removeTradingCard) {
-        formData.append('removeTradingCard', 'true');
-      }
+      // Append deletion arrays
+      formData.append('variantsToDelete', JSON.stringify(variantsToDelete));
+      formData.append('imagesToDelete', JSON.stringify(imagesToDelete));
+      formData.append('sizesToDelete', JSON.stringify(sizesToDelete));
 
-      // Add audio file data
-      if (audioFile) {
-        formData.append('audioFile', audioFile);
-      }
-      if (removeAudio) {
-        formData.append('removeAudio', 'true');
-      }
-
-      // Add new image files
-      variants.forEach((variant) => {
-        variant.images.forEach((image) => {
-          if (image instanceof File) {
-            formData.append(`image_${variant.id}_${image.name}`, image);
+      // Append variant data and new images
+      const variantsDataForApi = variants.map(v => {
+        const newImagesForVariant: string[] = [];
+        v.images.forEach(img => {
+          if (img instanceof File) {
+            formData.append(`image_${v.id}_${img.name}`, img);
+            newImagesForVariant.push(img.name);
           }
         });
-      });
 
-      const response = await fetch(`/api/admin/products/${initialData.id}`, {
-        method: 'PUT',
-        body: formData,
+        // This structured data helps backend identify what's new vs. what's existing
+        return {
+          id: v.id,
+          colorName: v.colorName,
+          colorHex: v.colorHex,
+          price: v.price,
+          compareAtPrice: v.compareAtPrice,
+          sku: v.sku,
+          thumbnailUrl: v.thumbnailUrl,
+          existingImageIds: v.images.filter(img => 'id' in img).map(img => (img as ProductImage).id),
+          newImageNames: newImagesForVariant,
+          sizes: v.sizes,
+        };
       });
+      formData.append('variants', JSON.stringify(variantsDataForApi));
 
+      const response = await fetch(`/api/admin/products/${initialData.id}`, { method: 'PUT', body: formData });
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update product');
       }
+      
+      router.push('/admin/products?updated=true');
 
-      // Success - redirect to admin products page
-      router.push('/admin/products');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (!initialData) return null; // Or a loading spinner
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="mb-6 text-3xl font-bold text-gray-800">Edit Product</h1>
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {error && <div className="p-4 border border-red-300 rounded-md bg-red-50"><p className="text-red-500">{error}</p></div>}
-        
-        {/* Base Product Details */}
-        <div className="p-6 bg-white rounded-lg shadow">
-          <h2 className="mb-4 text-xl font-semibold">Base Details</h2>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="productName" className="block text-sm font-medium text-gray-700">Product Name</label>
-              <input type="text" id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" required />
-            </div>
-            <div>
-              <label htmlFor="shippingCost" className="block text-sm font-medium text-gray-700">Shipping Cost (LKR)</label>
-              <input type="number" id="shippingCost" value={shippingCost} onChange={(e) => setShippingCost(e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="e.g., 500.00" min="0" step="0.01" required />
-              <p className="mt-1 text-xs text-gray-500">Enter 0 for free shipping.</p>
-            </div>
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm"></textarea>
-            </div>
-
-            {/* Audio File Section */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Audio File</label>
-              {initialData.audio_url && !removeAudio ? (
-                <div className="mt-2">
-                  <div className="flex items-center gap-4 p-3 rounded-md bg-gray-50">
-                    <audio controls className="flex-1">
-                      <source src={initialData.audio_url} type="audio/mpeg" />
-                      Your browser does not support the audio element.
-                    </audio>
-                    <button
-                      type="button"
-                      onClick={() => setRemoveAudio(true)}
-                      className="px-3 py-1 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-              {removeAudio && (
-                <div className="p-2 mt-2 border border-red-200 rounded bg-red-50">
-                  <p className="text-sm text-red-700">✓ Audio file will be removed when you save</p>
-                  <button
-                    type="button"
-                    onClick={() => setRemoveAudio(false)}
-                    className="mt-1 text-xs text-red-600 underline hover:no-underline"
-                  >
-                    Undo removal
-                  </button>
-                </div>
-              )}
-              <div className="mt-2">
-                <input
-                  type="file"
-                  accept="audio/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setAudioFile(file);
-                      setRemoveAudio(false);
-                    }
-                  }}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary-dark"
-                />
-                <p className="mt-1 text-xs text-gray-500">Upload a new audio file (MP3, WAV, etc.)</p>
-                {audioFile && (
-                  <div className="p-2 mt-2 border border-green-200 rounded bg-green-50">
-                    <p className="text-sm text-green-700">✓ New audio file selected: {audioFile.name}</p>
-                  </div>
-                )}
+    <div className="min-h-screen bg-slate-50">
+      <form onSubmit={handleSubmit}>
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur-lg border-slate-200">
+          <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-4">
+                <button type="button" onClick={() => router.back()} className="p-2 rounded-md text-slate-500 hover:bg-slate-100">
+                   <ArrowLeft size={20} />
+                </button>
+                <h1 className="text-xl font-semibold text-slate-900">Edit Product</h1>
               </div>
-            </div>
-
-            {/* Trading Card Image Section */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Trading Card Image</label>
-              {currentTradingCardImage ? (
-                <div className="mt-2">
-                  <div className="flex items-start gap-4 p-3 rounded-md bg-gray-50">
-                    <div className="relative">
-                      <Image
-                        src={currentTradingCardImage}
-                        alt="Current trading card"
-                        width={120}
-                        height={168}
-                        className="object-cover rounded-md shadow-sm"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <p className="mb-2 text-sm text-gray-600">Current trading card image</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRemoveTradingCard(true);
-                          setCurrentTradingCardImage(null);
-                        }}
-                        className="px-3 py-1 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50"
-                      >
-                        Remove Current Image
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-              <div className="mt-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setTradingCardImage(file);
-                      setRemoveTradingCard(false);
-                    }
-                  }}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary-dark"
-                />
-                <p className="mt-1 text-xs text-gray-500">Upload a new trading card image (PNG, JPG, etc.)</p>
-                {tradingCardImage && (
-                  <div className="p-2 mt-2 border border-green-200 rounded bg-green-50">
-                    <p className="text-sm text-green-700">✓ New trading card selected: {tradingCardImage.name}</p>
-                  </div>
-                )}
+              <div className="flex items-center gap-4">
+                <button type="button" onClick={() => router.push('/admin/products')} className="px-4 py-2 text-sm font-medium bg-white border rounded-lg shadow-sm text-slate-700 border-slate-300 hover:bg-slate-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={isLoading} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isLoading ? (
+                    <><div className="w-4 h-4 border-2 border-white rounded-full border-t-transparent animate-spin"></div>Saving...</>
+                  ) : (
+                    <><CheckCircle size={16} /> Save Changes</>
+                  )}
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Product Variants Section */}
-        <div>
-          <h2 className="mb-4 text-xl font-semibold text-gray-800">Product Variants</h2>
-          <div className="space-y-6">
-            {variants.map((variant) => (
-              <div key={variant.id} className="relative p-6 bg-white rounded-lg shadow">
-                {variants.length > 1 && (
-                  <button type="button" onClick={() => removeVariant(variant.id)} className="absolute text-gray-400 top-4 right-4 hover:text-red-500">
-                    <Trash2 size={20} />
-                  </button>
-                )}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  {/* Color selection with existing colors display and new color picker */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700">Color</label>
-                    
-                    {/* Display all existing colors for reference */}
-                    {existingColors.length > 0 && (
-                      <div className="p-4 mt-3 rounded-lg bg-gray-50">
-                        <h4 className="mb-3 text-sm font-medium text-gray-700">Existing Colors Reference</h4>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                          {existingColors.map(color => (
-                            <div key={color.colorName} className="flex items-center gap-2 p-2 bg-white border rounded">
-                              <div 
-                                className="flex-shrink-0 w-6 h-6 border border-gray-300 rounded" 
-                                style={{ backgroundColor: color.colorHex }}
-                                title={`${color.colorName} - ${color.colorHex}`}
-                              />
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-xs font-medium text-gray-700 truncate">{color.colorName}</span>
-                                <span className="text-xs text-gray-500">{color.colorHex}</span>
-                              </div>
+        {/* Main Content */}
+        <main className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            {/* Left Column */}
+            <div className="flex flex-col col-span-1 gap-8 lg:col-span-2">
+              {error && (
+                <div className="flex items-start gap-3 p-4 text-red-800 border border-red-200 rounded-lg bg-red-50">
+                  <AlertCircle className="flex-shrink-0 w-5 h-5 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold">Error Updating Product</h3>
+                    <p className="text-sm">{error}</p>
+                  </div>
+                </div>
+              )}
+              
+              <Card title="General Information">
+                <div className="space-y-6">
+                  <Input label="Product Name *" id="productName" type="text" value={productName} onChange={(e) => setProductName(e.target.value)} required />
+                  <div>
+                    <label htmlFor="description" className="block mb-2 text-sm font-medium text-slate-700">Description</label>
+                    <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={5} className="block w-full border rounded-lg shadow-sm text-slate-900 bg-slate-50 border-slate-300 sm:text-sm" />
+                  </div>
+                </div>
+              </Card>
+
+              <Card title="Media" description="Manage optional product-related media files.">
+                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    {/* Audio Manager */}
+                    <div className="space-y-2">
+                      <h3 className="flex items-center gap-2 font-medium text-slate-800"><Music size={16} /> Product Audio</h3>
+                      {currentAudioUrl && !removeAudio && !audioFile && (
+                        <div className="p-2 space-y-2 rounded-md bg-slate-100">
+                          <audio controls src={currentAudioUrl} className="w-full h-10" />
+                          <button type="button" onClick={() => setRemoveAudio(true)} className="w-full px-2 py-1 text-xs text-red-600 border border-red-200 rounded-md hover:bg-red-50">Remove Audio</button>
+                        </div>
+                      )}
+                      {(removeAudio || audioFile) && (
+                        <div className={`p-2 text-sm rounded-md ${removeAudio ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                          {removeAudio ? 'Audio will be removed on save.' : `New audio selected: ${audioFile?.name}`}
+                          <button type="button" onClick={() => { setRemoveAudio(false); setAudioFile(null); }} className="ml-2 text-xs font-semibold underline">Undo</button>
+                        </div>
+                      )}
+                      <label htmlFor="audioFile" className="flex flex-col items-center justify-center w-full p-4 text-center transition bg-white border-2 border-dashed rounded-lg cursor-pointer border-slate-300 hover:border-blue-500 hover:bg-blue-50">
+                        <UploadCloud size={24} className="text-slate-400" />
+                        <span className="mt-2 text-sm text-slate-600">Upload new audio</span>
+                        <input id="audioFile" type="file" className="hidden" accept="audio/*" onChange={(e) => { setAudioFile(e.target.files?.[0] || null); setRemoveAudio(false); }} />
+                      </label>
+                    </div>
+
+                    {/* Trading Card Manager */}
+                     <div className="space-y-2">
+                        <h3 className="flex items-center gap-2 font-medium text-slate-800"><CreditCard size={16} /> Trading Card</h3>
+                        {currentTradingCardUrl && !removeTradingCard && !tradingImage && (
+                          <div className="p-2 space-y-2 rounded-md bg-slate-100">
+                            <Image src={currentTradingCardUrl} alt="Current Card" width={100} height={140} className="object-cover mx-auto rounded-md" />
+                            <button type="button" onClick={() => setRemoveTradingCard(true)} className="w-full px-2 py-1 text-xs text-red-600 border border-red-200 rounded-md hover:bg-red-50">Remove Card</button>
+                          </div>
+                        )}
+                        {(removeTradingCard || tradingImage) && (
+                          <div className={`p-2 text-sm rounded-md ${removeTradingCard ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                            {removeTradingCard ? 'Trading card will be removed on save.' : `New card selected.`}
+                            <button type="button" onClick={() => { setRemoveTradingCard(false); setTradingImage(null); }} className="ml-2 text-xs font-semibold underline">Undo</button>
+                          </div>
+                        )}
+                        <label htmlFor="tradingImage" className="flex flex-col items-center justify-center w-full p-4 text-center transition bg-white border-2 border-dashed rounded-lg cursor-pointer border-slate-300 hover:border-blue-500 hover:bg-blue-50">
+                          <UploadCloud size={24} className="text-slate-400" />
+                          <span className="mt-2 text-sm text-slate-600">Upload new card</span>
+                          <input id="tradingImage" type="file" className="hidden" accept="image/*" onChange={(e) => { setTradingImage(e.target.files?.[0] || null); setRemoveTradingCard(false); }} />
+                        </label>
+                     </div>
+                 </div>
+              </Card>
+              
+              {/* NOTE: Variant Card JSX is identical to the Add page, as the logic is handled by state handlers */}
+              <Card title="Variants & Pricing">
+                {/* Variant Tabs */}
+                <div className="flex items-center border-b border-slate-200">
+                  <div className="flex-1 -mb-px overflow-x-auto"><nav className="flex gap-4">
+                    {variants.map(variant => (
+                      <button key={variant.id} type="button" onClick={() => setActiveVariantId(variant.id)}
+                        className={`flex items-center gap-2 px-3 py-3 text-sm font-medium whitespace-nowrap shrink-0 border-b-2 ${activeVariantId === variant.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}>
+                         <span className="block w-4 h-4 border rounded-full border-slate-300" style={{ backgroundColor: variant.colorHex }}></span>
+                         {variant.colorName || 'New Variant'}
+                      </button>
+                    ))}
+                  </nav></div>
+                  <button type="button" onClick={addVariant} className="flex items-center gap-2 px-3 py-2 ml-4 text-sm font-medium text-blue-600 rounded-lg hover:bg-blue-50"><Plus size={16} /> Add</button>
+                </div>
+                {/* Active Variant Content */}
+                <div className="pt-6">{!activeVariant ? (<div className="text-center text-slate-500"><p>No variant selected.</p></div>) : (
+                  <div key={activeVariant.id}>
+                     <div className="flex justify-end mb-4">{variants.length > 1 && (<button type="button" onClick={() => removeVariant(activeVariant.id)} className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800"><Trash2 size={14} /> Remove this variant</button>)}</div>
+                    <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                      <div className="space-y-6"> {/* Details */}
+                        <div>
+                          <Input label="Color Name *" id={`colorName-${activeVariant.id}`} type="text" value={activeVariant.colorName} onChange={e => updateVariant(activeVariant.id, 'colorName', e.target.value)} required />
+                          {duplicateColorNames.has(activeVariant.colorName.trim().toLowerCase()) && <p className="mt-1 text-xs text-red-600">This color name is already in use.</p>}
+                        </div>
+                        <div className="flex items-end gap-4">
+                          <div className="flex-1"><Input label="Hex Code *" id={`colorHex-${activeVariant.id}`} type="text" value={activeVariant.colorHex} onChange={e => updateVariant(activeVariant.id, 'colorHex', e.target.value)} required /></div>
+                          <input type="color" value={activeVariant.colorHex} onChange={e => updateVariant(activeVariant.id, 'colorHex', e.target.value)} className="w-10 h-10 p-0 bg-transparent border-none rounded-md cursor-pointer" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <Input label="Sale Price (LKR) *" id={`price-${activeVariant.id}`} type="number" value={activeVariant.price} onChange={e => updateVariant(activeVariant.id, 'price', e.target.value)} required />
+                          <Input label="Original Price" id={`compareAtPrice-${activeVariant.id}`} type="number" value={activeVariant.compareAtPrice} onChange={e => updateVariant(activeVariant.id, 'compareAtPrice', e.target.value)} />
+                        </div>
+                        <Input label="SKU" id={`sku-${activeVariant.id}`} type="text" value={activeVariant.sku} onChange={e => updateVariant(activeVariant.id, 'sku', e.target.value)} />
+                      </div>
+                      <div className="space-y-6"> {/* Images */}
+                         <div>
+                            <label className="block mb-2 text-sm font-medium text-slate-700">Images</label>
+                            <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+                              {activeVariant.images.map((image, index) => {
+                                const imageUrl = 'imageUrl' in image ? image.imageUrl : URL.createObjectURL(image);
+                                return (
+                                <div key={'id' in image ? image.id : `${image.name}-${index}`} className="relative group aspect-square">
+                                  <Image src={imageUrl} alt="upload preview" layout="fill" className="object-cover border rounded-lg border-slate-200" />
+                                  <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity bg-black bg-opacity-50 rounded-lg opacity-0 group-hover:opacity-100">
+                                    <button type="button" title="Set as thumbnail" onClick={() => setThumbnail(activeVariant.id, image)} className="p-1.5 text-white rounded-full bg-black/50 hover:bg-blue-600"><Star size={14} fill={activeVariant.thumbnailUrl === imageUrl ? 'currentColor' : 'none'} /></button>
+                                    <button type="button" title="Remove image" onClick={() => removeImage(activeVariant.id, image)} className="p-1.5 text-white rounded-full bg-black/50 hover:bg-red-600"><X size={14} /></button>
+                                  </div>
+                                  {activeVariant.thumbnailUrl === imageUrl && <div className="absolute p-1 bg-white rounded-full shadow top-1 right-1"><Star size={10} className="text-blue-500" fill="currentColor"/></div>}
+                                </div>
+                              )})}
+                              <label htmlFor={`image-upload-${activeVariant.id}`} className="flex flex-col items-center justify-center text-center transition bg-white border-2 border-dashed rounded-lg cursor-pointer aspect-square border-slate-300 hover:border-blue-500 hover:bg-blue-50">
+                                <ImageIcon size={20} className="text-slate-400" /><span className="mt-1 text-xs text-slate-500">Add</span>
+                                <input id={`image-upload-${activeVariant.id}`} type="file" multiple accept="image/*" className="hidden" onChange={e => handleImageChange(activeVariant.id, e.target.files)} />
+                              </label>
                             </div>
-                          ))}
+                         </div>
+                      </div>
+                    </div>
+                    {/* Sizes & Stock Section */}
+                    <div className="pt-8 mt-8 border-t border-slate-200">
+                      <h3 className="text-base font-semibold text-slate-900">Sizes & Inventory</h3>
+                      <div className="mt-4 space-y-3">
+                         {activeVariant.sizes.map((size) => (
+                            <div key={size.id} className="flex items-center gap-4">
+                               <input type="text" placeholder="Size (e.g., M)" value={size.size} onChange={e => updateVariant(activeVariant.id, 'sizes', activeVariant.sizes.map(s => s.id === size.id ? {...s, size: e.target.value} : s))} className="flex-1 w-full px-3 py-2 border rounded-lg shadow-sm bg-slate-50 border-slate-300 sm:text-sm" required />
+                               <input type="number" placeholder="Stock" value={size.stock} onChange={e => updateVariant(activeVariant.id, 'sizes', activeVariant.sizes.map(s => s.id === size.id ? {...s, stock: parseInt(e.target.value, 10) || 0} : s))} className="px-3 py-2 border rounded-lg shadow-sm w-28 bg-slate-50 border-slate-300 sm:text-sm" />
+                               {activeVariant.sizes.length > 1 && <button type="button" onClick={() => removeSize(activeVariant.id, size.id)} className="p-2 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50"><Trash2 size={16} /></button>}
+                            </div>
+                         ))}
+                         <button type="button" onClick={() => addSize(activeVariant.id)} className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 rounded-lg hover:bg-blue-50"><Plus size={16} /> Add Size</button>
+                      </div>
+                    </div>
+                  </div>
+                )}</div>
+              </Card>
+            </div>
+
+            {/* Right Column */}
+            <div className="col-span-1">
+              <div className="sticky top-24">
+                <Card title="Organization">
+                  <div className="space-y-6">
+                    <Input label="Shipping Cost (LKR)" id="shippingCost" type="number" value={shippingCost} onChange={e => setShippingCost(e.target.value)} placeholder="500" required />
+                    {existingColors.length > 0 && (
+                      <div>
+                        <h3 className="block mb-2 text-sm font-medium text-slate-700">🎨 Existing Colors</h3>
+                        <div className="flex flex-wrap gap-2">
+                           {existingColors.map(c => (
+                            <div key={c.colorName} className="flex items-center gap-2 px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-700">
+                               <span className="block w-3 h-3 border rounded-full border-slate-300" style={{backgroundColor: c.colorHex}}></span>{c.colorName}
+                            </div>))}
                         </div>
                       </div>
                     )}
-
-                    {/* Current Color Input */}
-                    <div className="mt-4 space-y-3">
-                      <h4 className="text-sm font-medium text-gray-700">Current Color</h4>
-                      <div className="flex flex-col gap-3">
-                        <div>
-                          <label className="block mb-1 text-xs font-medium text-gray-600">Color Name</label>
-                          <input
-                            type="text"
-                            value={variant.colorName}
-                            onChange={e => handleVariantChange(variant.id, 'colorName', e.target.value)}
-                            className="block w-full border-gray-300 rounded-md shadow-sm"
-                            placeholder="e.g., Ocean Blue"
-                            required
-                          />
-                        </div>
-                        
-                        <div className="flex items-end gap-4">
-                          <div className="flex-1">
-                            <label className="block mb-1 text-xs font-medium text-gray-600">Hex Color Code</label>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={variant.colorHex}
-                                onChange={e => {
-                                  let value = e.target.value;
-                                  if (!value.startsWith('#') && value.length > 0) {
-                                    value = '#' + value;
-                                  }
-                                  // Validate hex format
-                                  if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})?$/.test(value) || value === '#') {
-                                    handleVariantChange(variant.id, 'colorHex', value);
-                                  }
-                                }}
-                                className="block w-full font-mono text-sm border-gray-300 rounded-md shadow-sm"
-                                placeholder="#000000"
-                                pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
-                                required
-                              />
-                              <input
-                                type="color"
-                                value={variant.colorHex}
-                                onChange={e => handleVariantChange(variant.id, 'colorHex', e.target.value)}
-                                className="w-12 h-10 border border-gray-300 rounded-md cursor-pointer"
-                                title="Click to open color picker"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">Preview:</span>
-                            <div 
-                              className="w-10 h-10 border-2 border-gray-300 rounded-md shadow-sm"
-                              style={{ backgroundColor: variant.colorHex }}
-                              title={`${variant.colorName || 'Unnamed'} - ${variant.colorHex}`}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Duplicate warning */}
-                      {variant.colorName.trim() && duplicateColorNames.has(variant.colorName.trim().toLowerCase()) && (
-                        <p className="p-2 text-xs text-red-600 rounded bg-red-50">
-                          ⚠️ Duplicate color: another variant already uses &quot;{variant.colorName}&quot;.
-                        </p>
-                      )}
-
-                      {/* Color validation */}
-                      {variant.colorHex && !/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(variant.colorHex) && (
-                        <p className="p-2 text-xs text-red-600 rounded bg-red-50">
-                          ⚠️ Invalid hex color format. Please use format like #FF0000 or #F00.
-                        </p>
-                      )}
-                    </div>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Price (Sale Price)</label>
-                    <input type="number" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="e.g., 49.99" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Compare At Price (Original)</label>
-                    <input type="number" value={variant.compareAtPrice} onChange={e => handleVariantChange(variant.id, 'compareAtPrice', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="Optional: e.g., 59.99" />
-                    <p className="mt-1 text-xs text-gray-500">If set, will be shown as crossed out.</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700">SKU</label>
-                    <input type="text" value={variant.sku} onChange={e => handleVariantChange(variant.id, 'sku', e.target.value)} className="block w-full mt-1 border-gray-300 rounded-md shadow-sm" placeholder="e.g., TSH-OB-001" />
-                  </div>
-
-                  {/* Images Section */}
-                  <div className="md:col-span-2">
-                    <label className="block mb-2 text-sm font-medium text-gray-700">Images</label>
-                    <div className="flex flex-wrap gap-4">
-                      {variant.images.map((image) => {
-                        const isExisting = 'imageUrl' in image;
-                        const imageUrl = isExisting ? image.imageUrl : URL.createObjectURL(image);
-                        const isThumbnail = variant.thumbnailImageUrl === imageUrl;
-                        return (
-                          <div key={isExisting ? image.id : image.name} className="relative group">
-                            <Image 
-                              src={imageUrl} 
-                              alt="product" 
-                              width={96}
-                              height={96}
-                              className={`object-cover w-24 h-24 rounded-md border-2 ${isThumbnail ? 'border-primary' : 'border-transparent'}`} 
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center gap-2 transition-opacity bg-black rounded-md opacity-0 bg-opacity-60 group-hover:opacity-100">
-                              <button type="button" title="Set as thumbnail" onClick={() => setThumbnail(variant.id, image)} className="p-1.5 text-white bg-black/50 rounded-full hover:bg-primary">
-                                <Star size={14} fill={isThumbnail ? 'currentColor' : 'none'} />
-                              </button>
-                              <button type="button" title="Remove image" onClick={() => removeImage(variant.id, image)} className="p-1.5 text-white bg-black/50 rounded-full hover:bg-red-500">
-                                <X size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:bg-gray-50">
-                        <ImagePlus size={24} className="text-gray-400" />
-                        <span className="mt-1 text-xs text-gray-500">Add Images</span>
-                        <input type="file" multiple accept="image/*" onChange={(e) => { 
-                          handleImageChange(variant.id, e.target.files);
-                          e.target.value = '';
-                        }} className="hidden" />
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Sizes & Stock Section */}
-                  <div className="md:col-span-2">
-                    <label className="block mb-2 text-sm font-medium text-gray-700">Sizes & Stock</label>
-                    <div className="space-y-2">
-                      {variant.sizes.map((sizeStock) => (
-                        <div key={sizeStock.id} className="flex items-center gap-4">
-                          <input 
-                            type="text" 
-                            placeholder="Size (e.g., M, 32x34)" 
-                            value={sizeStock.size} 
-                            onChange={e => handleSizeChange(variant.id, sizeStock.id, 'size', e.target.value)} 
-                            className="block w-full border-gray-300 rounded-md shadow-sm" 
-                            required 
-                          />
-                          <input 
-                            type="number" 
-                            placeholder="Stock" 
-                            value={sizeStock.stock} 
-                            onChange={e => handleSizeChange(variant.id, sizeStock.id, 'stock', parseInt(e.target.value) || 0)} 
-                            className="block w-full border-gray-300 rounded-md shadow-sm" 
-                          />
-                          {variant.sizes.length > 1 && (
-                            <button type="button" onClick={() => removeSize(variant.id, sizeStock.id)} className="text-gray-400 hover:text-red-500">
-                              <Trash2 size={18} />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button type="button" onClick={() => addSize(variant.id)} className="flex items-center gap-1 mt-2 text-sm font-medium text-primary hover:text-primary-dark">
-                        <PlusCircle size={16} /> Add Size
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                </Card>
               </div>
-            ))}
+            </div>
           </div>
-          <button type="button" onClick={addVariant} className="flex items-center gap-2 px-4 py-2 mt-6 text-sm font-medium text-white bg-gray-600 border border-transparent rounded-md shadow-sm hover:bg-gray-700">
-            <PlusCircle size={20} /> Add Another Variant
-          </button>
-        </div>
-
-        {/* Submit Buttons */}
-        <div className="flex justify-end pt-4">
-          <button type="button" onClick={() => router.push('/admin/products')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
-            Cancel
-          </button>
-          <button type="submit" disabled={isLoading} className="inline-flex justify-center px-6 py-2 ml-3 text-sm font-medium text-white border border-transparent rounded-md shadow-sm bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed">
-            {isLoading ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
+        </main>
       </form>
     </div>
   );

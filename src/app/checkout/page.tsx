@@ -301,7 +301,11 @@ export default function CheckoutPage() {
                       <div className="relative flex items-center gap-4 p-4 transition-all duration-300 border border-gray-700/50 bg-gray-800/20 rounded-2xl hover:bg-gray-800/40 backdrop-blur-sm">
                         <div className="relative flex-shrink-0 w-16 h-16 overflow-hidden transition-all duration-300 border-2 rounded-xl border-gray-600/50 group-hover/item:border-primary/50">
                           <Image
-                            src={item.sku.variant.thumbnail_url || ''}
+                            src={
+                              item.sku.variant.variant_images && item.sku.variant.variant_images.length > 0
+                                ? item.sku.variant.variant_images[0].image_url
+                                : item.sku.variant.thumbnail_url || '/images/image.jpg'
+                            }
                             alt={item.sku.variant.product.name}
                             fill
                             className="object-cover transition-transform duration-300 group-hover/item:scale-105"

@@ -6,6 +6,13 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 // --- TYPE DEFINITIONS FOR THE FULLY-FETCHED CART ---
+export interface VariantImage {
+  id: string;
+  image_url: string;
+  alt_text: string | null;
+  display_order: number;
+}
+
 export interface CartItem {
   id: string; // cart_item id
   quantity: number;
@@ -16,6 +23,7 @@ export interface CartItem {
       price: string;
       thumbnail_url: string | null;
       color_name: string;
+      variant_images: VariantImage[];
       product: {
         id: string;
         name: string;

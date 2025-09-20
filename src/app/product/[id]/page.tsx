@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, use } from 'react';
 import { notFound, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
@@ -30,11 +30,14 @@ type Product = {
   variants: Variant[];
 };
 
-export default function ProductDetailPage({ params }: { params: { id: string } }) {
+export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { addToCart, openCart, error, clearError } = useCart();
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // Unwrap params using React.use()
+  const { id } = use(params);
   
   // Animation refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -83,7 +86,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     const fetchProduct = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/products/${params.id}`);
+        const res = await fetch(`/api/products/${id}`);
         if (!res.ok) {
           if (res.status === 404) notFound();
           throw new Error('Failed to fetch product');
@@ -128,7 +131,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     return () => {
       isMounted = false;
     };
-  }, [params.id, searchParams]);
+  }, [id, searchParams]);
 
   // Preload images for the currently selected variant to reduce flicker
   const selectedVariantId = selectedVariant?.variantId;
@@ -175,7 +178,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     // Check authentication first
     if (!user) {
       // Redirect to login page with current product page as return URL
-      const returnUrl = `/product/${params.id}`;
+      const returnUrl = `/product/${id}`;
       router.push(`/login?redirect=${encodeURIComponent(returnUrl)}`);
       return;
     }
@@ -594,7 +597,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <div className="space-y-4">
               {/* Stock Drop Alert */}
               {showStockDropAlert && (
-                <div className="p-3 text-sm font-medium text-red-800 bg-red-50 border border-red-200 rounded-lg animate-pulse">
+                <div className="p-3 text-sm font-medium text-red-800 border border-red-200 rounded-lg bg-red-50 animate-pulse">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                     <span>⚡ Stock level updated! Someone just purchased this item.</span>
@@ -672,7 +675,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                   {recentPurchases.length > 0 && (
                     <div className="space-y-1">
                       {recentPurchases.slice(0, 2).map((purchase, index) => (
-                        <p key={index} className="text-xs text-gray-600 bg-gray-50 p-2 rounded border-l-2 border-orange-400">
+                        <p key={index} className="p-2 text-xs text-gray-600 border-l-2 border-orange-400 rounded bg-gray-50">
                           🛒 {purchase}
                         </p>
                       ))}

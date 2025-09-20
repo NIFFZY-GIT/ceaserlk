@@ -42,7 +42,16 @@ const CartItemCard = ({ item }: { item: CartItem }) => {
   const product = item.sku.variant.product;
   const variant = item.sku.variant;
   const size = item.sku.size;
-  const imageUrl = variant.thumbnail_url || '/images/image.jpg'; // Use a fallback image
+  
+  // Use the first variant image if available, otherwise fallback to thumbnail_url or default
+  const getImageUrl = () => {
+    if (variant.variant_images && variant.variant_images.length > 0) {
+      return variant.variant_images[0].image_url;
+    }
+    return variant.thumbnail_url || '/images/image.jpg';
+  };
+  
+  const imageUrl = getImageUrl();
 
   return (
     <div className="flex items-start space-x-4 cart-item-gsap">
