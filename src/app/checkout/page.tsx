@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles } from 'lucide-react';
+import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import StripePaymentHandler from './StripePaymentHandler';
@@ -24,6 +24,11 @@ export default function CheckoutPage() {
     postalCode: '',
     country: 'Sri Lanka'
   });
+
+  const inputClass = 'w-full rounded-2xl border border-gray-700/50 bg-gray-900/25 px-5 py-4 text-base text-brand-white placeholder-gray-400 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30';
+  const labelClass = 'text-base font-semibold text-gray-200';
+  const helperTextClass = 'mt-2 text-sm text-gray-400';
+  const sectionCardClass = 'relative overflow-hidden rounded-3xl border border-gray-700/50 bg-gradient-to-br from-gray-950 via-gray-900/70 to-gray-950 p-6 sm:p-8 shadow-[0_28px_55px_-28px_rgba(0,0,0,0.75)] backdrop-blur-xl';
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setShippingDetails({ ...shippingDetails, [e.target.name]: e.target.value });
@@ -68,71 +73,160 @@ export default function CheckoutPage() {
     currency: 'lkr',
   };
 
+  const steps = [
+    {
+      label: 'Review Cart',
+      description: `${cart.items.length} item${cart.items.length === 1 ? '' : 's'} ready`,
+      status: 'done' as const,
+      icon: ShoppingBag,
+    },
+    {
+      label: 'Shipping Details',
+      description: 'Enter delivery information',
+      status: 'current' as const,
+      icon: Truck,
+    },
+    {
+      label: 'Payment & Confirmation',
+      description: 'Secure Stripe checkout',
+      status: 'up-next' as const,
+      icon: CreditCard,
+    },
+  ];
+
+  const heroHighlights = [
+    {
+      icon: Shield,
+      title: 'Payment protection',
+      copy: '256-bit SSL encrypted checkout powered by Stripe.',
+    },
+    {
+      icon: Truck,
+      title: 'Tracked delivery',
+      copy: 'Island-wide shipping with live updates in 2-3 business days.',
+    },
+    {
+      icon: CheckCircle2,
+      title: '30-day flexibility',
+      copy: 'Easy exchanges or returns if something isn’t just right.',
+    },
+  ];
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-brand-black text-brand-white">
-      {/* Ambient Background */}
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/5 via-transparent to-accent/5"></div>
-      <div className="absolute top-0 right-0 rounded-full pointer-events-none w-96 h-96 bg-primary/10 blur-3xl"></div>
-      <div className="absolute bottom-0 left-0 rounded-full pointer-events-none w-96 h-96 bg-accent/10 blur-3xl"></div>
-      
-      {/* Navigation */}
-      <div className="relative z-10 border-b border-gray-800/50 bg-brand-black/80 backdrop-blur-xl">
-        <div className="container px-4 py-6 mx-auto">
-          <Link 
-            href="/shop" 
-            className="inline-flex items-center gap-3 text-sm text-gray-400 transition-all duration-300 hover:text-primary group hover:gap-4"
-          >
-            <div className="p-2 transition-all duration-300 rounded-full bg-gray-800/50 group-hover:bg-primary/10">
-              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            </div>
-            <span className="font-medium">Back to Shop</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="container relative z-10 px-4 py-12 mx-auto md:py-20">
-        {/* Page Title */}
-        <div className="mb-16 text-center">
-          <div className="inline-flex items-center gap-3 px-4 py-2 mb-6 border border-gray-800 rounded-full bg-gray-900/50 backdrop-blur-sm">
-            <Shield className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium tracking-wide text-gray-300">SSL SECURED CHECKOUT</span>
-          </div>
-          <h1 className="mb-6 text-4xl font-black tracking-wider text-transparent uppercase md:text-6xl bg-gradient-to-r from-brand-white via-gray-200 to-brand-white bg-clip-text">
-            Secure Checkout
-          </h1>
-          <div className="relative w-32 h-2 mx-auto rounded-full bg-gradient-to-r from-primary via-accent to-primary">
-            <div className="absolute inset-0 rounded-full opacity-50 bg-gradient-to-r from-primary via-accent to-primary blur-sm"></div>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,86,86,0.18),_transparent_55%),_radial-gradient(circle_at_bottom,_rgba(255,184,108,0.14),_transparent_60%)]"></div>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <div className="border-b border-gray-800/60 bg-black/60 backdrop-blur-lg">
+          <div className="container flex items-center justify-between px-4 py-6 mx-auto">
+            <Link
+              href="/shop"
+              className="inline-flex items-center gap-3 text-sm text-gray-400 transition-all duration-300 group hover:text-primary"
+            >
+              <span className="p-2 transition-all duration-300 border rounded-full border-gray-800/70 bg-gray-900/40 group-hover:border-primary/60 group-hover:bg-primary/10">
+                <ArrowLeft className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1" />
+              </span>
+              <span className="font-medium tracking-wide">Back to shop</span>
+            </Link>
+            <span className="hidden text-xs font-semibold tracking-[0.4em] text-gray-600 uppercase sm:block">
+              Secure checkout
+            </span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-12 mx-auto xl:grid-cols-3 max-w-7xl">
-          {/* Forms Section */}
-          <div className="space-y-8 xl:col-span-2">
-            {/* Contact Information */}
-            <div className="relative group">
-              <div className="absolute inset-0 transition-all duration-700 opacity-0 bg-gradient-to-r from-primary/20 via-accent/10 to-primary/20 rounded-3xl blur-xl group-hover:opacity-100"></div>
-              <div className="relative p-8 border shadow-2xl border-gray-800/50 bg-gray-900/30 rounded-3xl md:p-10 backdrop-blur-xl">
-                <div className="flex items-center gap-6 mb-8">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-2xl blur-sm"></div>
-                    <div className="relative flex items-center justify-center w-16 h-16 text-xl font-black shadow-lg rounded-2xl bg-gradient-to-r from-primary to-accent text-brand-black">
-                      1
+        <header className="container px-4 py-10 mx-auto sm:py-14">
+          <div className="max-w-3xl mx-auto text-center">
+            <span className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/50 bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.3em] text-primary uppercase">
+              <Shield className="w-4 h-4" /> Stripe protected
+            </span>
+            <h1 className="mt-6 text-4xl font-black tracking-tight sm:text-5xl md:text-6xl">
+              Complete your order
+            </h1>
+            <p className="mt-4 text-base text-gray-400 sm:text-lg">
+              Review your details below and finish with our secure Stripe payment flow. Delivery updates will be
+              sent to your inbox.
+            </p>
+          </div>
+
+          <div className="grid gap-4 mt-10 sm:grid-cols-3">
+            {heroHighlights.map(({ icon: HighlightIcon, title, copy }) => (
+              <div
+                key={title}
+                className="flex items-start gap-3 p-4 text-left border rounded-2xl border-gray-700/50 bg-gray-900/30"
+              >
+                <span className="inline-flex items-center justify-center flex-shrink-0 w-10 h-10 mt-1 border rounded-2xl border-primary/30 bg-primary/10 text-primary">
+                  <HighlightIcon className="w-5 h-5" />
+                </span>
+                <div>
+                  <p className="text-base font-semibold text-brand-white">{title}</p>
+                  <p className="mt-1 text-sm text-gray-300">{copy}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-4 mt-8 sm:grid-cols-3">
+            {steps.map((step) => {
+              const Icon = step.icon;
+              const isDone = step.status === 'done';
+              const isCurrent = step.status === 'current';
+
+              return (
+                <div
+                  key={step.label}
+                  className={`relative overflow-hidden rounded-2xl border p-5 transition-colors duration-300 ${
+                    isDone
+                      ? 'border-primary/50 bg-primary/10'
+                      : isCurrent
+                      ? 'border-primary/40 bg-gradient-to-r from-primary/10 to-accent/10'
+                      : 'border-gray-800/60 bg-gray-900/40'
+                  }`}
+                >
+                  <div className="absolute inset-0 transition-opacity duration-500 opacity-0 -z-10 bg-gradient-to-br from-white/10 via-transparent to-transparent hover:opacity-100" />
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl border text-sm font-semibold ${
+                        isDone
+                          ? 'border-primary/40 bg-primary/20 text-primary'
+                          : isCurrent
+                          ? 'border-primary/40 bg-primary/15 text-primary'
+                          : 'border-gray-800/70 bg-gray-900/50 text-gray-400'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-300">
+                        {isDone ? 'Completed' : isCurrent ? 'In progress' : 'Up next'}
+                      </p>
+                      <p className="mt-2 text-lg font-semibold text-brand-white">{step.label}</p>
+                      <p className="mt-1 text-sm text-gray-300">{step.description}</p>
                     </div>
                   </div>
+                </div>
+              );
+            })}
+          </div>
+        </header>
+
+        <div className="container flex-1 px-4 pb-16 mx-auto">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <div className="space-y-8">
+              <section className={sectionCardClass}>
+                <div className="flex items-start justify-between gap-4 sm:gap-6">
                   <div>
-                    <h2 className="text-2xl font-black tracking-wider text-transparent uppercase md:text-3xl bg-gradient-to-r from-brand-white to-gray-300 bg-clip-text">
-                      Contact & Shipping
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-400">Secure delivery information</p>
+                    <p className={labelClass}>Step 1</p>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Contact details</h2>
+                    <p className={helperTextClass}>We&apos;ll send receipts and delivery updates here.</p>
+                  </div>
+                  <div className="p-3 border rounded-3xl border-primary/40 bg-primary/10 text-primary">
+                    <Shield className="w-6 h-6" />
                   </div>
                 </div>
 
-                <div className="space-y-8">
-                  {/* Email */}
-                  <div className="relative">
-                    <label htmlFor="email" className="block mb-3 text-sm font-semibold tracking-wide text-gray-300">
-                      EMAIL ADDRESS
+                <div className="mt-8 space-y-6">
+                  <div>
+                    <label htmlFor="email" className={labelClass}>
+                      Email address
                     </label>
                     <input
                       type="email"
@@ -141,17 +235,18 @@ export default function CheckoutPage() {
                       onChange={handleInputChange}
                       placeholder="you@example.com"
                       required
-                      className="w-full px-6 py-4 placeholder-gray-500 transition-all duration-300 border-2 border-gray-700/50 rounded-2xl bg-gray-800/30 text-brand-white focus:ring-4 focus:ring-primary/20 focus:border-primary hover:border-gray-600 backdrop-blur-sm"
+                      autoComplete="email"
+                      className={inputClass}
                     />
+                    <p className={helperTextClass}>We&apos;ll send your receipt and delivery timeline here.</p>
                   </div>
 
-                  {/* Phone */}
-                  <div className="relative">
-                    <label htmlFor="phone" className="block mb-3 text-sm font-semibold tracking-wide text-gray-300">
-                      MOBILE NUMBER
+                  <div>
+                    <label htmlFor="phone" className={labelClass}>
+                      Mobile number
                     </label>
                     <div className="flex">
-                      <span className="inline-flex items-center px-6 py-4 text-sm font-medium text-gray-300 border-2 border-r-0 border-gray-700/50 rounded-l-2xl bg-gray-800/30 backdrop-blur-sm">
+                      <span className="inline-flex items-center px-5 text-sm font-medium text-gray-300 border border-r-0 rounded-l-2xl border-gray-700/60 bg-gray-900/40">
                         🇱🇰 +94
                       </span>
                       <input
@@ -161,145 +256,171 @@ export default function CheckoutPage() {
                         onChange={handleInputChange}
                         placeholder="71 234 5678"
                         required
-                        className="w-full px-6 py-4 placeholder-gray-500 transition-all duration-300 border-2 border-gray-700/50 rounded-r-2xl bg-gray-800/30 text-brand-white focus:ring-4 focus:ring-primary/20 focus:border-primary hover:border-gray-600 backdrop-blur-sm"
+                        autoComplete="tel"
+                        className={`${inputClass} rounded-l-none border-l-0`}
                       />
                     </div>
+                    <p className={helperTextClass}>We only use this if the courier needs extra delivery details.</p>
                   </div>
 
-                  {/* Full Name */}
-                  <div className="relative">
-                    <label className="block mb-3 text-sm font-semibold tracking-wide text-gray-300">
-                      FULL NAME
-                    </label>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <input
-                        type="text"
-                        name="firstName"
-                        onChange={handleInputChange}
-                        placeholder="First name"
-                        required
-                        className="w-full px-6 py-4 placeholder-gray-500 transition-all duration-300 border-2 border-gray-700/50 rounded-2xl bg-gray-800/30 text-brand-white focus:ring-4 focus:ring-primary/20 focus:border-primary hover:border-gray-600 backdrop-blur-sm"
-                      />
-                      <input
-                        type="text"
-                        name="lastName"
-                        onChange={handleInputChange}
-                        placeholder="Last name"
-                        required
-                        className="w-full px-6 py-4 placeholder-gray-500 transition-all duration-300 border-2 border-gray-700/50 rounded-2xl bg-gray-800/30 text-brand-white focus:ring-4 focus:ring-primary/20 focus:border-primary hover:border-gray-600 backdrop-blur-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Shipping Address */}
-                  <div className="relative pt-8 border-t border-gray-700/50">
-                    <div className="absolute top-0 w-8 h-1 transform -translate-x-1/2 -translate-y-1/2 rounded-full left-1/2 bg-gradient-to-r from-primary to-accent"></div>
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="p-2 border rounded-xl bg-primary/10 border-primary/20">
-                        <CheckCircle2 className="w-5 h-5 text-primary" />
-                      </div>
-                      <h3 className="text-xl font-bold tracking-wide text-gray-200">SHIPPING ADDRESS</h3>
-                    </div>
-                    
-                    <div className="space-y-6">
-                      <input
-                        type="text"
-                        name="address"
-                        onChange={handleInputChange}
-                        placeholder="Street Address"
-                        required
-                        className="w-full px-6 py-4 placeholder-gray-500 transition-all duration-300 border-2 border-gray-700/50 rounded-2xl bg-gray-800/30 text-brand-white focus:ring-4 focus:ring-primary/20 focus:border-primary hover:border-gray-600 backdrop-blur-sm"
-                      />
-                      
-                      <input
-                        type="text"
-                        name="city"
-                        onChange={handleInputChange}
-                        placeholder="City"
-                        required
-                        className="w-full px-6 py-4 placeholder-gray-500 transition-all duration-300 border-2 border-gray-700/50 rounded-2xl bg-gray-800/30 text-brand-white focus:ring-4 focus:ring-primary/20 focus:border-primary hover:border-gray-600 backdrop-blur-sm"
-                      />
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            name="country"
-                            value="Sri Lanka"
-                            readOnly
-                            className="w-full px-6 py-4 text-gray-400 border-2 cursor-not-allowed border-gray-600/50 rounded-2xl bg-gray-700/30 backdrop-blur-sm"
-                          />
-                          <div className="absolute top-4 right-4">
-                            <span className="text-lg">🇱🇰</span>
-                          </div>
-                        </div>
+                  <div>
+                    <label className={labelClass}>Full name</label>
+                    <div className="grid gap-4 mt-3 sm:grid-cols-2">
+                      <div>
                         <input
                           type="text"
-                          name="postalCode"
+                          name="firstName"
                           onChange={handleInputChange}
-                          placeholder="Postal Code"
+                          placeholder="First name"
                           required
-                          className="w-full px-6 py-4 placeholder-gray-500 transition-all duration-300 border-2 border-gray-700/50 rounded-2xl bg-gray-800/30 text-brand-white focus:ring-4 focus:ring-primary/20 focus:border-primary hover:border-gray-600 backdrop-blur-sm"
+                          autoComplete="given-name"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          name="lastName"
+                          onChange={handleInputChange}
+                          placeholder="Last name"
+                          required
+                          autoComplete="family-name"
+                          className={inputClass}
                         />
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </section>
 
-            {/* Payment Section */}
-            <div className="relative group">
-              <div className="absolute inset-0 transition-all duration-700 opacity-0 bg-gradient-to-r from-accent/20 via-primary/10 to-accent/20 rounded-3xl blur-xl group-hover:opacity-100"></div>
-              <div className="relative p-8 border shadow-2xl border-gray-800/50 bg-gray-900/30 rounded-3xl md:p-10 backdrop-blur-xl">
-                <div className="flex items-center gap-6 mb-8">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-accent to-primary rounded-2xl blur-sm"></div>
-                    <div className="relative flex items-center justify-center w-16 h-16 text-xl font-black shadow-lg rounded-2xl bg-gradient-to-r from-accent to-primary text-brand-black">
-                      2
+              <section className={sectionCardClass}>
+                <div className="flex items-start justify-between gap-4 sm:gap-6">
+                  <div>
+                    <p className={labelClass}>Step 2</p>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Delivery address</h2>
+                    <p className={helperTextClass}>Packages ship within 2 business days across Sri Lanka.</p>
+                  </div>
+                  <div className="p-3 border rounded-3xl border-accent/40 bg-accent/10 text-accent">
+                    <Truck className="w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="mt-8 space-y-6">
+                  <div>
+                    <label htmlFor="address" className={labelClass}>
+                      Street address
+                    </label>
+                    <input
+                      type="text"
+                      id="address"
+                      name="address"
+                      onChange={handleInputChange}
+                      placeholder="House number and street"
+                      required
+                      autoComplete="street-address"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="city" className={labelClass}>
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      id="city"
+                      name="city"
+                      onChange={handleInputChange}
+                      placeholder="City / Town"
+                      required
+                      autoComplete="address-level2"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="relative">
+                      <label className={labelClass}>Country</label>
+                      <input
+                        type="text"
+                        name="country"
+                        value="Sri Lanka"
+                        readOnly
+                        className={`${inputClass} cursor-not-allowed border-dashed text-gray-400`}
+                      />
+                      <span className="absolute text-lg -translate-y-1/2 pointer-events-none right-5 top-1/2">🇱🇰</span>
+                    </div>
+                    <div>
+                      <label htmlFor="postalCode" className={labelClass}>
+                        Postal code
+                      </label>
+                      <input
+                        type="text"
+                        id="postalCode"
+                        name="postalCode"
+                        onChange={handleInputChange}
+                        placeholder="Postal code"
+                        required
+                        autoComplete="postal-code"
+                        className={inputClass}
+                      />
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-black tracking-wider text-transparent uppercase md:text-3xl bg-gradient-to-r from-brand-white to-gray-300 bg-clip-text">
-                      Payment Details
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-400">Secure payment processing</p>
-                  </div>
-                  <div className="p-3 border rounded-2xl bg-primary/10 border-primary/20">
-                    <CreditCard className="w-8 h-8 text-primary" />
-                  </div>
                 </div>
+              </section>
 
-                <Elements stripe={stripePromise} options={options}>
-                  <StripePaymentHandler cart={cart} shippingDetails={shippingDetails} />
-                </Elements>
-              </div>
-            </div>
-          </div>
-
-          {/* Order Summary */}
-          <div className="xl:col-span-1">
-            <div className="relative group">
-              <div className="absolute inset-0 transition-all duration-700 opacity-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 rounded-3xl blur-xl group-hover:opacity-100"></div>
-              <div className="sticky p-8 border shadow-2xl border-gray-800/50 bg-gray-900/40 rounded-3xl md:p-10 backdrop-blur-xl top-8">
-                <div className="flex items-center justify-between mb-6">
+              <section className={sectionCardClass}>
+                <div className="flex items-start justify-between gap-4 sm:gap-6">
                   <div>
-                    <h2 className="text-2xl font-black tracking-wider text-transparent uppercase bg-gradient-to-r from-brand-white to-gray-300 bg-clip-text">
-                      Your Order
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-400">{cart.items.length} items</p>
+                    <p className={labelClass}>Step 3</p>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Payment</h2>
+                    <p className={helperTextClass}>
+                      Stripe encrypts your card details end-to-end. We never store payment information on our
+                      servers.
+                    </p>
                   </div>
-                  <div className="p-3 border rounded-2xl bg-gradient-to-br from-primary/20 to-accent/10 border-primary/20">
-                    <Sparkles className="w-6 h-6 text-primary" />
+                  <div className="p-3 border rounded-3xl border-primary/40 bg-primary/10 text-primary">
+                    <CreditCard className="w-6 h-6" />
                   </div>
                 </div>
 
-                {/* Order Items */}
-                <div className="mb-8 space-y-4 overflow-y-auto max-h-80">
-                  {cart.items.map(item => (
-                    <div key={item.id} className="relative group/item">
-                      <div className="relative flex items-center gap-4 p-4 transition-all duration-300 border border-gray-700/50 bg-gray-800/20 rounded-2xl hover:bg-gray-800/40 backdrop-blur-sm">
-                        <div className="relative flex-shrink-0 w-16 h-16 overflow-hidden transition-all duration-300 border-2 rounded-xl border-gray-600/50 group-hover/item:border-primary/50">
+                  <div className="p-4 mt-6 border rounded-3xl border-gray-700/50 bg-black/15 sm:p-6">
+                  <Elements stripe={stripePromise} options={options}>
+                    <StripePaymentHandler cart={cart} shippingDetails={shippingDetails} />
+                  </Elements>
+                    <div className="flex flex-wrap items-center gap-2 mt-4 text-sm font-medium text-gray-400">
+                    <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Visa</span>
+                    <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Mastercard</span>
+                    <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Amex</span>
+                    <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Apple Pay</span>
+                    <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Google Pay</span>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <aside className="space-y-6 xl:pl-2">
+              <div className="sticky top-6">
+                <div className={`${sectionCardClass} overflow-hidden`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className={labelClass}>Order summary</p>
+                      <h2 className="mt-3 text-2xl font-semibold tracking-tight">You&apos;re almost there</h2>
+                      <p className="mt-2 text-sm text-gray-300">{cart.items.length} item{cart.items.length === 1 ? '' : 's'} in cart</p>
+                      <p className={helperTextClass}>Trusted by 10,000+ athletes across Sri Lanka.</p>
+                    </div>
+                    <div className="p-3 border rounded-3xl border-primary/40 bg-primary/10 text-primary">
+                      <Sparkles className="w-6 h-6" />
+                    </div>
+                  </div>
+
+                  <div className="pr-1 mt-6 space-y-4 overflow-y-auto max-h-80">
+                    {cart.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-4 p-4 transition-all duration-300 border rounded-2xl border-gray-800/60 bg-gray-900/40 hover:border-primary/40 hover:bg-primary/10"
+                      >
+                        <div className="relative flex-shrink-0 w-16 h-16 overflow-hidden border border-gray-800 rounded-xl">
                           <Image
                             src={
                               item.sku.variant.variant_images && item.sku.variant.variant_images.length > 0
@@ -308,69 +429,75 @@ export default function CheckoutPage() {
                             }
                             alt={item.sku.variant.product.name}
                             fill
-                            className="object-cover transition-transform duration-300 group-hover/item:scale-105"
+                            className="object-cover"
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold truncate transition-colors duration-300 text-brand-white group-hover/item:text-primary">
+                          <p className="text-sm font-semibold truncate text-brand-white">
                             {item.sku.variant.product.name}
                           </p>
-                          <p className="text-sm font-medium text-gray-400">
-                            {item.sku.size} / {item.sku.variant.color_name}
+                          <p className="mt-1 text-sm text-gray-300">
+                            {item.sku.size} • {item.sku.variant.color_name}
                           </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="px-2 py-1 text-xs font-bold border rounded-full text-primary bg-primary/10 border-primary/20">
-                              Qty: {item.quantity}
+                          <div className="inline-flex items-center gap-2 mt-2">
+                            <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-primary">
+                              Qty {item.quantity}
                             </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-black transition-colors duration-300 text-brand-white group-hover/item:text-primary">
-                            LKR {(parseFloat(item.sku.variant.price) * item.quantity).toFixed(2)}
-                          </p>
-                        </div>
+                        <p className="text-sm font-semibold text-brand-white">
+                          LKR {(parseFloat(item.sku.variant.price) * item.quantity).toFixed(2)}
+                        </p>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                {/* Order Totals */}
-                <div className="relative">
-                  <div className="absolute top-0 w-12 h-1 transform -translate-x-1/2 -translate-y-1/2 rounded-full left-1/2 bg-gradient-to-r from-primary to-accent"></div>
-                  <div className="pt-8 space-y-4 border-t border-gray-700/50">
-                    <div className="flex justify-between text-gray-300 transition-colors duration-300 hover:text-brand-white">
-                      <span className="font-medium">Subtotal</span>
-                      <span className="font-bold">LKR {(cart.subtotal || 0).toFixed(2)}</span>
+                  <div className="pt-6 mt-8 space-y-4 text-sm border-t border-gray-800/60">
+                    <div className="flex justify-between text-gray-300">
+                      <span>Subtotal</span>
+                      <span className="font-semibold text-brand-white">LKR {(cart.subtotal || 0).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-gray-300 transition-colors duration-300 hover:text-brand-white">
-                      <span className="font-medium">Shipping</span>
-                      <span className="font-bold">
+                    <div className="flex justify-between text-gray-300">
+                      <span>Shipping</span>
+                      <span className="font-semibold text-brand-white">
                         {cart.totalShipping > 0 ? (
                           `LKR ${cart.totalShipping.toFixed(2)}`
                         ) : (
-                          <span className="px-4 py-2 text-sm font-black transition-all duration-300 border-2 rounded-full shadow-lg text-primary bg-gradient-to-r from-primary/20 to-accent/10 border-primary/30">
-                            FREE SHIPPING ✨
+                            <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-sm font-semibold uppercase tracking-[0.2em] text-primary">
+                            <CheckCircle2 className="w-3 h-3" /> Free
                           </span>
                         )}
                       </span>
                     </div>
                   </div>
-                  
-                  <div className="relative pt-6 mt-6 border-t-2 border-primary/30">
-                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-accent to-primary rounded-full"></div>
+
+                  <div className="p-5 mt-6 border rounded-2xl border-primary/30 bg-primary/5">
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl font-black tracking-wide text-brand-white">TOTAL</span>
+                      <span className="text-base font-semibold uppercase tracking-[0.3em] text-gray-300">
+                        Total
+                      </span>
                       <div className="text-right">
-                        <span className="text-3xl font-black tracking-wide text-transparent bg-gradient-to-r from-primary to-accent bg-clip-text">
+                        <p className="text-2xl font-black text-transparent bg-gradient-to-r from-primary to-accent bg-clip-text">
                           LKR {cart.totalAmount.toFixed(2)}
-                        </span>
-                        <p className="mt-1 text-xs text-gray-400">All taxes included</p>
+                        </p>
+                        <p className={helperTextClass}>All taxes included</p>
                       </div>
                     </div>
                   </div>
+
+                  <div className="p-4 mt-6 text-sm text-gray-300 border rounded-2xl border-gray-700/50 bg-black/20">
+                    <div className="flex items-center gap-2 text-gray-300">
+                      <Shield className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-semibold uppercase tracking-[0.2em]">30-day guarantee</span>
+                    </div>
+                    <p className="mt-2 leading-relaxed text-gray-300">
+                      Need help? Reach us at support@ceaserbrand.com. We&apos;re here to make sure your order arrives fast
+                      and in perfect shape.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </aside>
           </div>
         </div>
       </div>

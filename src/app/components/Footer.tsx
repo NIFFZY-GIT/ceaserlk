@@ -8,34 +8,7 @@ const Footer = () => {
   return (
     <footer className="text-white bg-brand-black">
       <div className="container px-6 mx-auto">
-        {/* Section 1: Newsletter Signup */}
-        <div className="flex flex-col items-center justify-between gap-8 py-16 border-b border-gray-800 lg:flex-row">
-          <div>
-            <h2 className="text-3xl font-bold tracking-wider uppercase md:text-4xl">
-              Join the Movement
-            </h2>
-            <p className="max-w-lg mt-2 text-gray-400">
-              Get exclusive access to new drops, special offers, and the relentless mindset delivered to your inbox.
-            </p>
-          </div>
-          <form className="w-full max-w-md">
-            <div className="flex items-center overflow-hidden bg-gray-900 border border-gray-700 rounded-md">
-              <input 
-                type="email"
-                placeholder="Enter your email"
-                className="w-full p-4 text-white placeholder-gray-500 bg-transparent focus:outline-none"
-                aria-label="Email for newsletter"
-              />
-              <button 
-                type="submit" 
-                className="p-4 text-white transition-colors bg-accent hover:bg-red-700"
-                aria-label="Subscribe to newsletter"
-              >
-                <ArrowRight size={24} />
-              </button>
-            </div>
-          </form>
-        </div>
+       
 
         {/* Section 2: Main Footer Links */}
         <div className="grid grid-cols-2 gap-8 py-16 md:grid-cols-4">
@@ -83,18 +56,29 @@ const Footer = () => {
         </div>
       </div>
       
-      {/* Section 3: Bottom Bar (Copyright & Socials) */}
-      <div className="py-6 bg-black">
-          <div className="container flex flex-col items-center justify-between gap-4 px-6 mx-auto md:flex-row">
-            <p className="text-sm text-center text-gray-500 md:text-left">
-              © {new Date().getFullYear()} Ceaser Brand. All Rights Reserved.
+      {/* Section 3: Bottom Bar (Credits & Socials) */}
+      <div className="py-6 bg-black border-t border-gray-800/80">
+        <div className="container flex flex-col items-center justify-between gap-4 px-6 mx-auto text-center md:flex-row md:text-left">
+          <div className="space-y-1 text-sm text-gray-500">
+            <p>© {new Date().getFullYear()} Ceaser.lk All rights reserved.</p>
+            <p>
+              Designed &amp; developed by{' '}
+              <a
+                href="https://zevarone.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold transition-colors text-primary hover:text-primary/80"
+              >
+                ZEVARONE
+              </a>
             </p>
-            <div className="flex items-center space-x-4">
-              <Link href="#" className="text-gray-400 transition-colors hover:text-primary" aria-label="Facebook"><Facebook size={20} /></Link>
-              <Link href="#" className="text-gray-400 transition-colors hover:text-primary" aria-label="Instagram"><Instagram size={20} /></Link>
-              <Link href="#" className="text-gray-400 transition-colors hover:text-primary" aria-label="Twitter"><Twitter size={20} /></Link>
-            </div>
           </div>
+          <div className="flex items-center space-x-4">
+            <Link href="#" className="text-gray-400 transition-colors hover:text-primary" aria-label="Facebook"><Facebook size={20} /></Link>
+            <Link href="#" className="text-gray-400 transition-colors hover:text-primary" aria-label="Instagram"><Instagram size={20} /></Link>
+            <Link href="#" className="text-gray-400 transition-colors hover:text-primary" aria-label="Twitter"><Twitter size={20} /></Link>
+          </div>
+        </div>
       </div>
     </footer>
   );
