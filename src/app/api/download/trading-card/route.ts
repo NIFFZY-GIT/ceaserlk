@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied: Product not purchased or order not paid' }, { status: 403 });
     }
 
-    const { order_id, trading_card_image, product_name } = rows[0];
+  const { order_id, trading_card_image, product_name } = rows[0];
     console.log('Order details:', { order_id, trading_card_image, product_name });
 
     if (!trading_card_image) {
@@ -84,7 +84,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Read and serve the file
-    const filePath = path.join(process.cwd(), 'public', trading_card_image);
+  const relativeImagePath = trading_card_image.replace(/^\/+/g, '');
+  const filePath = path.join(process.cwd(), 'public', relativeImagePath);
     console.log('Attempting to read file:', filePath);
     
     try {
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': contentType,
-          'Content-Disposition': `attachment; filename="${fileName}"`,
+          'Content-Disposition': `inline; filename="${fileName}"`,
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'

@@ -8,9 +8,17 @@ export async function resolveServerBaseUrl(): Promise<string> {
   const fallbackEnv = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || process.env.VERCEL_URL;
   try {
     const incomingHeaders = await headers();
-    const host = incomingHeaders.get('x-forwarded-host') || incomingHeaders.get('host');
+    const forwardedHost = incomingHeaders.get('x-forwarded-host');
+    const host = (forwardedHost ? forwardedHost.split(',')[0] : null) || incomingHeaders.get('host');
     if (host) {
-      const protocol = incomingHeaders.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+      const forwardedProtoHeader = incomingHeaders.get('x-forwarded-proto');
+      const forwardedProto = forwardedProtoHeader ? forwardedProtoHeader.split(',')[0]?.trim().toLowerCase() : undefined;
+      let protocol = forwardedProto || (host.includes('localhost') ? 'http' : 'https');
+
+      if (protocol === 'http' && !host.includes('localhost')) {
+        protocol = 'https';
+      }
+
       return `${protocol}://${host}`;
     }
   } catch {
