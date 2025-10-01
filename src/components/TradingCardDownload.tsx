@@ -23,6 +23,7 @@ export default function TradingCardDownload({
   const [copySuccess, setCopySuccess] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(true);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   // Auto-load preview on component mount
   useEffect(() => {
@@ -43,8 +44,11 @@ export default function TradingCardDownload({
 
         const { downloadUrl } = await urlResponse.json();
         setPreviewUrl(downloadUrl);
+        setPreviewError(null);
       } catch (error) {
         console.error('Preview error:', error);
+        setPreviewError(error instanceof Error ? error.message : 'Failed to load preview');
+        setPreviewUrl(null);
       } finally {
         setIsLoadingPreview(false);
       }
@@ -224,9 +228,12 @@ export default function TradingCardDownload({
                   width={300}
                   height={400}
                   className="object-contain rounded-lg shadow-2xl"
-                  onError={(e) => {
-                    console.error('Image load error:', e);
+                  unoptimized
+                  loading="lazy"
+                  onError={(event) => {
+                    console.error('Image load error:', event);
                     setPreviewUrl(null);
+                    setPreviewError('Preview image failed to load.');
                   }}
                 />
               </div>
@@ -235,7 +242,9 @@ export default function TradingCardDownload({
         ) : (
           <div className="p-4 mb-4 border border-gray-600 rounded-lg bg-gray-800/50 backdrop-blur-sm">
             <div className="flex items-center justify-center h-32">
-              <span className="text-sm text-gray-400">Preview not available</span>
+              <span className="text-sm text-gray-400">
+                {previewError ? `Preview not available: ${previewError}` : 'Preview not available'}
+              </span>
             </div>
           </div>
         )}
