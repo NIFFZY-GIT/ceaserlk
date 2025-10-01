@@ -40,9 +40,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-  const token = Buffer.from(`${userEmail}-${productId}-${jwtSecret}`).toString('base64');
-  const origin = new URL(request.url).origin;
-  const downloadUrl = `${origin}/api/download/trading-card?token=${encodeURIComponent(token)}&product_id=${encodeURIComponent(productId)}&user_email=${encodeURIComponent(userEmail)}`;
+    const token = Buffer.from(`${userEmail}-${productId}-${jwtSecret}`).toString('base64');
+
+    const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+    const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+
+    const fallbackUrl = new URL(request.url);
+  let protocol = forwardedProto ?? fallbackUrl.protocol.replace(':', '');
+  const host = forwardedHost ?? request.headers.get('host') ?? fallbackUrl.host;
+
+    if (process.env.NODE_ENV === 'production' && protocol === 'http') {
+      protocol = 'https';
+    }
+
+    if (!host) {
+      throw new Error('Unable to determine request host');
+    }
+
+    const origin = `${protocol}://${host}`;
+    const downloadUrl = `${origin}/api/download/trading-card?token=${encodeURIComponent(token)}&product_id=${encodeURIComponent(productId)}&user_email=${encodeURIComponent(userEmail)}`;
 
     return NextResponse.json({
       downloadUrl,
