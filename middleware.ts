@@ -22,9 +22,6 @@ const sensitiveEndpointsLimits = new Map<string, { count: number; lastReset: num
 const SENSITIVE_RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes
 const SENSITIVE_RATE_LIMIT_MAX = 10; // much stricter for auth endpoints
 
-// CSRF token storage (in production, use Redis or database)
-const csrfTokens = new Map<string, { token: string; expires: number }>();
-
 function getRateLimitKey(request: NextRequest): string {
   // Use IP address for rate limiting with better fallback handling
   const forwarded = request.headers.get('x-forwarded-for');
@@ -56,19 +53,6 @@ function isRateLimited(key: string, isSensitive: boolean = false): boolean {
 }
 
 // Generate secure random string for CSRF tokens
-function generateSecureToken(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-  let result = '';
-  const randomArray = new Uint8Array(32);
-  crypto.getRandomValues(randomArray);
-  
-  for (let i = 0; i < randomArray.length; i++) {
-    result += chars[randomArray[i] % chars.length];
-  }
-  
-  return result;
-}
-
 async function verifyJWT(token: string): Promise<UserJwtPayload | null> {
   try {
     if (!process.env.JWT_SECRET) {
@@ -105,11 +89,12 @@ function createSecureRedirectResponse(url: string, request: NextRequest): NextRe
   // Content Security Policy - restrictive but functional
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://js.stripe.com https://checkout.stripe.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https:",
-    "connect-src 'self' https://api.stripe.com https://checkout.stripe.com",
+    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com",
+    "worker-src 'self' blob:",
     "frame-src https://checkout.stripe.com https://js.stripe.com",
     "object-src 'none'",
     "base-uri 'self'",
@@ -121,8 +106,8 @@ function createSecureRedirectResponse(url: string, request: NextRequest): NextRe
   return response;
 }
 
-function createSecureNextResponse(): NextResponse {
-  const response = NextResponse.next();
+function createSecureNextResponse(init?: Parameters<typeof NextResponse.next>[0]): NextResponse {
+  const response = NextResponse.next(init);
   
   // Enhanced security headers following OWASP recommendations
   response.headers.set('X-Content-Type-Options', 'nosniff');
@@ -135,11 +120,12 @@ function createSecureNextResponse(): NextResponse {
   // Content Security Policy
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://js.stripe.com https://checkout.stripe.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https:",
-    "connect-src 'self' https://api.stripe.com https://checkout.stripe.com",
+    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com",
+    "worker-src 'self' blob:",
     "frame-src https://checkout.stripe.com https://js.stripe.com",
     "object-src 'none'",
     "base-uri 'self'",
@@ -241,11 +227,16 @@ export async function middleware(request: NextRequest) {
     }
 
     // Add user context to request headers for downstream use
-    const response = createSecureNextResponse();
-    response.headers.set('X-User-ID', payload.userId.toString());
-    response.headers.set('X-User-Role', payload.role);
-    
-    return response;
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-user-id', payload.userId.toString());
+    requestHeaders.set('x-user-role', payload.role);
+    requestHeaders.set('x-user-email', payload.email);
+
+    return createSecureNextResponse({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   // Enhanced admin route protection

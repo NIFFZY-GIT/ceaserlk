@@ -1,10 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { verifyAuth } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // For now, use the hardcoded user from your database
-    const userId = '722e9dc0-5b31-41b5-a791-2a8b46a2f062'; // Kotalawalage Dasun
+    const authUser = await verifyAuth(request);
+
+    if (!authUser) {
+      return NextResponse.json({ error: 'Authentication required. Please log in to continue.' }, { status: 401 });
+    }
+
+    const userId = authUser.userId.toString();
 
     // This single, powerful query gets the user and all their orders with nested items,
     // including the thumbnail image for each item.
@@ -89,7 +95,7 @@ export async function GET() {
     const { rows } = await db.query(query, [userId]);
 
     if (rows.length === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
     // Ensure orders is an array, even if the user has none
@@ -99,6 +105,6 @@ export async function GET() {
     return NextResponse.json(profileData);
   } catch (error) {
     console.error(`API GET Profile Error:`, error);
-    return NextResponse.json({ error: "Failed to fetch profile data" }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch profile data' }, { status: 500 });
   }
 }
