@@ -1,5 +1,5 @@
-import { headers } from 'next/headers';
 import AdminTable from './_components/AdminTable';
+import { resolveServerBaseUrl, serializeRequestCookies } from '@/lib/server-urls';
 
 export interface AdminData {
   id: string;
@@ -11,10 +11,15 @@ export interface AdminData {
 
 async function getAdmins(): Promise<AdminData[]> {
   try {
-    const requestHeaders = new Headers(await headers());
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/admins`, {
+    const baseUrl = await resolveServerBaseUrl();
+    const serializedCookies = await serializeRequestCookies();
+    const res = await fetch(`${baseUrl}/api/admin/admins`, {
       cache: 'no-store',
-      headers: requestHeaders,
+      headers: {
+        ...(serializedCookies ? { cookie: serializedCookies } : {}),
+        'Accept': 'application/json',
+      },
+      credentials: 'include',
     });
     if (!res.ok) throw new Error('Failed to fetch admins');
     return res.json();

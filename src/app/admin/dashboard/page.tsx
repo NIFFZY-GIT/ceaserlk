@@ -1,7 +1,7 @@
 import { DollarSign, ShoppingBag, Users, AlertCircle } from 'lucide-react';
 import SalesChart from './_components/SalesChart';
 import Link from 'next/link';
-import { cookies } from 'next/headers'; // <-- 1. IMPORT THE COOKIES HELPER
+import { resolveServerBaseUrl, serializeRequestCookies } from '@/lib/server-urls';
 
 // Define types for the data we'll fetch
 interface DashboardData {
@@ -14,15 +14,16 @@ interface DashboardData {
 // --- 2. UPDATE THE DATA FETCHING FUNCTION ---
 async function getDashboardData(): Promise<DashboardData | null> {
   try {
-    // Get the cookies from the incoming request to this page
-    const cookieStore = cookies();
-    
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/dashboard`, {
+  const baseUrl = await resolveServerBaseUrl();
+    const serializedCookies = await serializeRequestCookies();
+
+    const res = await fetch(`${baseUrl}/api/admin/dashboard`, {
       cache: 'no-store',
-      // Manually forward the user's cookies with the server-side fetch request
       headers: {
-        'Cookie': cookieStore.toString()
+        ...(serializedCookies ? { cookie: serializedCookies } : {}),
+        'Accept': 'application/json',
       },
+      credentials: 'include',
     });
 
     if (!res.ok) {

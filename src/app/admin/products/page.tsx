@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PlusCircle } from 'lucide-react';
 import ProductTable from '@/app/admin/_components/ProductTable'; // We will create this next
+import { resolveServerBaseUrl, serializeRequestCookies } from '@/lib/server-urls';
 
 // Define the shape of the product data we expect from our API
 export interface ProductSummary {
@@ -15,8 +16,16 @@ export interface ProductSummary {
 
 // Data fetching function specific to this page
 async function getProducts(): Promise<ProductSummary[]> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/products`, {
+  const baseUrl = await resolveServerBaseUrl();
+  const serializedCookies = await serializeRequestCookies();
+
+  const res = await fetch(`${baseUrl}/api/admin/products`, {
     cache: 'no-store', // IMPORTANT: Always fetch fresh data for admin pages
+    headers: {
+      ...(serializedCookies ? { cookie: serializedCookies } : {}),
+      'Accept': 'application/json',
+    },
+    credentials: 'include',
   });
 
   if (!res.ok) {

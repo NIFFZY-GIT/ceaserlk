@@ -1,6 +1,6 @@
-import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import CustomerDetailView from './_components/CustomerDetailView';
+import { resolveServerBaseUrl, serializeRequestCookies } from '@/lib/server-urls';
 
 // Define the full nested types for the customer data
 export interface CustomerOrder {
@@ -22,10 +22,15 @@ export interface CustomerDetail {
 
 async function getCustomerDetails(id: string): Promise<CustomerDetail | null> {
   try {
-    const requestHeaders = new Headers(await headers());
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/customers/${id}`, {
+    const baseUrl = await resolveServerBaseUrl();
+    const serializedCookies = await serializeRequestCookies();
+    const res = await fetch(`${baseUrl}/api/admin/customers/${id}`, {
       cache: 'no-store',
-      headers: requestHeaders,
+      headers: {
+        ...(serializedCookies ? { cookie: serializedCookies } : {}),
+        'Accept': 'application/json',
+      },
+      credentials: 'include',
     });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error("Failed to fetch customer details");

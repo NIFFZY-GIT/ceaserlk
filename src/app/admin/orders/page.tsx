@@ -23,8 +23,7 @@ export default function AdminOrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003';
-      const res = await fetch(`${baseUrl}/api/admin/orders`, {
+      const res = await fetch(`/api/admin/orders`, {
         cache: 'no-store',
       });
       if (!res.ok) {
@@ -57,8 +56,7 @@ export default function AdminOrdersPage() {
 
     try {
       setIsDeleting(true);
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003';
-      const response = await fetch(`${baseUrl}/api/admin/orders`, {
+      const response = await fetch(`/api/admin/orders`, {
         method: 'DELETE',
       });
 

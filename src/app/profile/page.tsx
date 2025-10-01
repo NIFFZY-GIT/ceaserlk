@@ -1,19 +1,27 @@
-// src/app/profile/page.tsx (Server Component)
-
 import ProfileClient from './components/ProfileClient';
+import { resolveServerBaseUrl, serializeRequestCookies } from '@/lib/server-urls';
+
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 async function getProfileData() {
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  
   try {
+    const baseUrl = await resolveServerBaseUrl();
+    const serializedCookies = await serializeRequestCookies();
+
     const response = await fetch(`${baseUrl}/api/profile`, {
-      cache: 'no-store', // Disable caching for fresh data
+      cache: 'no-store',
+      headers: {
+        ...(serializedCookies ? { cookie: serializedCookies } : {}),
+        'Accept': 'application/json',
+      },
+      credentials: 'include',
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('Failed to fetch profile data:', error);

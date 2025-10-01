@@ -1,16 +1,19 @@
-import { headers } from 'next/headers'; // <-- Use 'headers' instead of 'cookies' for the fix
-import CustomerTable from './_components/CustomerTable'; // <-- Fix: Default import (no curly braces)
-import type { CustomerData } from './_components/CustomerTable'; // <-- Best practice: import type from component
+import CustomerTable from './_components/CustomerTable';
+import type { CustomerData } from './_components/CustomerTable';
+import { resolveServerBaseUrl, serializeRequestCookies } from '@/lib/server-urls';
 
 async function getCustomers(): Promise<CustomerData[]> {
   try {
-    // --- THIS IS THE FIX for the cookies() error ---
-    // We get the headers from the incoming request and forward them.
-    const requestHeaders = new Headers(await headers());
+    const baseUrl = await resolveServerBaseUrl();
+    const serializedCookies = await serializeRequestCookies();
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/admin/customers`, {
+    const res = await fetch(`${baseUrl}/api/admin/customers`, {
       cache: 'no-store',
-      headers: requestHeaders, // This forwards the auth cookie
+      headers: {
+        ...(serializedCookies ? { cookie: serializedCookies } : {}),
+        'Accept': 'application/json',
+      },
+      credentials: 'include',
     });
 
     if (!res.ok) {
