@@ -3,6 +3,21 @@ import { db } from '@/lib/db';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+const MAX_UPLOAD_BYTES = 200 * 1024 * 1024; // 200MB cap per submission
+const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100MB cap for a single file
+
+class UploadLimitError extends Error {
+    status: number;
+    payload: { error: string; message: string };
+
+    constructor(status: number, payload: { error: string; message: string }) {
+        super(payload.message);
+        this.status = status;
+        this.payload = payload;
+        this.name = 'UploadLimitError';
+    }
+}
+
 // --- (Your verifyAuth function would go here if you add security) ---
 
 type VariantPayload = {
@@ -44,12 +59,33 @@ export async function POST(request: Request) {
         const shippingCost = formData.get('shippingCost') as string;
         const variantsString = formData.get('variants') as string;
         
+        let runningSize = 0;
+
+        const registerFile = (file: File | null, label: string) => {
+            if (!file) return;
+            if (file.size > MAX_FILE_BYTES) {
+                throw new UploadLimitError(413, {
+                    error: 'UPLOAD_TOO_LARGE',
+                    message: `${label} exceeds the ${MAX_FILE_BYTES / (1024 * 1024)}MB limit. Please upload a smaller file.`,
+                });
+            }
+            runningSize += file.size;
+            if (runningSize > MAX_UPLOAD_BYTES) {
+                throw new UploadLimitError(413, {
+                    error: 'TOTAL_UPLOAD_TOO_LARGE',
+                    message: `Combined upload exceeds ${MAX_UPLOAD_BYTES / (1024 * 1024)}MB. Please remove or compress some media.`,
+                });
+            }
+        };
+
         // --- NEW: Get the audio file ---
         const audioFile = formData.get('audioFile') as File | null;
+        registerFile(audioFile, 'Audio file');
         let audioUrl: string | null = null;
 
         // --- NEW: Get the trading image file ---
         const tradingImage = formData.get('tradingImage') as File | null;
+        registerFile(tradingImage, 'Trading card image');
         let tradingImageUrl: string | null = null;
 
         if (!productName || !variantsString || shippingCost === null) {
@@ -83,6 +119,12 @@ export async function POST(request: Request) {
     // --- Handle variant-specific product media ---
     // Variant media (images/videos) are posted with keys like: variantMedia_${variant.id}
     // We'll collect them later when processing each variant
+
+        const variantMediaKeys = Array.from(new Set(Array.from(formData.keys()).filter(key => key.startsWith('variantMedia_'))));
+        for (const key of variantMediaKeys) {
+            const files = formData.getAll(key) as File[];
+            files.forEach(file => registerFile(file, `Variant media (${key})`));
+        }
 
         const variants: VariantPayload[] = JSON.parse(variantsString);
         
@@ -188,8 +230,24 @@ export async function POST(request: Request) {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Failed to create product:', error);
+        if (error instanceof UploadLimitError) {
+            console.warn('Upload limit exceeded:', error.message);
+            return NextResponse.json(error.payload, { status: error.status });
+        }
+        console.error('Failed to create product:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     } finally {
         client.release();
     }
 }
+
+export const runtime = 'nodejs';
+
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '200mb',
+        },
+    },
+    maxDuration: 300,
+};

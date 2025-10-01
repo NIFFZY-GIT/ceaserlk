@@ -22,6 +22,10 @@ import Image from 'next/image';
 type ExistingColor = { colorName: string; colorHex: string };
 type SizeStock = { size: string; stock: number };
 const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm', 'mkv', 'm4v'];
+const MAX_TOTAL_UPLOAD_BYTES = 200 * 1024 * 1024;
+const MAX_FILE_UPLOAD_BYTES = 100 * 1024 * 1024;
+const MAX_TOTAL_UPLOAD_MB = MAX_TOTAL_UPLOAD_BYTES / (1024 * 1024);
+const MAX_FILE_UPLOAD_MB = MAX_FILE_UPLOAD_BYTES / (1024 * 1024);
 
 const isVideoFile = (file: File) => {
   if (file.type) {
@@ -225,6 +229,33 @@ const AddProductPage = () => {
     }
 
     try {
+      let runningBytes = 0;
+      const formatMb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
+      const enforceLimits = (file: File | null, label: string) => {
+        if (!file) return false;
+        if (file.size > MAX_FILE_UPLOAD_BYTES) {
+          setError(`${label} is ${formatMb(file.size)}MB which exceeds the ${MAX_FILE_UPLOAD_MB}MB per-file limit.`);
+          setIsLoading(false);
+          return true;
+        }
+        runningBytes += file.size;
+        if (runningBytes > MAX_TOTAL_UPLOAD_BYTES) {
+          setError(`Combined upload size is ${formatMb(runningBytes)}MB which exceeds the ${MAX_TOTAL_UPLOAD_MB}MB total limit.`);
+          setIsLoading(false);
+          return true;
+        }
+        return false;
+      };
+
+      if (enforceLimits(audioFile, 'Audio file')) return;
+      if (enforceLimits(tradingImage, 'Trading card image')) return;
+      for (const variant of variants) {
+        for (const mediaFile of variant.variantMedia) {
+          const label = `${variant.colorName || 'Variant'} media`;
+          if (enforceLimits(mediaFile, label)) return;
+        }
+      }
+
       console.log('🚀 Starting form submission...');
       console.log('📊 Current variants state:', variants);
       
@@ -261,7 +292,7 @@ const AddProductPage = () => {
           console.log(`  ${key}: ${value}`);
         }
       }
-      const response = await fetch('/api/admin/products', { method: 'POST', body: formData });
+  const response = await fetch('/api/admin/products', { method: 'POST', body: formData });
       
       console.log('API Response Status:', response.status);
       
