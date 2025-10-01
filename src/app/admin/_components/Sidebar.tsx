@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, Users, PackagePlus,Shield } from 'lucide-react';
+import clsx from 'clsx';
+import { LayoutDashboard, ShoppingBag, Users, PackagePlus, Shield } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
@@ -12,11 +13,21 @@ const navItems = [
   { name: 'Admins', href: '/admin/admins', icon: Shield },
 ];
 
-const Sidebar = () => {
+type SidebarProps = {
+  className?: string;
+  onNavigate?: () => void;
+};
+
+const Sidebar = ({ className, onNavigate }: SidebarProps) => {
   const pathname = usePathname();
 
   return (
-    <aside className="flex flex-col flex-shrink-0 w-64 text-white bg-gray-800">
+    <aside
+      className={clsx(
+        'flex h-full min-h-screen flex-col flex-shrink-0 w-64 text-white bg-gray-800',
+        className,
+      )}
+    >
       <div className="flex items-center justify-center h-16 text-2xl font-bold border-b border-gray-700">
         CEASER
       </div>
@@ -32,6 +43,11 @@ const Sidebar = () => {
                   ? 'bg-primary text-white'
                   : 'text-gray-300 hover:bg-gray-700 hover:text-white'
               }`}
+              onClick={() => {
+                if (onNavigate) {
+                  onNavigate();
+                }
+              }}
             >
               <item.icon className="w-5 h-5 mr-3" />
               <span className="font-medium">{item.name}</span>
