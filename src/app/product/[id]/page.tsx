@@ -6,20 +6,20 @@ import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, X, Volume2, VolumeX } from 'lucide-react';
+import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, X, Volume2, VolumeX, Video } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 import { gsap } from 'gsap';
 
 // --- (All type definitions remain the same) ---
 type StockInfo = { id: string; size: string; stock: number };
-type ImageInfo = { id: string; url: string };
+type MediaInfo = { id: string; url: string };
 type Variant = {
   variantId: string;
   price: string;
   compareAtPrice: string | null;
   colorName: string;
   colorHex: string;
-  images: ImageInfo[];
+  images: MediaInfo[];
   stock: StockInfo[];
 };
 type Product = {
@@ -29,6 +29,9 @@ type Product = {
   audio_url: string | null;
   variants: Variant[];
 };
+
+const VIDEO_EXTENSION_REGEX = /\.(mp4|webm|ogg|mov|m4v)$/i;
+const isVideoUrl = (url: string) => VIDEO_EXTENSION_REGEX.test(url);
 
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { addToCart, openCart, error, clearError } = useCart();
@@ -50,16 +53,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [selectedSize, setSelectedSize] = useState<StockInfo | null>(null);
-  const [selectedImage, setSelectedImage] = useState<ImageInfo | null>(null);
-  const [loadedImageId, setLoadedImageId] = useState<string | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<MediaInfo | null>(null);
+  const [loadedMediaId, setLoadedMediaId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   
   // Audio player state
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
 
   // Fake stock drop system
   const [fakeStockReduction, setFakeStockReduction] = useState(0);
@@ -67,6 +72,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [showStockDropAlert, setShowStockDropAlert] = useState(false);
   const [recentPurchases, setRecentPurchases] = useState<string[]>([]);
   const lastAlertAtRef = useRef<number>(0);
+  const lastDropAtRef = useRef<number>(0);
 
   // Entrance animations - Optimized to prevent double animation
   useEffect(() => {
@@ -111,8 +117,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             }
             
             setSelectedVariant(initialVariant);
-            setSelectedImage(initialVariant.images?.[0] || null);
-            setLoadedImageId(null);
+            const initialMedia = initialVariant.images?.[0] || null;
+            setSelectedMedia(initialMedia);
+            setLoadedMediaId(null);
+            setIsVideoMuted(true);
             setSelectedSize(initialVariant.stock?.find(s => s.stock > 0) || null);
           }
         }
@@ -138,9 +146,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     if (!selectedVariant || !selectedVariant.images) return;
     try {
-      selectedVariant.images.forEach(img => {
+      selectedVariant.images.forEach(asset => {
+        if (isVideoUrl(asset.url)) return;
         const pre = new window.Image();
-        pre.src = img.url;
+        pre.src = asset.url;
       });
     } catch {}
   }, [selectedVariant, selectedVariantId]);
@@ -150,7 +159,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     if (product?.audio_url && audioRef.current && !isAudioPlaying) {
       const playAudio = async () => {
         try {
-          audioRef.current!.volume = isMuted ? 0 : 0.5; // Set initial volume
+          audioRef.current!.volume = isAudioMuted ? 0 : 0.5; // Set initial volume
           await audioRef.current!.play();
           setIsAudioPlaying(true);
         } catch (error) {
@@ -159,12 +168,38 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       };
       playAudio();
     }
-  }, [product?.audio_url, isMuted, isAudioPlaying]);
+  }, [product?.audio_url, isAudioMuted, isAudioPlaying]);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = isVideoMuted;
+    }
+  }, [isVideoMuted, selectedMedia]);
+
+  useEffect(() => {
+    if (selectedMedia && isVideoUrl(selectedMedia.url)) {
+      setIsVideoMuted(true);
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          try {
+            videoRef.current.currentTime = 0;
+            videoRef.current.play().catch(() => {});
+          } catch {}
+        }
+      });
+    } else if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+      } catch {}
+    }
+  }, [selectedMedia]);
 
   const handleVariantSelect = (variant: Variant) => {
     setSelectedVariant(variant);
-    setSelectedImage(variant.images?.[0] || null);
-    setLoadedImageId(null);
+    const nextMedia = variant.images?.[0] || null;
+    setSelectedMedia(nextMedia);
+    setLoadedMediaId(null);
+    setIsVideoMuted(true);
     setSelectedSize(variant.stock?.find(s => s.stock > 0) || null);
     setQuantity(1);
     
@@ -243,11 +278,20 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   };
 
   // Audio control functions
-  const toggleMute = () => {
+  const toggleProductAudioMute = () => {
     if (audioRef.current) {
-      const newMutedState = !isMuted;
-      setIsMuted(newMutedState);
+      const newMutedState = !isAudioMuted;
+      setIsAudioMuted(newMutedState);
       audioRef.current.volume = newMutedState ? 0 : 0.5;
+    }
+  };
+
+  const toggleVideoMute = () => {
+    if (!selectedMedia || !isVideoUrl(selectedMedia.url)) return;
+    const nextMuted = !isVideoMuted;
+    setIsVideoMuted(nextMuted);
+    if (videoRef.current) {
+      videoRef.current.muted = nextMuted;
     }
   };
 
@@ -261,11 +305,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       clearTimeout(stockDropIntervalRef.current);
     }
 
+    const toMilliseconds = (seconds: number) => Math.floor(seconds * 1000);
+    const minDropGapMs = toMilliseconds(10);
+
+    // Reset last drop tracker each time we restart the flow
+    lastDropAtRef.current = 0;
+
     const scheduleNextDrop = () => {
-      // Variable interval with jitter (5s - 12s)
-      const minInterval = 5000;
-      const maxInterval = 12000;
-      const randomInterval = Math.floor(Math.random() * (maxInterval - minInterval + 1)) + minInterval;
+      const minIntervalSeconds = 10;
+      const maxIntervalSeconds = 20;
+      const randomSeconds = minIntervalSeconds + Math.random() * (maxIntervalSeconds - minIntervalSeconds);
+      const randomInterval = toMilliseconds(randomSeconds);
 
       stockDropIntervalRef.current = setTimeout(() => {
         setFakeStockReduction(prev => {
@@ -273,68 +323,52 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           const currentSelectedStock = selectedSize ? selectedSize.stock : 0;
           const effectiveStock = currentSelectedStock - prev;
 
-          // If too low, stop manipulation
           if (effectiveStock <= 2) {
             return prev;
           }
 
-          // Drop probability based on remaining stock
-          const dropChance = effectiveStock > 12 ? 0.6 : effectiveStock > 6 ? 0.45 : 0.25;
-          const shouldDrop = Math.random() < dropChance;
-
-          if (!shouldDrop) {
-            // No change this tick, but schedule the next
+          if (now - lastDropAtRef.current < minDropGapMs) {
             scheduleNextDrop();
             return prev;
           }
 
-          // Weighted reduction: mostly 1, sometimes 2, rarely 3 when high stock
-          let reduction = 1;
-          const roll = Math.random();
-          if (effectiveStock > 10) {
-            reduction = roll < 0.75 ? 1 : roll < 0.95 ? 2 : 3;
-          } else if (effectiveStock > 6) {
-            reduction = roll < 0.85 ? 1 : 2;
-          } else {
-            reduction = 1;
+          const dropChance = effectiveStock > 20 ? 0.65 : effectiveStock > 12 ? 0.5 : 0.35;
+          const shouldDrop = Math.random() < dropChance;
+
+          if (!shouldDrop) {
+            scheduleNextDrop();
+            return prev;
           }
 
-          // Ensure we never go below 2 effective stock
-          const maxAllowedReduction = Math.max(0, effectiveStock - 2);
-          reduction = Math.min(reduction, maxAllowedReduction);
+          lastDropAtRef.current = now;
+          const newReduction = prev + 1;
 
-          const newReduction = prev + reduction;
-
-          // Rate-limit alert visibility (cooldown 6-10s)
-          const alertCooldown = Math.floor(Math.random() * 4000) + 6000; // 6-10s
+          const alertCooldown = toMilliseconds(12 + Math.random() * 10); // 12-22 seconds
           if (now - lastAlertAtRef.current > alertCooldown) {
             lastAlertAtRef.current = now;
             setShowStockDropAlert(true);
-            setTimeout(() => setShowStockDropAlert(false), 2000 + Math.floor(Math.random() * 1500));
+            setTimeout(() => setShowStockDropAlert(false), 3000 + Math.floor(Math.random() * 2000));
           }
 
-          // Occasionally add a recent purchase (50% chance)
-          if (Math.random() < 0.5) {
+          if (Math.random() < 0.4) {
             const cities = ['Colombo', 'Kandy', 'Galle', 'Jaffna', 'Negombo', 'Matara', 'Anuradhapura'];
-            const timeAgo = ['2 minutes', '4 minutes', '7 minutes', '11 minutes'];
+            const timeAgo = ['about 2 minutes', '4 minutes', '7 minutes', '11 minutes', '15 minutes'];
             const city = cities[Math.floor(Math.random() * cities.length)];
             const time = timeAgo[Math.floor(Math.random() * timeAgo.length)];
             const newPurchase = `Someone in ${city} bought this ${time} ago`;
             setRecentPurchases(prevPurch => [newPurchase, ...prevPurch].slice(0, 3));
           }
 
-          // Schedule the next tick regardless
           scheduleNextDrop();
           return newReduction;
         });
       }, randomInterval);
     };
 
-    // Start first drop after a soft delay (4-8s)
-    const initialDelay = Math.floor(Math.random() * 4000) + 4000;
-    setTimeout(() => {
+    const initialDelaySeconds = 15 + Math.random() * 5; // 15-20 seconds before the first simulated drop
+    stockDropIntervalRef.current = setTimeout(() => {
       scheduleNextDrop();
-    }, initialDelay);
+    }, toMilliseconds(initialDelaySeconds));
   }, [selectedSize]);
 
   // Start fake stock drop when product loads and has variants
@@ -342,7 +376,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     if (selectedVariant && selectedSize && selectedSize.stock > 2) {
       // Add some initial fake purchases when product loads
       const cities = ['Colombo', 'Kandy', 'Galle', 'Jaffna', 'Negombo', 'Matara'];
-      const timeAgo = ['15 minutes', '23 minutes', '31 minutes', '45 minutes', '1 hour'];
+  const timeAgo = ['18 minutes', '26 minutes', '39 minutes', '55 minutes', 'about 1 hour'];
       const initialPurchases = [];
       
       for (let i = 0; i < Math.floor(Math.random() * 3) + 1; i++) {
@@ -368,6 +402,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     setFakeStockReduction(0);
     setRecentPurchases([]);
     setShowStockDropAlert(false);
+    lastDropAtRef.current = 0;
     if (stockDropIntervalRef.current) {
       clearTimeout(stockDropIntervalRef.current);
     }
@@ -388,6 +423,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const originalStock = selectedSize ? selectedSize.stock : 0;
   const currentStockForSelectedSize = Math.max(0, originalStock - fakeStockReduction);
   const isSoldOut = selectedVariant.stock.reduce((sum, s) => sum + s.stock, 0) === 0;
+  const isSelectedMediaVideo = selectedMedia ? isVideoUrl(selectedMedia.url) : false;
 
   return (
     <div ref={containerRef} className="min-h-screen bg-white">
@@ -409,21 +445,35 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           
           {/* Image Gallery */}
           <div ref={imageRef} className="space-y-4">
-            {/* Main Image */}
+            {/* Main Media */}
             <div className="relative group">
               <div className="relative overflow-hidden bg-gray-50 rounded-2xl aspect-square">
-                {selectedImage ? (
+                {selectedMedia ? (
                   <>
-                    <Image
-                      src={selectedImage.url}
-                      alt={`${product.name} - ${selectedVariant.colorName}`}
-                      fill
-                      priority
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                      className={`object-cover transition-all duration-500 group-hover:scale-105 ${loadedImageId === selectedImage.id ? 'opacity-100' : 'opacity-0'} transition-opacity`}
-                      onLoadingComplete={() => setLoadedImageId(selectedImage.id)}
-                      placeholder="empty"
-                    />
+                    {isSelectedMediaVideo ? (
+                      <video
+                        key={selectedMedia.id}
+                        ref={videoRef}
+                        src={selectedMedia.url}
+                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${loadedMediaId === selectedMedia.id ? 'opacity-100' : 'opacity-0'} group-hover:scale-105`}
+                        autoPlay
+                        loop
+                        muted={isVideoMuted}
+                        playsInline
+                        onLoadedData={() => setLoadedMediaId(selectedMedia.id)}
+                      />
+                    ) : (
+                      <Image
+                        src={selectedMedia.url}
+                        alt={`${product.name} - ${selectedVariant.colorName}`}
+                        fill
+                        priority
+                        sizes="(max-width: 1024px) 100vw, 50vw"
+                        className={`object-cover transition-all duration-500 group-hover:scale-105 ${loadedMediaId === selectedMedia.id ? 'opacity-100' : 'opacity-0'} transition-opacity`}
+                        onLoadingComplete={() => setLoadedMediaId(selectedMedia.id)}
+                        placeholder="empty"
+                      />
+                    )}
                     {/* Overlay Icons */}
                     <div className="absolute flex gap-2 transition-opacity opacity-0 top-4 right-4 group-hover:opacity-100">
                       <button 
@@ -436,11 +486,21 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         <Share2 className="w-5 h-5 text-gray-600" />
                       </button>
                     </div>
+                    {isSelectedMediaVideo && (
+                      <button
+                        type="button"
+                        onClick={toggleVideoMute}
+                        className="absolute flex items-center gap-2 px-3 py-1 text-xs font-semibold text-white transition-colors rounded-full bg-black/60 bottom-4 left-4 hover:bg-black/80"
+                      >
+                        {isVideoMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                        {isVideoMuted ? 'Muted' : 'Sound On'}
+                      </button>
+                    )}
                   </>
                 ) : (
                   <div className="w-full h-full bg-gray-100 rounded-2xl" />
                 )}
-                
+
                 {/* Sale Badge */}
                 {isOnSale && (
                   <div className="absolute top-4 left-4">
@@ -451,29 +511,51 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 )}
               </div>
             </div>
-            
+
             {/* Thumbnail Grid */}
             {selectedVariant.images && selectedVariant.images.length > 1 && (
               <div className="grid grid-cols-4 gap-3">
-                {selectedVariant.images.map((image, index) => (
-                  <button
-                    key={image.id}
-                    onClick={() => { setSelectedImage(image); setLoadedImageId(null); }}
-                    className={`relative overflow-hidden bg-gray-50 rounded-lg aspect-square border-2 transition-all ${
-                      selectedImage?.id === image.id 
-                        ? 'border-black' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <Image 
-                      src={image.url} 
-                      alt={`View ${index + 1}`} 
-                      fill 
-                      className="object-cover"
-                      sizes="(max-width: 768px) 25vw, 12.5vw" 
-                    />
-                  </button>
-                ))}
+                {selectedVariant.images.map((media, index) => {
+                  const isVideoThumb = isVideoUrl(media.url);
+                  return (
+                    <button
+                      key={media.id}
+                      onClick={() => {
+                        setSelectedMedia(media);
+                        setLoadedMediaId(null);
+                        setIsVideoMuted(true);
+                      }}
+                      className={`relative overflow-hidden bg-gray-50 rounded-lg aspect-square border-2 transition-all ${
+                        selectedMedia?.id === media.id 
+                          ? 'border-black' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {isVideoThumb ? (
+                        <video
+                          src={media.url}
+                          className="object-cover w-full h-full"
+                          muted
+                          loop
+                          playsInline
+                        />
+                      ) : (
+                        <Image 
+                          src={media.url} 
+                          alt={`View ${index + 1}`} 
+                          fill 
+                          className="object-cover"
+                          sizes="(max-width: 768px) 25vw, 12.5vw" 
+                        />
+                      )}
+                      {isVideoThumb && (
+                        <span className="absolute inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-white uppercase tracking-wide bg-black/70 rounded-full bottom-1 left-1">
+                          <Video className="w-3 h-3" /> Video
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -501,11 +583,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   </span>
                 </div>
                 <button
-                  onClick={toggleMute}
+                  onClick={toggleProductAudioMute}
                   className="flex items-center justify-center w-10 h-10 text-gray-600 transition-all bg-white border-2 border-gray-200 rounded-full hover:border-gray-300 hover:text-gray-900 hover:scale-105"
-                  title={isMuted ? "Unmute audio" : "Mute audio"}
+                  title={isAudioMuted ? "Unmute audio" : "Mute audio"}
                 >
-                  {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                  {isAudioMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                 </button>
                 <audio 
                   ref={audioRef}

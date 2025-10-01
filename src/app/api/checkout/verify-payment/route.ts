@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { sendEmail, generateOrderConfirmationEmail } from '@/lib/email';
+import { sendEmail, generateOrderConfirmationEmail, generateAdminOrderNotificationEmail } from '@/lib/email';
 import { generateInvoicePDF, generateInvoiceFilename, InvoiceData } from '@/lib/pdf-invoice';
 import Stripe from 'stripe';
 
@@ -145,6 +145,64 @@ export async function POST(request: NextRequest) {
         });
 
         console.log(`Order confirmation email sent successfully to ${customer_email}`);
+
+        // Notify administrators about the new order (non-blocking for the customer flow)
+        try {
+          const adminEmailSet = new Set<string>();
+
+          if (process.env.ADMIN_NOTIFICATION_EMAILS) {
+            process.env.ADMIN_NOTIFICATION_EMAILS
+              .split(',')
+              .map(email => email.trim())
+              .filter(Boolean)
+              .forEach(email => adminEmailSet.add(email));
+          }
+
+          try {
+            const adminQuery = await client.query(
+              `SELECT email FROM users WHERE role = 'ADMIN' AND email IS NOT NULL`
+            );
+            adminQuery.rows
+              .map(row => row.email as string)
+              .filter(Boolean)
+              .forEach(email => adminEmailSet.add(email));
+          } catch (adminLookupError) {
+            console.error('Failed to fetch admin email addresses from database:', adminLookupError);
+          }
+
+          const adminEmails = Array.from(adminEmailSet);
+
+          if (adminEmails.length > 0) {
+            const adminEmailHtml = generateAdminOrderNotificationEmail({
+              orderId,
+              customerName: customer_name,
+              customerEmail: customer_email,
+              phoneNumber: phone,
+              items,
+              subtotal: parseFloat(subtotal),
+              shippingCost: parseFloat(shipping_cost),
+              totalAmount: parseFloat(total_amount),
+              shippingAddress: {
+                line1: shipping_address,
+                city: shipping_city,
+                postalCode: shipping_postal,
+                country: 'Sri Lanka'
+              }
+            });
+
+            await sendEmail({
+              to: adminEmails.join(','),
+              subject: `New Order Placed - ${orderId}`,
+              html: adminEmailHtml
+            });
+
+            console.log(`Admin notification email sent to: ${adminEmails.join(', ')}`);
+          } else {
+            console.warn('No admin email recipients configured for order notifications.');
+          }
+        } catch (adminEmailError) {
+          console.error('Failed to send admin notification email:', adminEmailError);
+        }
       } catch (emailError) {
         console.error('Failed to send confirmation email:', emailError);
         // Don't fail the order creation if email fails

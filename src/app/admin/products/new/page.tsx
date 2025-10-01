@@ -12,7 +12,8 @@ import {
   UploadCloud,
   ArrowLeft,
   Music,
-  CreditCard
+  CreditCard,
+  Video
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -20,6 +21,16 @@ import Image from 'next/image';
 // --- TYPE DEFINITIONS ---
 type ExistingColor = { colorName: string; colorHex: string };
 type SizeStock = { size: string; stock: number };
+const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm', 'mkv', 'm4v'];
+
+const isVideoFile = (file: File) => {
+  if (file.type) {
+    return file.type.startsWith('video/');
+  }
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  return extension ? VIDEO_EXTENSIONS.includes(extension) : false;
+};
+
 type ProductVariant = {
   id: number; // Temporary client-side ID
   colorName: string;
@@ -27,7 +38,7 @@ type ProductVariant = {
   price: string;
   compareAtPrice: string;
   sku: string;
-  variantImages: File[]; // Color-specific variant images  
+  variantMedia: File[]; // Color-specific media files (images/videos)  
   sizes: SizeStock[];
   thumbnailImageName: string | null;
 };
@@ -77,7 +88,7 @@ const AddProductPage = () => {
       price: '', 
       compareAtPrice: '', 
       sku: '', 
-      variantImages: [], 
+      variantMedia: [], 
       sizes: [{ size: 'One Size', stock: 0 }], 
       thumbnailImageName: null
     }
@@ -128,7 +139,7 @@ const AddProductPage = () => {
       price: '', 
       compareAtPrice: '', 
       sku: '', 
-      variantImages: [], 
+      variantMedia: [], 
       sizes: [{ size: 'S', stock: 0 }], 
       thumbnailImageName: null
     };
@@ -146,19 +157,24 @@ const AddProductPage = () => {
     });
   }, [activeVariantId]);
   
-  const handleImageChange = useCallback((id: number, files: FileList | null) => {
-    console.log(`🖼️ handleImageChange called for variant ${id}`, files);
+  const handleMediaChange = useCallback((id: number, files: FileList | null) => {
+    console.log(`🖼️ handleMediaChange called for variant ${id}`, files);
     if (!files) {
       console.log('❌ No files provided');
       return;
     }
-    const newImages = Array.from(files);
-    console.log(`📁 Adding ${newImages.length} new images:`, newImages.map(img => img.name));
+    const newMedia = Array.from(files);
+    console.log(`📁 Adding ${newMedia.length} new files:`, newMedia.map(file => file.name));
     setVariants(prev => {
       const updated = prev.map(v => {
         if (v.id === id) {
-          const updatedVariant = { ...v, variantImages: [...v.variantImages, ...newImages] };
-          console.log(`✅ Updated variant ${id} now has ${updatedVariant.variantImages.length} images`);
+          const mergedMedia = [...v.variantMedia, ...newMedia];
+          const updatedVariant: ProductVariant = {
+            ...v,
+            variantMedia: mergedMedia,
+            thumbnailImageName: v.thumbnailImageName ?? mergedMedia[0]?.name ?? null
+          };
+          console.log(`✅ Updated variant ${id} now has ${updatedVariant.variantMedia.length} files`);
           return updatedVariant;
         }
         return v;
@@ -168,8 +184,13 @@ const AddProductPage = () => {
     });
   }, []);
 
-  const removeImage = useCallback((variantId: number, imageToRemove: File) => {
-    setVariants(prev => prev.map(v => v.id === variantId ? { ...v, variantImages: v.variantImages.filter(img => img !== imageToRemove) } : v));
+  const removeMedia = useCallback((variantId: number, fileToRemove: File) => {
+    setVariants(prev => prev.map(v => {
+      if (v.id !== variantId) return v;
+      const filteredMedia = v.variantMedia.filter(mediaFile => mediaFile !== fileToRemove);
+      const updatedThumbnail = v.thumbnailImageName === fileToRemove.name ? (filteredMedia[0]?.name ?? null) : v.thumbnailImageName;
+      return { ...v, variantMedia: filteredMedia, thumbnailImageName: updatedThumbnail };
+    }));
   }, []);
   
   const setThumbnail = useCallback((variantId: number, imageName: string) => {
@@ -214,19 +235,19 @@ const AddProductPage = () => {
       if (audioFile) formData.append('audioFile', audioFile);
       if (tradingImage) formData.append('tradingImage', tradingImage);
       
-      // Include client-side IDs for image mapping, exclude variantImages from JSON
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const variantsForApi = variants.map(({ variantImages, ...rest }) => rest);
+  // Include client-side IDs for media mapping, exclude variantMedia from JSON
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const variantsForApi = variants.map(({ variantMedia, ...rest }) => rest);
       console.log('🔍 Variants being sent to API:', variantsForApi);
       formData.append('variants', JSON.stringify(variantsForApi));
       
       // Add variant-specific images only
       variants.forEach(variant => {
-        console.log(`🖼️ Adding images for variant ${variant.id} (${variant.colorName}): ${variant.variantImages.length} images`);
-        // Add variant-specific images
-        variant.variantImages.forEach((image, index) => {
-          console.log(`📎 Adding image ${index + 1}: ${image.name} (${image.size} bytes) as variantImage_${variant.id}`);
-          formData.append(`variantImage_${variant.id}`, image);
+        console.log(`🖼️ Adding media for variant ${variant.id} (${variant.colorName}): ${variant.variantMedia.length} files`);
+  // Add variant-specific media
+        variant.variantMedia.forEach((file, index) => {
+          console.log(`📎 Adding file ${index + 1}: ${file.name} (${file.size} bytes) as variantMedia_${variant.id}`);
+          formData.append(`variantMedia_${variant.id}`, file);
         });
       });
 
@@ -436,30 +457,55 @@ const AddProductPage = () => {
                         {/* Right Side: Images */}
                         <div className="space-y-6">
                            <div>
-                              <label className="block mb-2 text-sm font-medium text-slate-700">Variant Images (Color-specific)</label>
+                              <label className="block mb-2 text-sm font-medium text-slate-700">Variant Media (Color-specific)</label>
                               {/* Debug: Show current variant state */}
                               <div className="mb-2 text-xs text-slate-500">
-                                Debug: Variant {activeVariant.id} has {activeVariant.variantImages.length} images
+                                Debug: Variant {activeVariant.id} has {activeVariant.variantMedia.length} files
                               </div>
                               <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-                                {activeVariant.variantImages.map((image, i) => (
-                                  <div key={i} className="relative group aspect-square">
-                                    <Image src={URL.createObjectURL(image)} alt="upload preview" layout="fill" className="object-cover border rounded-lg border-slate-200" />
-                                    <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity bg-black bg-opacity-50 rounded-lg opacity-0 group-hover:opacity-100">
-                                      <button type="button" title="Set as thumbnail" onClick={() => setThumbnail(activeVariant.id, image.name)} className="p-1.5 text-white rounded-full bg-black/50 hover:bg-primary">
-                                        <Star size={14} fill={activeVariant.thumbnailImageName === image.name ? 'currentColor' : 'none'} />
-                                      </button>
-                                      <button type="button" title="Remove image" onClick={() => removeImage(activeVariant.id, image)} className="p-1.5 text-white rounded-full bg-black/50 hover:bg-red-600">
-                                        <X size={14} />
-                                      </button>
+                                {activeVariant.variantMedia.map((file, i) => {
+                                  const previewUrl = URL.createObjectURL(file);
+                                  const isVideo = isVideoFile(file);
+                                  return (
+                                    <div key={i} className="relative overflow-hidden border rounded-lg group border-slate-200 bg-slate-50 aspect-square">
+                                      {isVideo ? (
+                                        <video
+                                          src={previewUrl}
+                                          className="object-cover w-full h-full"
+                                          muted
+                                          controls={false}
+                                          playsInline
+                                          loop
+                                        />
+                                      ) : (
+                                        <Image src={previewUrl} alt="upload preview" layout="fill" className="object-cover" />
+                                      )}
+                                      <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity rounded-lg opacity-0 bg-black/60 group-hover:opacity-100">
+                                        <button type="button" title="Set as thumbnail" onClick={() => setThumbnail(activeVariant.id, file.name)} className="p-1.5 text-white rounded-full bg-black/60 hover:bg-primary">
+                                          <Star size={14} fill={activeVariant.thumbnailImageName === file.name ? 'currentColor' : 'none'} />
+                                        </button>
+                                        <button type="button" title="Remove file" onClick={() => removeMedia(activeVariant.id, file)} className="p-1.5 text-white rounded-full bg-black/60 hover:bg-red-600">
+                                          <X size={14} />
+                                        </button>
+                                      </div>
+                                      {isVideo && (
+                                        <div className="absolute top-1 left-1 flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-white">
+                                          <Video size={12} />
+                                          Video
+                                        </div>
+                                      )}
+                                      {activeVariant.thumbnailImageName === file.name && (
+                                        <div className="absolute p-1 bg-white rounded-full shadow top-1 right-1">
+                                          <Star size={10} className="text-primary" fill="currentColor" />
+                                        </div>
+                                      )}
                                     </div>
-                                    {activeVariant.thumbnailImageName === image.name && <div className="absolute p-1 bg-white rounded-full shadow top-1 right-1"><Star size={10} className="text-primary" fill="currentColor"/></div>}
-                                  </div>
-                                ))}
+                                  );
+                                })}
                                 <label htmlFor={`variantImage-upload-${activeVariant.id}`} className="flex flex-col items-center justify-center text-center transition bg-white border-2 border-dashed rounded-lg cursor-pointer aspect-square border-slate-300 hover:border-primary hover:bg-primary/5">
                                   <ImageIcon size={20} className="text-slate-400" />
                                   <span className="mt-1 text-xs text-slate-500">Add</span>
-                                  <input id={`variantImage-upload-${activeVariant.id}`} type="file" multiple accept="image/*" className="hidden" onChange={e => handleImageChange(activeVariant.id, e.target.files)} />
+                                  <input id={`variantImage-upload-${activeVariant.id}`} type="file" multiple accept="image/*,video/*" className="hidden" onChange={e => handleMediaChange(activeVariant.id, e.target.files)} />
                                 </label>
                               </div>
                            </div>

@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { 
@@ -16,17 +16,18 @@ import {
   UploadCloud,
   ArrowLeft,
   Music,
-  CreditCard
+  CreditCard,
+  Video as VideoIcon
 } from 'lucide-react';
 
 // --- TYPE DEFINITIONS ---
 // Data from API
-interface ProductImage { id: string; imageUrl: string; }
+interface ProductMedia { id: string; url: string; altText?: string | null; }
 interface ProductSize { id: string; size: string; stock: number; }
 interface ProductVariant {
   id: string; colorName: string; colorHex: string; price: string;
   compareAtPrice: string | null; sku: string | null; thumbnailUrl: string | null;
-  images: ProductImage[]; sizes: ProductSize[];
+  images: { id: string; imageUrl: string; altText?: string | null }[]; sizes: ProductSize[];
 }
 export interface FullProduct {
   id: string; name: string; description: string | null; audio_url: string | null;
@@ -35,13 +36,34 @@ export interface FullProduct {
 type ExistingColor = { colorName: string; colorHex: string };
 
 // Internal Form State
-type ImageState = File | { id: string; imageUrl: string };
-type SizeState = { id: string; size: string; stock: number };
-type VariantFormState = {
-  id: string; // Real UUID or `temp_...` for new variants
-  colorName: string; colorHex: string; price: string; compareAtPrice: string;
-  sku: string; images: ImageState[]; sizes: SizeState[]; thumbnailUrl: string | null;
-};
+    type MediaState = File | ProductMedia;
+    type SizeState = { id: string; size: string; stock: number };
+    type ThumbnailSelection =
+      | { kind: 'existing'; mediaId: string }
+      | { kind: 'file'; fileName: string }
+      | { kind: 'url'; url: string };
+    type VariantFormState = {
+      id: string; // Real UUID or `temp_...` for new variants
+      colorName: string;
+      colorHex: string;
+      price: string;
+      compareAtPrice: string;
+      sku: string;
+      media: MediaState[];
+      sizes: SizeState[];
+      thumbnailSelection: ThumbnailSelection | null;
+    };
+
+    const VIDEO_EXTENSION_REGEX = /\.(mp4|webm|ogg|mov|m4v)$/i;
+
+    const isVideoUrl = (url: string) => VIDEO_EXTENSION_REGEX.test(url);
+    const isVideoMedia = (media: MediaState) => {
+      if (media instanceof File) {
+        if (media.type.startsWith('video/')) return true;
+        return VIDEO_EXTENSION_REGEX.test(media.name);
+      }
+      return isVideoUrl(media.url);
+    };
 
 // --- HELPER COMPONENTS ---
 const Card = ({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) => (
@@ -71,6 +93,7 @@ const Input = (props: React.InputHTMLAttributes<HTMLInputElement> & { label: str
 // --- MAIN EDIT FORM COMPONENT ---
 export default function EditProductForm({ initialData }: { initialData: FullProduct }) {
   const router = useRouter();
+  const filePreviewCache = useRef(new Map<File, string>());
 
   // --- FORM STATE ---
   const [productName, setProductName] = useState('');
@@ -92,13 +115,18 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
 
   // Deletion Tracking State
   const [variantsToDelete, setVariantsToDelete] = useState<string[]>([]);
-  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+  const [mediaToDelete, setMediaToDelete] = useState<string[]>([]);
   const [sizesToDelete, setSizesToDelete] = useState<string[]>([]);
   
   // API & Loading State
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [existingColors, setExistingColors] = useState<ExistingColor[]>([]);
+
+  useEffect(() => () => {
+    filePreviewCache.current.forEach(url => URL.revokeObjectURL(url));
+    filePreviewCache.current.clear();
+  }, []);
 
   // Initialize form with existing data
   useEffect(() => {
@@ -109,14 +137,33 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
       setCurrentAudioUrl(initialData.audio_url);
       setCurrentTradingCardUrl(initialData.trading_card_image);
       
-      const formVariants = initialData.variants.map(v => ({
-        ...v,
-        compareAtPrice: v.compareAtPrice || '',
-        sku: v.sku || '',
-        images: v.images || [],
-        sizes: (v.sizes || []).map(s => ({ ...s, id: s.id })),
-        thumbnailUrl: v.thumbnailUrl,
-      }));
+      const formVariants = initialData.variants.map(variant => {
+        const media = (variant.images || []).map(mediaItem => ({
+          id: mediaItem.id,
+          url: mediaItem.imageUrl,
+          altText: mediaItem.altText ?? null,
+        }));
+
+        let thumbnailSelection: ThumbnailSelection | null = null;
+        if (variant.thumbnailUrl) {
+          const matchingMedia = media.find(item => item.url === variant.thumbnailUrl);
+          thumbnailSelection = matchingMedia
+            ? { kind: 'existing', mediaId: matchingMedia.id }
+            : { kind: 'url', url: variant.thumbnailUrl };
+        }
+
+        return {
+          id: variant.id,
+          colorName: variant.colorName,
+          colorHex: variant.colorHex,
+          price: variant.price,
+          compareAtPrice: variant.compareAtPrice || '',
+          sku: variant.sku || '',
+          media,
+          sizes: (variant.sizes || []).map(size => ({ id: size.id, size: size.size, stock: size.stock })),
+          thumbnailSelection,
+        } satisfies VariantFormState;
+      });
       setVariants(formVariants);
       setActiveVariantId(formVariants[0]?.id || null);
     }
@@ -135,27 +182,73 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
 
   // --- COMPUTED STATE ---
   const activeVariant = useMemo(() => variants.find(v => v.id === activeVariantId), [variants, activeVariantId]);
-  
+
   const duplicateColorNames = useMemo(() => {
     const names = variants.map(v => v.colorName.trim().toLowerCase()).filter(Boolean);
-    const counts = names.reduce((acc, name) => ({...acc, [name]: (acc[name] || 0) + 1}), {} as Record<string, number>);
+    const counts = names.reduce((acc, name) => ({ ...acc, [name]: (acc[name] || 0) + 1 }), {} as Record<string, number>);
     return new Set(Object.keys(counts).filter(name => counts[name] > 1));
   }, [variants]);
 
-  // --- HANDLER FUNCTIONS ---
-  const updateVariant = useCallback((id: string, field: keyof VariantFormState, value: string | number | ImageState[] | SizeState[] | null) => {
+  const getMediaPreviewUrl = useCallback((media: MediaState) => {
+    if (media instanceof File) {
+      if (!filePreviewCache.current.has(media)) {
+        filePreviewCache.current.set(media, URL.createObjectURL(media));
+      }
+      return filePreviewCache.current.get(media)!;
+    }
+    return media.url;
+  }, []);
+
+  const getThumbnailPreviewUrl = useCallback((variant: VariantFormState): string | null => {
+    const selection = variant.thumbnailSelection;
+    if (!selection) return null;
+
+    if (selection.kind === 'existing') {
+      const media = variant.media.find(item => !(item instanceof File) && item.id === selection.mediaId) as ProductMedia | undefined;
+      return media?.url ?? null;
+    }
+
+    if (selection.kind === 'file') {
+      const media = variant.media.find(item => item instanceof File && item.name === selection.fileName) as File | undefined;
+      return media ? getMediaPreviewUrl(media) : null;
+    }
+
+    return selection.url;
+  }, [getMediaPreviewUrl]);
+
+  const isActiveThumbnail = useCallback((variant: VariantFormState, media: MediaState) => {
+    if (!variant.thumbnailSelection) return false;
+    if (variant.thumbnailSelection.kind === 'existing' && !(media instanceof File)) {
+      return variant.thumbnailSelection.mediaId === media.id;
+    }
+    if (variant.thumbnailSelection.kind === 'file' && media instanceof File) {
+      return variant.thumbnailSelection.fileName === media.name;
+    }
+    return false;
+  }, []);
+
+  const updateVariant = useCallback(<K extends keyof VariantFormState>(id: string, field: K, value: VariantFormState[K]) => {
     setVariants(prev => prev.map(v => (v.id === id ? { ...v, [field]: value } : v)));
   }, []);
 
   const addVariant = useCallback(() => {
     const newId = `temp_${Date.now()}`;
-    const newVariant: VariantFormState = { id: newId, colorName: '', colorHex: '#ffffff', price: '', compareAtPrice: '', sku: '', images: [], sizes: [{ id: `temp_size_${Date.now()}`, size: 'S', stock: 0 }], thumbnailUrl: null };
+    const newVariant: VariantFormState = {
+      id: newId,
+      colorName: '',
+      colorHex: '#ffffff',
+      price: '',
+      compareAtPrice: '',
+      sku: '',
+      media: [],
+      sizes: [{ id: `temp_size_${Date.now()}`, size: 'S', stock: 0 }],
+      thumbnailSelection: null,
+    };
     setVariants(prev => [...prev, newVariant]);
     setActiveVariantId(newId);
   }, []);
 
   const removeVariant = useCallback((idToRemove: string) => {
-    // If it's a real variant (not a temp one), track its ID for deletion
     if (!idToRemove.startsWith('temp_')) {
       setVariantsToDelete(prev => [...prev, idToRemove]);
     }
@@ -167,47 +260,67 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
       return newVariants;
     });
   }, [activeVariantId]);
-  
-  const handleImageChange = useCallback((id: string, files: FileList | null) => {
-    if (!files) return;
-    updateVariant(id, 'images', [...(variants.find(v => v.id === id)?.images || []), ...Array.from(files)]);
-  }, [variants, updateVariant]);
 
-  const removeImage = useCallback((variantId: string, imageToRemove: ImageState) => {
-    // If it's an existing image, track its ID for deletion
-    if ('id' in imageToRemove) {
-        setImagesToDelete(prev => [...prev, imageToRemove.id]);
-    }
-    const variant = variants.find(v => v.id === variantId);
-    if (!variant) return;
-    
-    const newImages = variant.images.filter(img => img !== imageToRemove);
-    const imageUrl = 'imageUrl' in imageToRemove ? imageToRemove.imageUrl : URL.createObjectURL(imageToRemove);
-    
-    // If removing the thumbnail, pick a new one
-    let newThumbnail = variant.thumbnailUrl;
-    if (variant.thumbnailUrl === imageUrl) {
-      newThumbnail = newImages.length > 0 ? ('imageUrl' in newImages[0] ? newImages[0].imageUrl : URL.createObjectURL(newImages[0])) : null;
-    }
+  const handleMediaChange = useCallback((id: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const incoming = Array.from(files);
+    setVariants(prev => prev.map(variant => {
+      if (variant.id !== id) return variant;
+      const updatedMedia = [...variant.media, ...incoming];
+      const nextThumbnail = variant.thumbnailSelection || { kind: 'file', fileName: incoming[0].name };
+      return { ...variant, media: updatedMedia, thumbnailSelection: nextThumbnail };
+    }));
+  }, []);
 
-    setVariants(prev => prev.map(v => v.id === variantId ? { ...v, images: newImages, thumbnailUrl: newThumbnail } : v));
-  }, [variants]);
-  
-  const setThumbnail = useCallback((variantId: string, image: ImageState) => {
-    const imageUrl = 'imageUrl' in image ? image.imageUrl : URL.createObjectURL(image);
-    updateVariant(variantId, 'thumbnailUrl', imageUrl);
-  }, [updateVariant]);
+  const removeMedia = useCallback((variantId: string, mediaToRemove: MediaState) => {
+    setVariants(prev => prev.map(variant => {
+      if (variant.id !== variantId) return variant;
+      const filteredMedia = variant.media.filter(item => item !== mediaToRemove);
+
+      let nextThumbnail = variant.thumbnailSelection;
+      if (variant.thumbnailSelection) {
+        if (variant.thumbnailSelection.kind === 'existing' && !(mediaToRemove instanceof File) && variant.thumbnailSelection.mediaId === mediaToRemove.id) {
+          nextThumbnail = null;
+        }
+        if (variant.thumbnailSelection.kind === 'file' && mediaToRemove instanceof File && variant.thumbnailSelection.fileName === mediaToRemove.name) {
+          nextThumbnail = null;
+        }
+      }
+
+      return { ...variant, media: filteredMedia, thumbnailSelection: nextThumbnail };
+    }));
+
+    if (!(mediaToRemove instanceof File)) {
+      setMediaToDelete(prev => [...prev, mediaToRemove.id]);
+    } else {
+      const preview = filePreviewCache.current.get(mediaToRemove);
+      if (preview) {
+        URL.revokeObjectURL(preview);
+        filePreviewCache.current.delete(mediaToRemove);
+      }
+    }
+  }, []);
+
+  const setThumbnail = useCallback((variantId: string, media: MediaState) => {
+    setVariants(prev => prev.map(variant => {
+      if (variant.id !== variantId) return variant;
+      const selection: ThumbnailSelection = media instanceof File
+        ? { kind: 'file', fileName: media.name }
+        : { kind: 'existing', mediaId: media.id };
+      return { ...variant, thumbnailSelection: selection };
+    }));
+  }, []);
 
   const addSize = useCallback((variantId: string) => {
     const newSize = { id: `temp_size_${Date.now()}`, size: '', stock: 0 };
-    setVariants(prev => prev.map(v => v.id === variantId ? { ...v, sizes: [...v.sizes, newSize] } : v));
+    setVariants(prev => prev.map(v => (v.id === variantId ? { ...v, sizes: [...v.sizes, newSize] } : v)));
   }, []);
 
   const removeSize = useCallback((variantId: string, sizeId: string) => {
     if (!sizeId.startsWith('temp_')) {
       setSizesToDelete(prev => [...prev, sizeId]);
     }
-    setVariants(prev => prev.map(v => v.id === variantId ? { ...v, sizes: v.sizes.filter(s => s.id !== sizeId) } : v));
+    setVariants(prev => prev.map(v => (v.id === variantId ? { ...v, sizes: v.sizes.filter(s => s.id !== sizeId) } : v)));
   }, []);
 
   // --- FORM SUBMISSION ---
@@ -235,31 +348,35 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
 
       // Append deletion arrays
       formData.append('variantsToDelete', JSON.stringify(variantsToDelete));
-      formData.append('imagesToDelete', JSON.stringify(imagesToDelete));
+      formData.append('mediaToDelete', JSON.stringify(mediaToDelete));
       formData.append('sizesToDelete', JSON.stringify(sizesToDelete));
 
-      // Append variant data and new images
-      const variantsDataForApi = variants.map(v => {
-        const newImagesForVariant: string[] = [];
-        v.images.forEach(img => {
-          if (img instanceof File) {
-            formData.append(`image_${v.id}_${img.name}`, img);
-            newImagesForVariant.push(img.name);
+      // Append variant data and new media
+      const variantsDataForApi = variants.map(variant => {
+        const existingMediaIds: string[] = [];
+        const newMediaDescriptors: Array<{ formKey: string; originalName: string }> = [];
+
+        variant.media.forEach((mediaItem, index) => {
+          if (mediaItem instanceof File) {
+            const formKey = `variantMedia_${variant.id}_${index}`;
+            formData.append(formKey, mediaItem);
+            newMediaDescriptors.push({ formKey, originalName: mediaItem.name });
+          } else {
+            existingMediaIds.push(mediaItem.id);
           }
         });
 
-        // This structured data helps backend identify what's new vs. what's existing
         return {
-          id: v.id,
-          colorName: v.colorName,
-          colorHex: v.colorHex,
-          price: v.price,
-          compareAtPrice: v.compareAtPrice,
-          sku: v.sku,
-          thumbnailUrl: v.thumbnailUrl,
-          existingImageIds: v.images.filter(img => 'id' in img).map(img => (img as ProductImage).id),
-          newImageNames: newImagesForVariant,
-          sizes: v.sizes,
+          id: variant.id,
+          colorName: variant.colorName,
+          colorHex: variant.colorHex,
+          price: variant.price,
+          compareAtPrice: variant.compareAtPrice,
+          sku: variant.sku,
+          thumbnailSelection: variant.thumbnailSelection,
+          existingMediaIds,
+          newMediaDescriptors,
+          sizes: variant.sizes.map(size => ({ id: size.id, size: size.size, stock: size.stock })),
         };
       });
       formData.append('variants', JSON.stringify(variantsDataForApi));
@@ -418,28 +535,96 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                         </div>
                         <Input label="SKU" id={`sku-${activeVariant.id}`} type="text" value={activeVariant.sku} onChange={e => updateVariant(activeVariant.id, 'sku', e.target.value)} />
                       </div>
-                      <div className="space-y-6"> {/* Images */}
-                         <div>
-                            <label className="block mb-2 text-sm font-medium text-slate-700">Images</label>
-                            <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-                              {activeVariant.images.map((image, index) => {
-                                const imageUrl = 'imageUrl' in image ? image.imageUrl : URL.createObjectURL(image);
-                                return (
-                                <div key={'id' in image ? image.id : `${image.name}-${index}`} className="relative group aspect-square">
-                                  <Image src={imageUrl} alt="upload preview" layout="fill" className="object-cover border rounded-lg border-slate-200" />
+                      <div className="space-y-6">
+                        <div>
+                          <label className="block mb-2 text-sm font-medium text-slate-700">Variant Media (Images & Video)</label>
+                          <p className="mb-2 text-xs text-slate-500">Supports JPG, PNG, WEBP, MP4, WEBM, MOV</p>
+                          <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+                            {activeVariant.media.map((mediaItem, index) => {
+                              const previewUrl = getMediaPreviewUrl(mediaItem);
+                              const key = mediaItem instanceof File ? `${activeVariant.id}-file-${index}-${mediaItem.name}` : mediaItem.id;
+                              const video = isVideoMedia(mediaItem);
+                              const thumbnailActive = isActiveThumbnail(activeVariant, mediaItem);
+
+                              return (
+                                <div key={key} className="relative group aspect-square">
+                                  {video ? (
+                                    <video
+                                      src={previewUrl}
+                                      className="object-cover w-full h-full border rounded-lg border-slate-200"
+                                      muted
+                                      loop
+                                      playsInline
+                                      controls
+                                    />
+                                  ) : (
+                                    <Image
+                                      src={previewUrl}
+                                      alt="Variant media preview"
+                                      fill
+                                      sizes="(max-width: 640px) 33vw, 100px"
+                                      className="object-cover border rounded-lg border-slate-200"
+                                    />
+                                  )}
                                   <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity bg-black bg-opacity-50 rounded-lg opacity-0 group-hover:opacity-100">
-                                    <button type="button" title="Set as thumbnail" onClick={() => setThumbnail(activeVariant.id, image)} className="p-1.5 text-white rounded-full bg-black/50 hover:bg-blue-600"><Star size={14} fill={activeVariant.thumbnailUrl === imageUrl ? 'currentColor' : 'none'} /></button>
-                                    <button type="button" title="Remove image" onClick={() => removeImage(activeVariant.id, image)} className="p-1.5 text-white rounded-full bg-black/50 hover:bg-red-600"><X size={14} /></button>
+                                    <button
+                                      type="button"
+                                      title="Set as thumbnail"
+                                      onClick={() => setThumbnail(activeVariant.id, mediaItem)}
+                                      className="p-1.5 text-white rounded-full bg-black/50 hover:bg-blue-600"
+                                    >
+                                      <Star size={14} fill={thumbnailActive ? 'currentColor' : 'none'} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Remove file"
+                                      onClick={() => removeMedia(activeVariant.id, mediaItem)}
+                                      className="p-1.5 text-white rounded-full bg-black/50 hover:bg-red-600"
+                                    >
+                                      <X size={14} />
+                                    </button>
                                   </div>
-                                  {activeVariant.thumbnailUrl === imageUrl && <div className="absolute p-1 bg-white rounded-full shadow top-1 right-1"><Star size={10} className="text-blue-500" fill="currentColor"/></div>}
+                                  {thumbnailActive && (
+                                    <div className="absolute flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full top-1 right-1">
+                                      <Star size={10} className="text-white" fill="currentColor" />
+                                      Cover
+                                    </div>
+                                  )}
+                                  {video && (
+                                    <span className="absolute inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white bg-black/70 rounded-full bottom-1 left-1">
+                                      <VideoIcon size={12} /> Video
+                                    </span>
+                                  )}
                                 </div>
-                              )})}
-                              <label htmlFor={`image-upload-${activeVariant.id}`} className="flex flex-col items-center justify-center text-center transition bg-white border-2 border-dashed rounded-lg cursor-pointer aspect-square border-slate-300 hover:border-blue-500 hover:bg-blue-50">
-                                <ImageIcon size={20} className="text-slate-400" /><span className="mt-1 text-xs text-slate-500">Add</span>
-                                <input id={`image-upload-${activeVariant.id}`} type="file" multiple accept="image/*" className="hidden" onChange={e => handleImageChange(activeVariant.id, e.target.files)} />
-                              </label>
-                            </div>
-                         </div>
+                              );
+                            })}
+
+                            <label
+                              htmlFor={`media-upload-${activeVariant.id}`}
+                              className="flex flex-col items-center justify-center text-center transition bg-white border-2 border-dashed rounded-lg cursor-pointer aspect-square border-slate-300 hover:border-blue-500 hover:bg-blue-50"
+                            >
+                              <ImageIcon size={20} className="text-slate-400" />
+                              <span className="mt-1 text-xs text-slate-500">Add</span>
+                              <input
+                                id={`media-upload-${activeVariant.id}`}
+                                type="file"
+                                multiple
+                                accept="image/*,video/*"
+                                className="hidden"
+                                onChange={e => handleMediaChange(activeVariant.id, e.target.files)}
+                              />
+                            </label>
+                          </div>
+
+                          <div className="mt-3 text-xs text-slate-500">
+                            Current cover preview:{' '}
+                            {getThumbnailPreviewUrl(activeVariant) ? (
+                              <span className="font-medium text-slate-700">set</span>
+                            ) : (
+                              <span className="text-red-500">none selected</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                     {/* Sizes & Stock Section */}

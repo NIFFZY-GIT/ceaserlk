@@ -178,3 +178,106 @@ export function generateOrderConfirmationEmail(orderData: {
     </html>
   `;
 }
+
+export function generateAdminOrderNotificationEmail(notificationData: {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  phoneNumber?: string | null;
+  items: Array<{
+    productName: string;
+    variantColor: string;
+    variantSize: string;
+    quantity: number;
+    pricePaid: number;
+  }>;
+  subtotal: number;
+  shippingCost: number;
+  totalAmount: number;
+  shippingAddress: {
+    line1: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+}): string {
+  const itemsHtml = notificationData.items
+    .map(
+      (item) => `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.productName}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.variantColor} / ${item.variantSize}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">LKR ${(item.pricePaid * item.quantity).toFixed(2)}</td>
+        </tr>
+      `
+    )
+    .join('');
+
+  const phoneLine = notificationData.phoneNumber
+    ? `<p style="margin: 4px 0 0 0;"><strong>Phone:</strong> ${notificationData.phoneNumber}</p>`
+    : '';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Order Notification</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 640px; margin: 0 auto; padding: 20px;">
+      <h2 style="margin-top: 0; color: #111;">New Order Placed</h2>
+      <p style="margin: 0 0 16px 0;">A new order has been placed on Ceaser LK. Here are the details:</p>
+
+      <div style="background-color: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 0;"><strong>Order ID:</strong> ${notificationData.orderId}</p>
+        <p style="margin: 4px 0 0 0;"><strong>Customer:</strong> ${notificationData.customerName}</p>
+        <p style="margin: 4px 0 0 0;"><strong>Email:</strong> ${notificationData.customerEmail}</p>
+        ${phoneLine}
+      </div>
+
+      <h3 style="color: #111; border-bottom: 2px solid #111; padding-bottom: 8px;">Order Items</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+          <tr style="background-color: #f1f1f1;">
+            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Product</th>
+            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Variant</th>
+            <th style="padding: 8px; text-align: center; border-bottom: 2px solid #ddd;">Qty</th>
+            <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Line Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+
+      <div style="margin-bottom: 20px;">
+        <table style="width: 100%;">
+          <tr>
+            <td style="padding: 4px 0;">Subtotal:</td>
+            <td style="padding: 4px 0; text-align: right;">LKR ${notificationData.subtotal.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 0;">Shipping:</td>
+            <td style="padding: 4px 0; text-align: right;">LKR ${notificationData.shippingCost.toFixed(2)}</td>
+          </tr>
+          <tr style="font-weight: bold; font-size: 1.05em;">
+            <td style="padding: 6px 0; border-top: 1px solid #ddd;">Total:</td>
+            <td style="padding: 6px 0; border-top: 1px solid #ddd; text-align: right;">LKR ${notificationData.totalAmount.toFixed(2)}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="background-color: #f8f9fa; padding: 16px; border-radius: 8px;">
+        <h3 style="margin-top: 0; color: #111;">Shipping Address</h3>
+        <p style="margin: 0;">${notificationData.shippingAddress.line1}</p>
+        <p style="margin: 4px 0 0 0;">${notificationData.shippingAddress.city}, ${notificationData.shippingAddress.postalCode}</p>
+        <p style="margin: 4px 0 0 0;">${notificationData.shippingAddress.country}</p>
+      </div>
+
+      <p style="margin-top: 24px; font-size: 0.9em; color: #555;">This email was sent automatically by the Ceaser LK store when an order was placed.</p>
+    </body>
+    </html>
+  `;
+}

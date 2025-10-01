@@ -1,22 +1,26 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Import useRouter
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Chrome, Mail, User, Lock, Eye, EyeOff, Phone, AlertCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  Chrome,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Palette,
+  Phone,
+  Sparkles,
+  Tag,
+  User,
+} from 'lucide-react';
 
-// Logo component remains the same...
-const Logo = () => (
-  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2 17L12 22L22 17" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2 12L12 17L22 12" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
+import AuthLayout from '@/app/components/auth/AuthLayout';
 
 const SignUpPage = () => {
-  const router = useRouter(); // Initialize router for redirection
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   
   // State for form data, loading, and errors
@@ -54,9 +58,30 @@ const SignUpPage = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        // Handle both Zod validation errors and general errors
-        throw new Error(errorData.error || 'An unknown error occurred.');
+        const errorData = await response.json().catch(() => ({}));
+
+        let message = 'An unknown error occurred.';
+
+        if (errorData) {
+          if (Array.isArray(errorData.details)) {
+            const issues = errorData.details
+              .map((issue: { message?: string }) => issue?.message)
+              .filter(Boolean);
+            if (issues.length > 0) {
+              message = issues.join(', ');
+            }
+          } else if (typeof errorData.details === 'string' && errorData.details.trim().length > 0) {
+            message = errorData.details;
+          }
+
+          if (typeof errorData.error === 'string' && errorData.error.trim().length > 0) {
+            message = errorData.details && message !== errorData.error
+              ? `${errorData.error}: ${message}`
+              : errorData.error;
+          }
+        }
+
+        throw new Error(message);
       }
 
       // On success, redirect to the login page
@@ -73,72 +98,195 @@ const SignUpPage = () => {
     }
   };
 
-  return (
-    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-      <div className="relative hidden lg:block">
-        <Image src="/images/image.jpg" alt="Athlete preparing for a challenge" fill style={{ objectFit: 'cover' }} priority />
-        <div className="absolute inset-0 flex flex-col justify-end p-12 text-white bg-gradient-to-t from-black/80 via-primary/60 to-transparent">
-          <h1 className="text-5xl font-extrabold tracking-tight uppercase">Join The Movement</h1>
-          <p className="max-w-md mt-4 text-lg text-white/90">Become part of a community dedicated to ambition, discipline, and success. Your journey starts now.</p>
-        </div>
-      </div>
-      <div className="flex items-center justify-center p-8 sm:p-12 bg-gray-50">
-        <div className="w-full max-w-md">
-          <div className="mb-10 text-center lg:text-left">
-            <div className="flex justify-center mb-6 lg:justify-start"><Logo /></div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-black">Create Your Account</h2>
-            <p className="mt-2 text-gray-600">Let&apos;s get started on your path to greatness.</p>
-          </div>
+  const heroHighlights = [
+    {
+      icon: <Sparkles className="h-4 w-4" />,
+      title: 'Motivational drops',
+      description: 'Snag limited-release creative tees before they sell out.',
+    },
+    {
+      icon: <Tag className="h-4 w-4" />,
+      title: 'Member bundles',
+      description: 'Unlock curated pack pricing on confidence-boosting fits.',
+    },
+    {
+      icon: <Palette className="h-4 w-4" />,
+      title: 'Creative styling tips',
+      description: 'Get weekly outfit inspo built around bold Ceaser artwork.',
+    },
+    {
+      icon: <Mail className="h-4 w-4" />,
+      title: 'Behind-the-print stories',
+      description: 'Hear the inspiration behind every motivational graphic.',
+    },
+  ];
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <div className="relative">
-                <User className="absolute w-5 h-5 text-gray-400 top-3 left-4" />
-                <input id="firstName" name="firstName" type="text" required value={formData.firstName} onChange={handleChange} className="w-full py-3 pl-12 pr-4 text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="First Name"/>
-              </div>
-              <div className="relative">
-                 <User className="absolute w-5 h-5 text-gray-400 top-3 left-4" />
-                <input id="lastName" name="lastName" type="text" required value={formData.lastName} onChange={handleChange} className="w-full py-3 pl-12 pr-4 text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Last Name"/>
-              </div>
+  return (
+    <AuthLayout
+      formTitle="Create your Ceaser Designs account"
+      formSubtitle="Be first in line for limited-run motivational tees, surprise restocks, and styling notes."
+      hero={{
+        eyebrow: 'Ceaser Designs Studio',
+        title: 'Fuel your wardrobe with creative energy',
+        description:
+          'Creators, athletes, and visionaries wear Ceaser when they want a shirt that speaks as loudly as they do.',
+        highlights: heroHighlights,
+      }}
+      footer={
+        <button
+          type="button"
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+        >
+          <Chrome className="h-5 w-5" /> Continue with Google
+        </button>
+      }
+      bottomSlot={
+        <span>
+          Already have an account?{' '}
+          <Link href="/login" className="font-semibold text-white underline-offset-4 hover:underline">
+            Sign in to keep inspiring
+          </Link>
+        </span>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <label htmlFor="firstName" className="text-sm font-medium text-slate-500">
+            First name
+            <div className="relative mt-2">
+              <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                id="firstName"
+                name="firstName"
+                type="text"
+                required
+                value={formData.firstName}
+                onChange={handleChange}
+                className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                placeholder="Jordan"
+              />
             </div>
-            <div className="relative">
-              <Mail className="absolute w-5 h-5 text-gray-400 top-3 left-4" />
-              <input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleChange} className="w-full py-3 pl-12 pr-4 text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Email Address"/>
+          </label>
+          <label htmlFor="lastName" className="text-sm font-medium text-slate-500">
+            Last name
+            <div className="relative mt-2">
+              <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                id="lastName"
+                name="lastName"
+                type="text"
+                required
+                value={formData.lastName}
+                onChange={handleChange}
+                className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                placeholder="Taylor"
+              />
             </div>
-            <div className="relative">
-              <Phone className="absolute w-5 h-5 text-gray-400 top-3 left-4" />
-              <input id="phone" name="phone" type="tel" required value={formData.phone} onChange={handleChange} className="w-full py-3 pl-12 pr-4 text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Phone Number"/>
-            </div>
-            <div className="relative">
-              <Lock className="absolute w-5 h-5 text-gray-400 top-3 left-4" />
-              <input id="password" name="password" type={showPassword ? "text" : "password"} required value={formData.password} onChange={handleChange} className="w-full py-3 pl-12 pr-12 text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Password"/>
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 rounded-r-lg hover:text-primary" aria-label={showPassword ? "Hide password" : "Show password"}>
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            <div className="flex items-center">
-              <input id="terms" name="terms" type="checkbox" required checked={formData.terms} onChange={handleChange} className="w-4 h-4 border-gray-300 rounded text-primary focus:ring-primary"/>
-              <label htmlFor="terms" className="block ml-2 text-sm text-gray-700">I agree to the <Link href="/terms" className="font-medium text-primary hover:underline">Terms of Service</Link></label>
-            </div>
-            {error && (
-              <div className="flex items-center p-3 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-                <AlertCircle className="w-5 h-5 mr-2"/>
-                <span className="font-medium">{error}</span>
-              </div>
-            )}
-            <div className="pt-2">
-              <button type="submit" disabled={loading} className="w-full py-3 font-bold tracking-wider text-white uppercase transition-all duration-300 rounded-lg bg-accent hover:bg-red-500 hover:shadow-lg hover:-translate-y-0.5 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                {loading ? 'Creating Account...' : 'Create Account'}
-              </button>
-            </div>
-          </form>
-          {/* ... Social Login and Sign In link ... */}
-          <div className="flex items-center my-8"><div className="flex-grow border-t border-gray-200"></div><span className="mx-4 text-sm font-medium text-gray-400">OR</span><div className="flex-grow border-t border-gray-200"></div></div>
-          <div><button type="button" className="flex items-center justify-center w-full gap-3 px-4 py-3 font-semibold text-gray-800 transition-all duration-300 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:shadow-sm"><Chrome size={20} />Sign up with Google</button></div>
-          <p className="mt-8 text-sm text-center text-gray-600">Already have an account?{' '}<Link href="/login" className="font-medium text-primary hover:underline">Sign In</Link></p>
+          </label>
         </div>
-      </div>
-    </div>
+
+        <label htmlFor="email" className="text-sm font-medium text-slate-500">
+          Email address
+          <div className="relative mt-2">
+            <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={formData.email}
+              onChange={handleChange}
+              className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              placeholder="you@ceaserfan.com"
+            />
+          </div>
+        </label>
+
+        <label htmlFor="phone" className="text-sm font-medium text-slate-500">
+          Phone number <span className="font-normal text-slate-400">(optional)</span>
+          <div className="relative mt-2">
+            <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={handleChange}
+              className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              placeholder="(+94) 77 555 2210"
+            />
+          </div>
+        </label>
+
+        <label htmlFor="password" className="text-sm font-medium text-slate-500">
+          Password
+          <div className="relative mt-2">
+            <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              required
+              value={formData.password}
+              onChange={handleChange}
+              className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              placeholder="Create a strong password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-3 flex items-center rounded-lg px-3 text-slate-500 transition hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </label>
+
+        <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600 shadow-sm transition hover:border-slate-300 focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-900/10">
+          <input
+            id="terms"
+            name="terms"
+            type="checkbox"
+            required
+            checked={formData.terms}
+            onChange={handleChange}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+          />
+          <span>
+            I agree to the{' '}
+            <Link href="/terms" className="font-semibold text-slate-900 underline-offset-4 hover:underline">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="font-semibold text-slate-900 underline-offset-4 hover:underline">
+              Privacy Policy
+            </Link>
+          </span>
+        </label>
+
+        {error && (
+          <div
+            className="flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+            role="alert"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4" />
+            <span className="font-medium">{error}</span>
+          </div>
+        )}
+
+        <div className="pt-1">
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:translate-y-0 disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+          >
+            {loading ? 'Creating account…' : 'Create account'}
+          </button>
+        </div>
+      </form>
+    </AuthLayout>
   );
 };
 

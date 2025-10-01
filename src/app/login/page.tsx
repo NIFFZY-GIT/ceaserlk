@@ -3,19 +3,21 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Chrome, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  Chrome,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Package,
+  Sparkles,
+  Tag,
+  Truck,
+} from 'lucide-react';
+
+import AuthLayout from '@/app/components/auth/AuthLayout';
 import { useAuth } from '@/context/AuthContext';
-
-// ... Logo component remains the same ...
-const Logo = () => (
-  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2 17L12 22L22 17" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2 12L12 17L22 12" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
 
 const LoginPage = () => {
   const router = useRouter();
@@ -46,10 +48,31 @@ const LoginPage = () => {
       });
 
       // We need the response body to determine the role
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed.');
+        let message = 'Login failed.';
+
+        if (data) {
+          if (Array.isArray(data.details)) {
+            const issues = data.details
+              .map((issue: { message?: string }) => issue?.message)
+              .filter(Boolean);
+            if (issues.length > 0) {
+              message = issues.join(', ');
+            }
+          } else if (typeof data.details === 'string' && data.details.trim().length > 0) {
+            message = data.details;
+          }
+
+          if (typeof data.error === 'string' && data.error.trim().length > 0) {
+            message = data.details && message !== data.error
+              ? `${data.error}: ${message}`
+              : data.error;
+          }
+        }
+
+        throw new Error(message);
       }
 
       // ==========================================================
@@ -84,59 +107,128 @@ const LoginPage = () => {
     }
   };
 
-  // ... the rest of your JSX remains exactly the same ...
+  const heroHighlights = [
+    {
+      icon: <Package className="h-4 w-4" />,
+      title: 'Order vault',
+      description: 'Review past motivational tees, receipts, and saved sizes in one place.',
+    },
+    {
+      icon: <Truck className="h-4 w-4" />,
+      title: 'Doorstep tracking',
+      description: 'Follow every creative drop from print shop to porch with live status.',
+    },
+    {
+      icon: <Tag className="h-4 w-4" />,
+      title: 'Member pricing',
+      description: 'Grab bundle deals on bold statement shirts before they disappear.',
+    },
+    {
+      icon: <Sparkles className="h-4 w-4" />,
+      title: 'VIP previews',
+      description: 'Preview the next motivational collection before the public launch.',
+    },
+  ];
+
   return (
-    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-      <div className="relative hidden lg:block">
-        <Image src="/images/image.jpg" alt="Focused individual achieving a goal" fill style={{ objectFit: 'cover' }} priority />
-        <div className="absolute inset-0 flex flex-col justify-end p-12 text-white bg-gradient-to-t from-black/80 via-primary/60 to-transparent">
-          <h1 className="text-5xl font-extrabold tracking-tight uppercase">Welcome Back, Champion</h1>
-          <p className="max-w-md mt-4 text-lg text-white/90">The journey continues. Sign in to track your progress and gear up for your next victory.</p>
-        </div>
-      </div>
-      <div className="flex items-center justify-center p-8 sm:p-12 bg-gray-50">
-        <div className="w-full max-w-md">
-          <div className="mb-10 text-center lg:text-left">
-            <Link href="/" className="flex justify-center mb-6 lg:justify-start"><Logo /></Link>
-            <h2 className="text-3xl font-extrabold tracking-tight text-black">Sign In to Your Account</h2>
-            <p className="mt-2 text-gray-600">Ready to conquer the day?</p>
+    <AuthLayout
+      formTitle="Welcome back to Ceaser Designs"
+      formSubtitle="Manage your motivational wardrobe, track deliveries, and unlock member-only drops."
+      hero={{
+        eyebrow: 'Client Atelier Access',
+        title: 'Tap into your creative shirt control room',
+        description:
+          'Restock alerts, delivery statuses, and print previews are waiting the moment you sign in.',
+        highlights: heroHighlights,
+      }}
+      footer={
+        <button
+          type="button"
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+        >
+          <Chrome className="h-5 w-5" /> Continue with Google
+        </button>
+      }
+      bottomSlot={
+        <span>
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="font-semibold text-white underline-offset-4 hover:underline">
+            Join Ceaser Designs
+          </Link>
+        </span>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <label htmlFor="email" className="text-sm font-medium text-slate-500">
+          Email address
+          <div className="relative mt-2">
+            <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={formData.email}
+              onChange={handleChange}
+              className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              placeholder="you@ceaserfan.com"
+            />
           </div>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="relative">
-              <Mail className="absolute w-5 h-5 text-gray-400 top-3.5 left-4" />
-              <input id="email" name="email" type="email" autoComplete="email" required value={formData.email} onChange={handleChange} className="w-full py-3 pl-12 pr-4 text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Email Address"/>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 sr-only">Password</label>
-                <Link href="/forgot-password" className="ml-auto text-sm font-medium text-primary hover:underline">Forgot Password?</Link>
-              </div>
-              <div className="relative">
-                <Lock className="absolute w-5 h-5 text-gray-400 top-3.5 left-4" />
-                <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required value={formData.password} onChange={handleChange} className="w-full py-3 pl-12 pr-12 text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Password"/>
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 rounded-r-lg hover:text-primary" aria-label={showPassword ? "Hide password" : "Show password"}>
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-             {error && (
-              <div className="flex items-center p-3 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-                <AlertCircle className="w-5 h-5 mr-2"/>
-                <span className="font-medium">{error}</span>
-              </div>
-            )}
-            <div className="pt-2">
-              <button type="submit" disabled={loading} className="w-full py-3 font-bold tracking-wider text-white uppercase transition-all duration-300 rounded-lg bg-accent hover:bg-red-500 hover:shadow-lg hover:-translate-y-0.5 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                {loading ? 'Signing In...' : 'Sign In'}
-              </button>
-            </div>
-          </form>
-          <div className="flex items-center my-8"><div className="flex-grow border-t border-gray-200"></div><span className="mx-4 text-sm font-medium text-gray-400">OR</span><div className="flex-grow border-t border-gray-200"></div></div>
-          <div><button type="button" className="flex items-center justify-center w-full gap-3 px-4 py-3 font-semibold text-gray-800 transition-all duration-300 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 hover:shadow-sm"><Chrome size={20} />Sign in with Google</button></div>
-          <p className="mt-8 text-sm text-center text-gray-600">Don&apos;t have an account?{' '}<Link href="/signup" className="font-medium text-primary hover:underline">Sign Up</Link></p>
+        </label>
+
+        <div>
+          <div className="flex items-center justify-between text-sm font-medium text-slate-500">
+            <label htmlFor="password">Password</label>
+            <Link href="/forgot-password" className="text-slate-900 underline-offset-4 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+          <div className="relative mt-2">
+            <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              required
+              value={formData.password}
+              onChange={handleChange}
+              className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              placeholder="Enter your secret passphrase"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-3 flex items-center rounded-lg px-3 text-slate-500 transition hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
+
+        {error && (
+          <div
+            className="flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+            role="alert"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4" />
+            <span className="font-medium">{error}</span>
+          </div>
+        )}
+
+        <div className="pt-1">
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:translate-y-0 disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+          >
+            {loading ? 'Signing in…' : 'Sign in'}
+          </button>
+        </div>
+      </form>
+    </AuthLayout>
   );
 };
 

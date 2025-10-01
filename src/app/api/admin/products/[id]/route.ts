@@ -4,6 +4,11 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 // Type definitions for the data sent from frontend
+type ThumbnailSelectionPayload =
+  | { kind: 'existing'; mediaId: string }
+  | { kind: 'file'; fileName: string }
+  | { kind: 'url'; url: string };
+
 type VariantUpdateData = {
   id: string;
   colorName: string;
@@ -11,9 +16,9 @@ type VariantUpdateData = {
   price: string;
   compareAtPrice: string;
   sku: string;
-  thumbnailUrl: string | null;
-  existingImageIds: string[];
-  newImageNames: string[];
+  thumbnailSelection: ThumbnailSelectionPayload | null;
+  existingMediaIds: string[];
+  newMediaDescriptors: Array<{ formKey: string; originalName: string }>;
   sizes: { id: string; size: string; stock: number; }[];
 };
 
@@ -129,8 +134,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Product name is required' }, { status: 400 });
     }
     
-    const variantsToDelete = JSON.parse(formData.get('variantsToDelete') as string || '[]');
-    const imagesToDelete = JSON.parse(formData.get('imagesToDelete') as string || '[]');
+  const variantsToDelete = JSON.parse(formData.get('variantsToDelete') as string || '[]');
+  const mediaToDelete = JSON.parse(formData.get('mediaToDelete') as string || '[]');
     const sizesToDelete = JSON.parse(formData.get('sizesToDelete') as string || '[]');
     const variants: VariantUpdateData[] = JSON.parse(formData.get('variants') as string);
 
@@ -138,14 +143,14 @@ export async function PUT(
     console.log('DEBUG - Parsed variants:', JSON.stringify(variants, null, 2));
 
     // --- 1. Perform Deletions First ---
-    if (imagesToDelete.length > 0) {
+    if (mediaToDelete.length > 0) {
       // Also delete the actual files from storage
-      const { rows } = await client.query('SELECT image_url FROM variant_images WHERE id = ANY($1::uuid[])', [imagesToDelete]);
+      const { rows } = await client.query('SELECT image_url FROM variant_images WHERE id = ANY($1::uuid[])', [mediaToDelete]);
       for (const row of rows) {
           const filePath = path.join(process.cwd(), 'public', row.image_url);
           try { await fs.unlink(filePath); } catch (e) { console.error(`Failed to delete file: ${filePath}`, e); }
       }
-      await client.query('DELETE FROM variant_images WHERE id = ANY($1::uuid[])', [imagesToDelete]);
+      await client.query('DELETE FROM variant_images WHERE id = ANY($1::uuid[])', [mediaToDelete]);
     }
     if (sizesToDelete.length > 0) {
       await client.query('DELETE FROM stock_keeping_units WHERE id = ANY($1::uuid[])', [sizesToDelete]);
@@ -261,48 +266,79 @@ export async function PUT(
     // --- 4. Reconcile Variants, Images, and Sizes ---
     for (const variant of variants) {
       let variantId = variant.id;
-      const thumbnailUrl: string | null = variant.thumbnailUrl; // Start with the existing one
 
-      // A) Handle Variant (INSERT or UPDATE)
       if (variant.id.startsWith('temp_')) {
-        const res = await client.query(`INSERT INTO product_variants (product_id, color_name, color_hex_code, price, compare_at_price, sku) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`, [productId, variant.colorName, variant.colorHex, variant.price, variant.compareAtPrice || null, variant.sku || null]);
+        const res = await client.query(
+          `INSERT INTO product_variants (product_id, color_name, color_hex_code, price, compare_at_price, sku)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+          [productId, variant.colorName, variant.colorHex, variant.price, variant.compareAtPrice || null, variant.sku || null],
+        );
         variantId = res.rows[0].id;
       } else {
-        await client.query(`UPDATE product_variants SET color_name = $1, color_hex_code = $2, price = $3, compare_at_price = $4, sku = $5 WHERE id = $6`, [variant.colorName, variant.colorHex, variant.price, variant.compareAtPrice || null, variant.sku || null, variantId]);
+        await client.query(
+          `UPDATE product_variants
+             SET color_name = $1,
+                 color_hex_code = $2,
+                 price = $3,
+                 compare_at_price = $4,
+                 sku = $5
+           WHERE id = $6`,
+          [variant.colorName, variant.colorHex, variant.price, variant.compareAtPrice || null, variant.sku || null, variantId],
+        );
       }
-      
-      // B) Handle Images for this variant
-      // Frontend sends existingImageIds and newImageNames arrays instead of images array
-      const newImageNames = variant.newImageNames || [];
-      
-      // Process new image uploads
-      for (const imageName of newImageNames) {
-        const imageFile = formData.get(`image_${variant.id}_${imageName}`) as File;
-        if (imageFile) {
-          const buffer = Buffer.from(await imageFile.arrayBuffer());
-          const filename = `${Date.now()}-${imageFile.name.replace(/\s+/g, '-')}`;
-          const uploadPath = path.join(process.cwd(), 'public/uploads/products', filename);
-          
-          // Ensure the products directory exists
-          const productsDir = path.join(process.cwd(), 'public/uploads/products');
-          await fs.mkdir(productsDir, { recursive: true });
-          
-          await fs.writeFile(uploadPath, buffer);
-          const imageUrl = `/uploads/products/${filename}`;
-          
-          await client.query('INSERT INTO variant_images (variant_id, image_url, alt_text) VALUES ($1, $2, $3)', [variantId, imageUrl, productName]);
-          // Note: thumbnailUrl handling may need adjustment based on frontend implementation
-        }
-      }
-      
-      // C) Update the thumbnail URL for the variant
-      const finalThumbnailUrl = thumbnailUrl;
-      await client.query('UPDATE product_variants SET thumbnail_url = $1 WHERE id = $2', [finalThumbnailUrl, variantId]);
-      
-      // C) Update the thumbnail URL for the variant after all images are processed
-      await client.query('UPDATE product_variants SET thumbnail_url = $1 WHERE id = $2', [thumbnailUrl, variantId]);
 
-      // D) Handle Sizes for this variant (INSERT or UPDATE)
+      const savedMedia: Array<{ id: string; url: string; originalName: string }> = [];
+
+      for (const descriptor of variant.newMediaDescriptors || []) {
+        const mediaFile = formData.get(descriptor.formKey) as File | null;
+        if (!mediaFile || mediaFile.size === 0) continue;
+
+        const buffer = Buffer.from(await mediaFile.arrayBuffer());
+        const filename = `${Date.now()}-${mediaFile.name.replace(/\s+/g, '-')}`;
+        const productsDir = path.join(process.cwd(), 'public/uploads/products');
+        await fs.mkdir(productsDir, { recursive: true });
+        const uploadPath = path.join(productsDir, filename);
+        await fs.writeFile(uploadPath, buffer);
+
+        const mediaUrl = `/uploads/products/${filename}`;
+        const insertResult = await client.query(
+          'INSERT INTO variant_images (variant_id, image_url, alt_text) VALUES ($1, $2, $3) RETURNING id, image_url',
+          [variantId, mediaUrl, `${productName} - ${variant.colorName}`],
+        );
+        savedMedia.push({ id: insertResult.rows[0].id, url: insertResult.rows[0].image_url, originalName: descriptor.originalName });
+      }
+
+      let thumbnailUrlToPersist: string | null = null;
+
+      if (variant.thumbnailSelection) {
+        switch (variant.thumbnailSelection.kind) {
+          case 'existing': {
+            const existing = await client.query('SELECT image_url FROM variant_images WHERE id = $1 LIMIT 1', [variant.thumbnailSelection.mediaId]);
+            thumbnailUrlToPersist = existing.rows[0]?.image_url ?? null;
+            break;
+          }
+          case 'file': {
+            const { fileName } = variant.thumbnailSelection;
+            const match = savedMedia.find(media => media.originalName === fileName);
+            if (match) {
+              thumbnailUrlToPersist = match.url;
+            } else if (savedMedia.length > 0) {
+              thumbnailUrlToPersist = savedMedia[0].url;
+            }
+            break;
+          }
+          case 'url':
+            thumbnailUrlToPersist = variant.thumbnailSelection.url || null;
+            break;
+          default:
+            thumbnailUrlToPersist = null;
+        }
+      } else {
+        thumbnailUrlToPersist = null;
+      }
+
+      await client.query('UPDATE product_variants SET thumbnail_url = $1 WHERE id = $2', [thumbnailUrlToPersist, variantId]);
+
       for (const size of variant.sizes) {
         if (size.id.startsWith('temp_')) {
           await client.query('INSERT INTO stock_keeping_units (variant_id, size, stock_quantity) VALUES ($1, $2, $3)', [variantId, size.size, size.stock]);

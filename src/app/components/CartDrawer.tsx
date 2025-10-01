@@ -1,7 +1,7 @@
 "use client";
 
 import { useCart, CartItem } from "@/context/CartContext";
-import { X, Trash2, Plus, Minus, ShoppingBag, Loader2, Clock } from "lucide-react";
+import { X, Trash2, Plus, Minus, ShoppingBag, Loader2, Clock, Video } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useLayoutEffect, useState, useEffect } from 'react';
@@ -34,6 +34,9 @@ import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 //   );
 // };
 
+const VIDEO_EXTENSION_REGEX = /\.(mp4|webm|ogg|mov|m4v)$/i;
+const isVideoUrl = (url: string) => VIDEO_EXTENSION_REGEX.test(url);
+
 // --- THIS IS THE KEY CHANGE ---
 const CartItemCard = ({ item }: { item: CartItem }) => {
   const { removeFromCart, updateQuantity } = useCart();
@@ -43,20 +46,43 @@ const CartItemCard = ({ item }: { item: CartItem }) => {
   const variant = item.sku.variant;
   const size = item.sku.size;
   
-  // Use the first variant image if available, otherwise fallback to thumbnail_url or default
-  const getImageUrl = () => {
+  const getPrimaryMedia = () => {
+    const mediaCandidates: string[] = [];
+    if (variant.thumbnail_url) mediaCandidates.push(variant.thumbnail_url);
     if (variant.variant_images && variant.variant_images.length > 0) {
-      return variant.variant_images[0].image_url;
+      mediaCandidates.push(...variant.variant_images.map(img => img.image_url));
     }
-    return variant.thumbnail_url || '/images/image.jpg';
+    const mediaUrl = mediaCandidates.find(url => !!url) || '/images/image.jpg';
+    return { url: mediaUrl, isVideo: isVideoUrl(mediaUrl) };
   };
-  
-  const imageUrl = getImageUrl();
+
+  const primaryMedia = getPrimaryMedia();
 
   return (
     <div className="flex items-start space-x-4 cart-item-gsap">
       <Link href={`/product/${product.id}`} className="relative flex-shrink-0 overflow-hidden bg-gray-900 rounded-lg w-28 h-28 group">
-        <Image src={imageUrl} alt={product.name} fill style={{objectFit:'cover'}} className="transition-transform duration-300 group-hover:scale-110"/>
+        {primaryMedia.isVideo ? (
+          <>
+            <video
+              src={primaryMedia.url}
+              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
+              muted
+              loop
+              autoPlay
+              playsInline
+            />
+            <span className="absolute inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white bg-black/70 rounded-full bottom-1 left-1">
+              <Video size={12} /> Video
+            </span>
+          </>
+        ) : (
+          <Image
+            src={primaryMedia.url}
+            alt={product.name}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+        )}
       </Link>
       <div className="flex-grow">
         <p className="text-lg font-bold leading-tight text-white">{product.name}</p>

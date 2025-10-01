@@ -3,17 +3,20 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Mail, ArrowLeft, CheckCircle, AlertCircle, Eye, EyeOff, Lock } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Palette,
+  Sparkles,
+  Tag,
+} from 'lucide-react';
 
-// Logo component
-const Logo = () => (
-  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2 17L12 22L22 17" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2 12L12 17L22 12" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
+import AuthLayout from '@/app/components/auth/AuthLayout';
 
 type Step = 'email' | 'verify' | 'reset' | 'success';
 
@@ -34,7 +37,7 @@ const ForgotPasswordPage = () => {
     hasLowerCase: false,
     hasNumber: false,
     hasSpecialChar: false,
-    passwordsMatch: false
+    passwordsMatch: false,
   });
 
   const validatePassword = (newPassword: string, confirmPass: string) => {
@@ -44,7 +47,7 @@ const ForgotPasswordPage = () => {
       hasLowerCase: /[a-z]/.test(newPassword),
       hasNumber: /\d/.test(newPassword),
       hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
-      passwordsMatch: newPassword === confirmPass && newPassword.length > 0
+      passwordsMatch: newPassword === confirmPass && newPassword.length > 0,
     });
   };
 
@@ -60,13 +63,14 @@ const ForgotPasswordPage = () => {
     validatePassword(password, newConfirmPassword);
   };
 
-  const isPasswordValid = () => {
-    return Object.values(passwordValidation).every(Boolean);
-  };
+  const isPasswordValid = () => Object.values(passwordValidation).every(Boolean);
 
-  // Step 1: Send verification code
-  const handleSendCode = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const sendVerificationCode = async () => {
+    if (!email) {
+      setError('Please enter the email connected to your Ceaser account.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -80,18 +84,23 @@ const ForgotPasswordPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send verification code');
+        throw new Error(data.error || 'We couldn’t send that reset code. Try again.');
       }
 
+      setVerificationCode('');
       setCurrentStep('verify');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send verification code');
+      setError(err instanceof Error ? err.message : 'We couldn’t send that reset code. Try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 2: Verify code
+  const handleSendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendVerificationCode();
+  };
+
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -107,25 +116,24 @@ const ForgotPasswordPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Invalid verification code');
+        throw new Error(data.error || 'The code you entered is incorrect.');
       }
 
       setCurrentStep('reset');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid verification code');
+      setError(err instanceof Error ? err.message : 'The code you entered is incorrect.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Step 3: Reset password
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     if (!isPasswordValid()) {
-      setError('Please ensure your password meets all requirements');
+      setError('Make sure your new password ticks every requirement.');
       setLoading(false);
       return;
     }
@@ -134,87 +142,131 @@ const ForgotPasswordPage = () => {
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
-          code: verificationCode, 
-          newPassword: password 
-        }),
+        body: JSON.stringify({ email, code: verificationCode, newPassword: password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password');
+        throw new Error(data.error || 'We couldn’t reset that password.');
       }
 
       setCurrentStep('success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reset password');
+      setError(err instanceof Error ? err.message : 'We couldn’t reset that password.');
     } finally {
       setLoading(false);
     }
   };
 
+  const heroHighlights = [
+    {
+      icon: <Sparkles className="w-4 h-4" />,
+      title: 'Stay inspired',
+      description: 'Regain access so you never miss the next motivational drop.',
+    },
+    {
+      icon: <Tag className="w-4 h-4" />,
+      title: 'Member perks intact',
+      description: 'Your loyalty pricing and saved bundles pick up right where you left off.',
+    },
+    {
+      icon: <Palette className="w-4 h-4" />,
+      title: 'Saved looks secured',
+      description: 'Keep every curated outfit and colourway ready once you sign back in.',
+    },
+  ];
+
+  const formTitleMap: Record<Step, string> = {
+    email: 'Forgot your password?',
+    verify: 'Enter your reset code',
+    reset: 'Set a new password',
+    success: 'Password reset complete',
+  };
+
+  const formSubtitle = (() => {
+    switch (currentStep) {
+      case 'email':
+        return 'Drop the email tied to your Ceaser Designs account and we’ll send a code.';
+      case 'verify':
+        return `We emailed a six-digit code to ${email || 'your inbox'}. Enter it below to continue.`;
+      case 'reset':
+        return 'Create a resilient password so your creative wardrobe stays protected.';
+      case 'success':
+        return 'You’re cleared to jump back in with your refreshed credentials.';
+      default:
+        return '';
+    }
+  })();
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 'email':
         return (
-          <div>
-            <div className="mb-8 text-center lg:text-left">
-              <h2 className="text-3xl font-extrabold tracking-tight text-black">Forgot Password?</h2>
-              <p className="mt-2 text-gray-600">Enter your email to receive a verification code</p>
-            </div>
-            <form onSubmit={handleSendCode} className="space-y-6">
-              <div className="relative">
-                <Mail className="absolute w-5 h-5 text-gray-400 top-3.5 left-4" />
+          <form onSubmit={handleSendCode} className="space-y-6">
+            <label htmlFor="reset-email" className="text-sm font-medium text-slate-500">
+              Email address
+              <div className="relative mt-2">
+                <Mail className="absolute w-4 h-4 -translate-y-1/2 pointer-events-none left-4 top-1/2 text-slate-400" />
                 <input
+                  id="reset-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full py-3 pl-12 pr-4 text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Enter your email address"
+                  onChange={event => setEmail(event.target.value)}
+                  className="block w-full px-12 py-3 text-sm font-medium transition bg-white border shadow-sm outline-none rounded-xl border-slate-200 text-slate-900 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                  placeholder="you@ceaserfan.com"
                   required
                 />
               </div>
-              {error && (
-                <div className="flex items-center p-3 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-                  <AlertCircle className="w-5 h-5 mr-2"/>
-                  <span className="font-medium">{error}</span>
-                </div>
-              )}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 font-bold tracking-wider text-white uppercase transition-all duration-300 rounded-lg bg-accent hover:bg-red-500 hover:shadow-lg hover:-translate-y-0.5 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Sending...' : 'Send Verification Code'}
-              </button>
-            </form>
-          </div>
+            </label>
+            {error && (
+              <div className="flex items-start gap-3 px-4 py-3 text-sm border rounded-2xl border-rose-100 bg-rose-50 text-rose-700" role="alert">
+                <AlertCircle className="mt-0.5 h-4 w-4" />
+                <span className="font-medium">{error}</span>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:translate-y-0 disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+            >
+              {loading ? 'Sending code…' : 'Send reset code'}
+            </button>
+          </form>
         );
 
       case 'verify':
         return (
-          <div>
-            <div className="mb-8 text-center lg:text-left">
-              <h2 className="text-3xl font-extrabold tracking-tight text-black">Check Your Email</h2>
-              <p className="mt-2 text-gray-600">We sent a 6-digit code to <span className="font-medium">{email}</span></p>
-            </div>
+          <div className="space-y-6">
+            <button
+              type="button"
+              onClick={() => setCurrentStep('email')}
+              className="inline-flex items-center gap-2 text-sm font-semibold transition text-slate-500 hover:text-slate-900"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
             <form onSubmit={handleVerifyCode} className="space-y-6">
               <div>
+                <label htmlFor="verification-code" className="sr-only">
+                  Verification code
+                </label>
                 <input
+                  id="verification-code"
                   type="text"
+                  inputMode="numeric"
                   value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full py-3 px-4 text-center text-2xl font-mono tracking-widest text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  onChange={event =>
+                    setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                  }
+                  className="block w-full rounded-xl border border-slate-200 bg-white px-6 py-3 text-center text-2xl tracking-[0.4em] text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
                   placeholder="000000"
-                  maxLength={6}
                   required
                 />
               </div>
               {error && (
-                <div className="flex items-center p-3 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-                  <AlertCircle className="w-5 h-5 mr-2"/>
+                <div className="flex items-start gap-3 px-4 py-3 text-sm border rounded-2xl border-rose-100 bg-rose-50 text-rose-700" role="alert">
+                  <AlertCircle className="mt-0.5 h-4 w-4" />
                   <span className="font-medium">{error}</span>
                 </div>
               )}
@@ -222,16 +274,16 @@ const ForgotPasswordPage = () => {
                 <button
                   type="submit"
                   disabled={loading || verificationCode.length !== 6}
-                  className="w-full py-3 font-bold tracking-wider text-white uppercase transition-all duration-300 rounded-lg bg-accent hover:bg-red-500 hover:shadow-lg hover:-translate-y-0.5 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:translate-y-0 disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
                 >
-                  {loading ? 'Verifying...' : 'Verify Code'}
+                  {loading ? 'Verifying…' : 'Verify code'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSendCode({ preventDefault: () => {} } as React.FormEvent)}
-                  className="w-full py-2 text-sm text-primary hover:underline"
+                  onClick={sendVerificationCode}
+                  className="w-full text-sm font-semibold transition text-slate-500 hover:text-slate-900"
                 >
-                  Didn&apos;t receive the code? Resend
+                  Didn&apos;t get it? Resend the code
                 </button>
               </div>
             </form>
@@ -240,69 +292,83 @@ const ForgotPasswordPage = () => {
 
       case 'reset':
         return (
-          <div>
-            <div className="mb-8 text-center lg:text-left">
-              <h2 className="text-3xl font-extrabold tracking-tight text-black">Set New Password</h2>
-              <p className="mt-2 text-gray-600">Create a strong password for your account</p>
-            </div>
+          <div className="space-y-6">
+            <button
+              type="button"
+              onClick={() => setCurrentStep('verify')}
+              className="inline-flex items-center gap-2 text-sm font-semibold transition text-slate-500 hover:text-slate-900"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
             <form onSubmit={handleResetPassword} className="space-y-6">
-              <div className="relative">
-                <Lock className="absolute w-5 h-5 text-gray-400 top-3.5 left-4" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={handlePasswordChange}
-                  className="w-full py-3 pl-12 pr-12 text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="New Password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 rounded-r-lg hover:text-primary"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-              <div className="relative">
-                <Lock className="absolute w-5 h-5 text-gray-400 top-3.5 left-4" />
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={handleConfirmPasswordChange}
-                  className="w-full py-3 pl-12 pr-12 text-black bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Confirm New Password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 rounded-r-lg hover:text-primary"
-                >
-                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
+              <label htmlFor="new-password" className="text-sm font-medium text-slate-500">
+                New password
+                <div className="relative mt-2">
+                  <Lock className="absolute w-4 h-4 -translate-y-1/2 pointer-events-none left-4 top-1/2 text-slate-400" />
+                  <input
+                    id="new-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={handlePasswordChange}
+                    className="block w-full px-12 py-3 text-sm font-medium transition bg-white border shadow-sm outline-none rounded-xl border-slate-200 text-slate-900 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                    placeholder="Create a strong passphrase"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 flex items-center px-3 transition rounded-lg right-3 text-slate-500 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </label>
 
-              {/* Password Requirements */}
+              <label htmlFor="confirm-password" className="text-sm font-medium text-slate-500">
+                Confirm password
+                <div className="relative mt-2">
+                  <Lock className="absolute w-4 h-4 -translate-y-1/2 pointer-events-none left-4 top-1/2 text-slate-400" />
+                  <input
+                    id="confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={handleConfirmPasswordChange}
+                    className="block w-full px-12 py-3 text-sm font-medium transition bg-white border shadow-sm outline-none rounded-xl border-slate-200 text-slate-900 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                    placeholder="Repeat it to double check"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 flex items-center px-3 transition rounded-lg right-3 text-slate-500 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </label>
+
               {password && (
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h4 className="mb-3 text-sm font-medium text-gray-700">Password Requirements:</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="px-4 py-4 text-sm border rounded-2xl border-slate-200 bg-slate-50 text-slate-600">
+                  <h4 className="text-sm font-semibold text-slate-700">Your password checklist</h4>
+                  <div className="grid gap-2 mt-3 sm:grid-cols-2">
                     {[
                       { key: 'minLength', label: 'At least 8 characters', valid: passwordValidation.minLength },
-                      { key: 'hasUpperCase', label: 'One uppercase letter', valid: passwordValidation.hasUpperCase },
-                      { key: 'hasLowerCase', label: 'One lowercase letter', valid: passwordValidation.hasLowerCase },
-                      { key: 'hasNumber', label: 'One number', valid: passwordValidation.hasNumber },
-                      { key: 'hasSpecialChar', label: 'One special character', valid: passwordValidation.hasSpecialChar },
-                      { key: 'passwordsMatch', label: 'Passwords match', valid: passwordValidation.passwordsMatch }
+                      { key: 'hasUpperCase', label: 'Includes an uppercase letter', valid: passwordValidation.hasUpperCase },
+                      { key: 'hasLowerCase', label: 'Includes a lowercase letter', valid: passwordValidation.hasLowerCase },
+                      { key: 'hasNumber', label: 'Contains a number', valid: passwordValidation.hasNumber },
+                      { key: 'hasSpecialChar', label: 'Has a special character', valid: passwordValidation.hasSpecialChar },
+                      { key: 'passwordsMatch', label: 'Matches the confirmation', valid: passwordValidation.passwordsMatch },
                     ].map(({ key, label, valid }) => (
-                      <div key={key} className="flex items-center space-x-2">
-                        <div className={`w-4 h-4 rounded-full flex items-center justify-center ${valid ? 'bg-green-500' : 'bg-gray-300'}`}>
-                          {valid && <CheckCircle className="w-3 h-3 text-white" />}
-                        </div>
-                        <span className={`text-sm ${valid ? 'text-green-600' : 'text-gray-500'}`}>
-                          {label}
+                      <div key={key} className="flex items-center gap-2">
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-full ${valid ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'}`}
+                        >
+                          {valid && <CheckCircle className="w-3 h-3" />}
                         </span>
+                        <span className={valid ? 'text-slate-700' : 'text-slate-400'}>{label}</span>
                       </div>
                     ))}
                   </div>
@@ -310,17 +376,18 @@ const ForgotPasswordPage = () => {
               )}
 
               {error && (
-                <div className="flex items-center p-3 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-                  <AlertCircle className="w-5 h-5 mr-2"/>
+                <div className="flex items-start gap-3 px-4 py-3 text-sm border rounded-2xl border-rose-100 bg-rose-50 text-rose-700" role="alert">
+                  <AlertCircle className="mt-0.5 h-4 w-4" />
                   <span className="font-medium">{error}</span>
                 </div>
               )}
+
               <button
                 type="submit"
                 disabled={loading || !isPasswordValid()}
-                className="w-full py-3 font-bold tracking-wider text-white uppercase transition-all duration-300 rounded-lg bg-accent hover:bg-red-500 hover:shadow-lg hover:-translate-y-0.5 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:translate-y-0 disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
               >
-                {loading ? 'Resetting...' : 'Reset Password'}
+                {loading ? 'Resetting…' : 'Reset password'}
               </button>
             </form>
           </div>
@@ -328,19 +395,19 @@ const ForgotPasswordPage = () => {
 
       case 'success':
         return (
-          <div className="text-center">
-            <div className="flex justify-center mb-6">
-              <div className="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full">
-                <CheckCircle className="w-8 h-8 text-green-500" />
-              </div>
+          <div className="space-y-6 text-center">
+            <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-emerald-100">
+              <CheckCircle className="w-8 h-8 text-emerald-500" />
             </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-black mb-4">Password Reset Successful!</h2>
-            <p className="text-gray-600 mb-8">Your password has been successfully reset. You can now sign in with your new password.</p>
+            <p className="text-sm text-slate-500">
+              Your password is updated. Keep the motivational energy rolling and sign in with your new credentials.
+            </p>
             <button
+              type="button"
               onClick={() => router.push('/login')}
-              className="w-full py-3 font-bold tracking-wider text-white uppercase transition-all duration-300 rounded-lg bg-accent hover:bg-red-500 hover:shadow-lg hover:-translate-y-0.5"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
             >
-              Sign In Now
+              Return to sign in
             </button>
           </div>
         );
@@ -351,53 +418,36 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-      <div className="relative hidden lg:block">
-        <Image 
-          src="/images/image.jpg" 
-          alt="Password reset illustration" 
-          fill 
-          style={{ objectFit: 'cover' }} 
-          priority 
-        />
-        <div className="absolute inset-0 flex flex-col justify-end p-12 text-white bg-gradient-to-t from-black/80 via-primary/60 to-transparent">
-          <h1 className="text-5xl font-extrabold tracking-tight uppercase">Secure Your Account</h1>
-          <p className="max-w-md mt-4 text-lg text-white/90">Reset your password securely and get back to achieving your goals.</p>
-        </div>
-      </div>
-      <div className="flex items-center justify-center p-8 sm:p-12 bg-gray-50">
-        <div className="w-full max-w-md">
-          <div className="mb-10 text-center lg:text-left">
-            <Link href="/" className="flex justify-center mb-6 lg:justify-start">
-              <Logo />
+    <AuthLayout
+      formTitle={formTitleMap[currentStep]}
+      formSubtitle={formSubtitle}
+      hero={{
+        eyebrow: 'Ceaser Designs Support',
+        title: 'Reset your access and keep the creativity flowing',
+        description:
+          'Glitches happen. We’ll get you back into the Ceaser universe so you can keep wearing motivation on your sleeve.',
+        highlights: heroHighlights,
+      }}
+      bottomSlot={
+        currentStep === 'success' ? (
+          <span>
+            Need more help?{' '}
+            <Link href="/contact" className="font-semibold text-white underline-offset-4 hover:underline">
+              Reach our team
             </Link>
-            {currentStep !== 'email' && currentStep !== 'success' && (
-              <button
-                onClick={() => {
-                  if (currentStep === 'verify') setCurrentStep('email');
-                  if (currentStep === 'reset') setCurrentStep('verify');
-                }}
-                className="flex items-center mb-4 text-sm text-primary hover:underline"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </button>
-            )}
-          </div>
-          
-          {renderStepContent()}
-          
-          {currentStep !== 'success' && (
-            <p className="mt-8 text-sm text-center text-gray-600">
-              Remember your password?{' '}
-              <Link href="/login" className="font-medium text-primary hover:underline">
-                Sign In
-              </Link>
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
+          </span>
+        ) : (
+          <span>
+            Remember your password?{' '}
+            <Link href="/login" className="font-semibold text-white underline-offset-4 hover:underline">
+              Sign in instead
+            </Link>
+          </span>
+        )
+      }
+    >
+      {renderStepContent()}
+    </AuthLayout>
   );
 };
 

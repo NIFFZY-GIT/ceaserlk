@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
+import { Clapperboard, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -57,9 +57,33 @@ export const ProductCard = ({ product }: { product: Product }) => {
   const price = parseFloat(activeVariant.price);
   const compareAtPrice = activeVariant.compareAtPrice ? parseFloat(activeVariant.compareAtPrice) : null;
   const isOnSale = compareAtPrice && compareAtPrice > price;
-  const mainImage = activeVariant.thumbnailUrl || '/images/image.jpg';
-  const hoverImage = activeVariant.images?.find(img => img.url !== mainImage)?.url || mainImage;
-  const currentImageUrl = isHovered ? hoverImage : mainImage;
+  const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov)$/i.test(url);
+
+  const rawMedia = [
+    ...(activeVariant.thumbnailUrl
+      ? [{ id: `${activeVariant.variantId}-thumbnail`, url: activeVariant.thumbnailUrl }]
+      : []),
+    ...(activeVariant.images ?? []),
+  ];
+
+  const mediaItems = rawMedia.reduce(
+    (acc, item) => {
+      if (!item.url) return acc;
+      const alreadyIncluded = acc.some(media => media.url === item.url);
+      if (alreadyIncluded) return acc;
+      acc.push({
+        id: item.id,
+        url: item.url,
+        type: isVideoUrl(item.url) ? ('video' as const) : ('image' as const),
+      });
+      return acc;
+    },
+    [] as Array<{ id: string; url: string; type: 'image' | 'video' }>,
+  );
+
+  const primaryMedia = mediaItems[0] ?? { id: 'fallback-media', url: '/images/image.jpg', type: 'image' as const };
+  const secondaryMedia = mediaItems.slice(1).find(media => media.url !== primaryMedia.url) ?? null;
+  const currentMedia = isHovered && secondaryMedia ? secondaryMedia : primaryMedia;
   const totalStock = activeVariant.stock.reduce((sum, s) => sum + s.stock, 0);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
@@ -94,7 +118,32 @@ export const ProductCard = ({ product }: { product: Product }) => {
           href={`/product/${product.id}?variant=${activeVariant.variantId}`} 
           className="relative block w-full overflow-hidden rounded-md aspect-square"
         >
-          <Image key={currentImageUrl} src={currentImageUrl} alt={`${product.name} - ${activeVariant.colorName}`} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" style={{ objectFit: 'cover' }} className="transition-all duration-500 group-hover:scale-105" />
+          {currentMedia.type === 'video' ? (
+            <video
+              key={currentMedia.url}
+              src={currentMedia.url}
+              muted
+              loop
+              playsInline
+              autoPlay
+              className="h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <Image
+              key={currentMedia.url}
+              src={currentMedia.url}
+              alt={`${product.name} - ${activeVariant.colorName}`}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              style={{ objectFit: 'cover' }}
+              className="transition-all duration-500 group-hover:scale-105"
+            />
+          )}
+          {currentMedia.type === 'video' && (
+            <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-white">
+              <Clapperboard className="h-3 w-3" /> Video
+            </span>
+          )}
           {isOnSale && (<div className="absolute top-0 left-0"><div className="absolute px-12 py-1.5 text-sm font-bold text-white uppercase transform -rotate-45 bg-black top-2 -left-10">SALE</div></div>)}
         </Link>
         <div className="flex flex-col flex-grow mt-4">

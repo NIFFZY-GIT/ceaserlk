@@ -74,9 +74,9 @@ export async function POST(request: Request) {
     if (userResult.rows.length === 0) {
       // Use a generic error message for security (prevents email enumeration)
       return NextResponse.json({ 
-        error: 'Invalid credentials.',
-        code: 'INVALID_CREDENTIALS'
-      }, { status: 401 });
+        error: 'No user found with this email address.',
+        code: 'USER_NOT_FOUND'
+      }, { status: 404 });
     }
 
     const user = userResult.rows[0];
@@ -86,8 +86,8 @@ export async function POST(request: Request) {
 
     if (!isPasswordValid) {
       return NextResponse.json({ 
-        error: 'Invalid credentials.',
-        code: 'INVALID_CREDENTIALS'
+        error: 'Incorrect password. Please try again.',
+        code: 'INVALID_PASSWORD'
       }, { status: 401 });
     }
 

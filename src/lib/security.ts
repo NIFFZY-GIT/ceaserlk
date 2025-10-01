@@ -260,14 +260,15 @@ export function validateEnvironment(): void {
 export function secureLog(level: 'info' | 'warn' | 'error', message: string, data?: Record<string, unknown>) {
   const sensitiveFields = ['password', 'token', 'secret', 'key', 'email'];
   
-  let sanitizedData = data;
+  let sanitizedData: Record<string, unknown> | undefined;
   if (data && typeof data === 'object') {
-    sanitizedData = { ...data };
+    const clone: Record<string, unknown> = { ...data };
     sensitiveFields.forEach(field => {
-      if (field in sanitizedData) {
-        sanitizedData[field] = '[REDACTED]';
+      if (field in clone) {
+        clone[field] = '[REDACTED]';
       }
     });
+    sanitizedData = clone;
   }
 
   const logEntry = {

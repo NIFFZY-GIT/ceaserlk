@@ -6,9 +6,10 @@ import path from 'path';
 // --- (Your verifyAuth function would go here if you add security) ---
 
 type VariantPayload = {
-  id: number; colorName: string; colorHex: string; price: string;
-  compareAtPrice: string; sku: string; images: string[];
-  sizes: { size: string; stock: number }[]; thumbnailImageName: string | null;
+    id: number; colorName: string; colorHex: string; price: string;
+    compareAtPrice: string; sku: string;
+    sizes: { size: string; stock: number }[];
+    thumbnailImageName: string | null;
 };
 
 // GET function for the product list page (remains the same)
@@ -79,9 +80,9 @@ export async function POST(request: Request) {
             tradingImageUrl = `/uploads/trading-cards/${filename}`; // Public URL to save in DB
         }
 
-        // --- NEW: Handle variant-specific product images ---
-        // Product images are now stored per variant with keys like: productImage_${variant.id}_${index}
-        // We'll collect them later when processing each variant
+    // --- Handle variant-specific product media ---
+    // Variant media (images/videos) are posted with keys like: variantMedia_${variant.id}
+    // We'll collect them later when processing each variant
 
         const variants: VariantPayload[] = JSON.parse(variantsString);
         
@@ -94,14 +95,11 @@ export async function POST(request: Request) {
 
         await client.query('BEGIN');
 
-        // --- UPDATE INSERT QUERY to include audio_url and trading_card_image ---
         const productResult = await client.query(
             'INSERT INTO products (name, description, shipping_cost, audio_url, trading_card_image, is_published) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
             [productName, description, parseFloat(shippingCost) || 0, audioUrl, tradingImageUrl, true]
         );
         const productId = productResult.rows[0].id;
-
-        // Process variants with variant-specific images
 
         for (const variant of variants) {
             const compareAtPriceValue = variant.compareAtPrice ? parseFloat(variant.compareAtPrice) : null;
@@ -121,19 +119,25 @@ export async function POST(request: Request) {
             );
             const variantId = variantResult.rows[0].id;
 
-            // --- Handle variant-specific variant images with keys: variantImage_${variant.id} ---
-            console.log(`\n🖼️ Processing variant images for variant ${variant.id} (${variant.colorName})`);
-            const variantImageFiles = formData.getAll(`variantImage_${variant.id}`) as File[];
-            console.log(`📁 Found ${variantImageFiles.length} variant image files`);
+            console.log(`\n🖼️ Processing variant media for variant ${variant.id} (${variant.colorName})`);
+            const variantMediaFiles = formData.getAll(`variantMedia_${variant.id}`) as File[];
+            console.log(`📁 Found ${variantMediaFiles.length} variant media files`);
+            let thumbnailUrl: string | null = null;
             
-            for (let index = 0; index < variantImageFiles.length; index++) {
-                const imageFile = variantImageFiles[index];
-                console.log(`🔄 Processing image ${index + 1}: ${imageFile.name} (${imageFile.size} bytes)`);
+            for (let index = 0; index < variantMediaFiles.length; index++) {
+                const mediaFile = variantMediaFiles[index];
+                console.log(`🔄 Processing file ${index + 1}: ${mediaFile.name} (${mediaFile.size} bytes)`);
                 
-                if (imageFile) {
+                if (mediaFile) {
+                    const mimeType = mediaFile.type;
+                    if (mimeType && !mimeType.startsWith('image/') && !mimeType.startsWith('video/')) {
+                        console.warn(`⚠️ Skipping unsupported media type: ${mimeType}`);
+                        continue;
+                    }
                     try {
-                        const buffer = Buffer.from(await imageFile.arrayBuffer());
-                        const filename = `${Date.now()}-variant-${index}-${imageFile.name.replace(/\s+/g, '-')}`;
+                        const buffer = Buffer.from(await mediaFile.arrayBuffer());
+                        const sanitizedName = mediaFile.name.replace(/\s+/g, '-');
+                        const filename = `${Date.now()}-variant-${index}-${sanitizedName}`;
                         const uploadDir = path.join(process.cwd(), 'public/uploads/products');
                         const fullPath = path.join(uploadDir, filename);
                         
@@ -142,20 +146,31 @@ export async function POST(request: Request) {
                         await fs.writeFile(fullPath, buffer);
                         console.log(`✅ File saved successfully`);
                         
-                        const imageUrl = `/uploads/products/${filename}`;
-                        console.log(`📝 Inserting into database: ${imageUrl}`);
+                        const mediaUrl = `/uploads/products/${filename}`;
+                        console.log(`📝 Inserting into database: ${mediaUrl}`);
                         
                         await client.query(
-                            'INSERT INTO variant_images (variant_id, image_url, alt_text) VALUES ($1, $2, $3)',
-                            [variantId, imageUrl, `${productName} - ${variant.colorName} - Variant Image ${index + 1}`]
+                            'INSERT INTO variant_images (variant_id, image_url, alt_text, display_order) VALUES ($1, $2, $3, $4)',
+                            [variantId, mediaUrl, `${productName} - ${variant.colorName} - Variant Media ${index + 1}`, index]
                         );
+
+                        if (variant.thumbnailImageName === mediaFile.name || (!variant.thumbnailImageName && index === 0)) {
+                            thumbnailUrl = mediaUrl;
+                        }
                         
                         console.log(`✅ Database record created`);
                     } catch (error) {
-                        console.error(`❌ Error processing image ${index + 1}:`, error);
+                        console.error(`❌ Error processing media file ${index + 1}:`, error);
                         throw error;
                     }
                 }
+            }
+
+            if (thumbnailUrl) {
+                await client.query(
+                    'UPDATE product_variants SET thumbnail_url = $1 WHERE id = $2',
+                    [thumbnailUrl, variantId]
+                );
             }
 
             // Handle stock keeping units (sizes)
