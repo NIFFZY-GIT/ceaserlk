@@ -297,9 +297,22 @@ const AddProductPage = () => {
       console.log('API Response Status:', response.status);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const errorData = await response.json().catch(() => {
+          if (response.status === 413) {
+            return {
+              error: 'UPLOAD_TOO_LARGE',
+              message: `Server rejected the upload (HTTP 413). Check VPS reverse proxy limits and retry with files under ${MAX_TOTAL_UPLOAD_MB}MB total.`
+            };
+          }
+          return { error: 'Unknown error' };
+        });
         console.error('API Error:', errorData);
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to create product`);
+        const errorMessage = errorData.message
+          || errorData.error
+          || (response.status === 413
+                ? `Upload too large. Ensure each file is under ${MAX_FILE_UPLOAD_MB}MB and total upload under ${MAX_TOTAL_UPLOAD_MB}MB.`
+                : `HTTP ${response.status}: Failed to create product`);
+        throw new Error(errorMessage);
       }
       
       // On success, redirect
