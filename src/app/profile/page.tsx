@@ -1,57 +1,46 @@
 import ProfileClient from './components/ProfileClient';
-import { resolveServerBaseUrl, serializeRequestCookies } from '@/lib/server-urls';
+import { cookies } from 'next/headers';
+import { verifySessionToken } from '@/lib/auth';
+import { getProfileWithOrders } from '@/lib/profile';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-async function getProfileData() {
+export default async function ProfilePage() {
   try {
-    const baseUrl = await resolveServerBaseUrl();
-    const serializedCookies = await serializeRequestCookies();
+  const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session-token')?.value;
+    const authUser = await verifySessionToken(sessionToken);
 
-    const response = await fetch(`${baseUrl}/api/profile`, {
-      cache: 'no-store',
-      headers: {
-        ...(serializedCookies ? { cookie: serializedCookies } : {}),
-        'Accept': 'application/json',
-      },
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (!authUser) {
+      return <div className="min-h-screen p-8 text-center text-white bg-black">Please log in to view your profile.</div>;
     }
 
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to fetch profile data:', error);
-    return null;
-  }
-}
+    const profileData = await getProfileWithOrders(authUser.userId.toString());
 
-export default async function ProfilePage() {
-  const profileData = await getProfileData();
+    if (!profileData) {
+      return <div className="min-h-screen p-8 text-center text-white bg-black">Profile not found.</div>;
+    }
 
-  if (!profileData) {
-    // Render a login prompt or redirect
-    return <div className="min-h-screen p-8 text-center text-white bg-black">Please log in to view your profile.</div>;
-  }
-
-  const { id, firstName, lastName, email, phoneNumber, orders } = profileData;
+    const { id, firstName, lastName, email, phoneNumber, orders } = profileData;
   
-  const user = {
-    id,
-    firstName,
-    lastName,
-    email,
-    phoneNumber,
-  };
+    const user = {
+      id,
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+    };
 
-  return (
-    <div className="min-h-screen bg-black">
-       <div className="container p-4 mx-auto sm:p-6 lg:p-8">
-        <ProfileClient user={user} orders={orders || []} />
+    return (
+      <div className="min-h-screen bg-black">
+         <div className="container p-4 mx-auto sm:p-6 lg:p-8">
+          <ProfileClient user={user} orders={orders || []} />
+        </div>
       </div>
-    </div>
-  );
+    );
+  } catch (error) {
+    console.error('Failed to render profile page:', error);
+    return <div className="min-h-screen p-8 text-center text-white bg-black">Unable to load profile at this time.</div>;
+  }
 }

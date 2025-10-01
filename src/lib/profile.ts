@@ -1,4 +1,5 @@
 import { db } from './db';
+import type { Order } from './types';
 
 const PROFILE_QUERY = `
   SELECT
@@ -82,7 +83,7 @@ export type ProfileData = {
   lastName: string;
   email: string;
   phoneNumber: string | null;
-  orders: unknown[];
+  orders: Order[];
 };
 
 export async function getProfileWithOrders(userId: string): Promise<ProfileData | null> {
@@ -93,7 +94,7 @@ export async function getProfileWithOrders(userId: string): Promise<ProfileData 
   }
 
   const profileData = rows[0];
-  profileData.orders = profileData.orders || [];
+  profileData.orders = Array.isArray(profileData.orders) ? profileData.orders : [];
 
   return profileData as ProfileData;
 }

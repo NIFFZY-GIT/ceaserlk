@@ -35,44 +35,8 @@ function getJWTSecret(): Uint8Array {
  * @returns Promise<UserJwtPayload | null> - User data if valid, null if invalid/missing
  */
 export async function verifyAuth(request: NextRequest): Promise<UserJwtPayload | null> {
-  try {
-    // Get session token from cookies
-    const sessionToken = request.cookies.get('session-token')?.value;
-    
-    if (!sessionToken) {
-      return null;
-    }
-
-    // Verify the token
-    const secret = getJWTSecret();
-    const { payload } = await jose.jwtVerify<UserJwtPayload>(sessionToken, secret);
-    
-    // Additional validation checks
-    if (!payload.userId || !payload.email || !payload.role) {
-      console.warn('JWT payload missing required fields');
-      return null;
-    }
-
-    // Check if token is expired (extra safety check)
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
-      return null;
-    }
-
-    return payload;
-  } catch (error) {
-    // Log specific error types for debugging (in development only)
-    if (process.env.NODE_ENV === 'development') {
-      if (error instanceof jose.errors.JWTExpired) {
-        console.warn('JWT token expired');
-      } else if (error instanceof jose.errors.JWTInvalid) {
-        console.warn('JWT token invalid');
-      } else {
-        console.error('JWT Verification Error:', error);
-      }
-    }
-    return null;
-  }
+  const sessionToken = request.cookies.get('session-token')?.value;
+  return verifySessionToken(sessionToken);
 }
 
 /**
@@ -165,4 +129,43 @@ export function getSecureCookieOptions(maxAge?: number) {
     path: '/',
     maxAge: maxAge || 30 * 24 * 60 * 60, // 30 days default
   };
+}
+
+/**
+ * Verifies a raw session token string.
+ */
+export async function verifySessionToken(token?: string): Promise<UserJwtPayload | null> {
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const secret = getJWTSecret();
+    const { payload } = await jose.jwtVerify<UserJwtPayload>(token, secret);
+
+    if (!payload.userId || !payload.email || !payload.role) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('JWT payload missing required fields');
+      }
+      return null;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) {
+      return null;
+    }
+
+    return payload;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      if (error instanceof jose.errors.JWTExpired) {
+        console.warn('JWT token expired');
+      } else if (error instanceof jose.errors.JWTInvalid) {
+        console.warn('JWT token invalid');
+      } else {
+        console.error('JWT Verification Error:', error);
+      }
+    }
+    return null;
+  }
 }

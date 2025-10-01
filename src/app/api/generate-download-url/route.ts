@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const token = Buffer.from(`${userEmail}-${productId}-${jwtSecret}`).toString('base64');
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const downloadUrl = `${baseUrl}/api/download/trading-card?token=${encodeURIComponent(token)}&product_id=${encodeURIComponent(productId)}&user_email=${encodeURIComponent(userEmail)}`;
+  const token = Buffer.from(`${userEmail}-${productId}-${jwtSecret}`).toString('base64');
+  const origin = new URL(request.url).origin;
+  const downloadUrl = `${origin}/api/download/trading-card?token=${encodeURIComponent(token)}&product_id=${encodeURIComponent(productId)}&user_email=${encodeURIComponent(userEmail)}`;
 
     return NextResponse.json({
       downloadUrl,
