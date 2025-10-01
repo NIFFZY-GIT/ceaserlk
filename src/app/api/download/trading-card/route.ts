@@ -84,7 +84,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Read and serve the file
-  const relativeImagePath = trading_card_image.replace(/^\/+/g, '');
+  let normalizedPath = trading_card_image;
+
+  try {
+    const url = new URL(trading_card_image);
+    normalizedPath = url.pathname;
+  } catch {
+    // Ignore parsing errors for relative paths
+  }
+
+  const relativeImagePath = normalizedPath
+      .replace(/^\/+/, '')
+      .replace(/^public\//, '');
   const filePath = path.join(process.cwd(), 'public', relativeImagePath);
     console.log('Attempting to read file:', filePath);
     

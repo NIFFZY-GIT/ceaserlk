@@ -42,7 +42,7 @@ const Footer = () => {
           {/* Column 1: Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="inline-block mb-4">
-              <Image src="/assets/log1.png" alt="Ceaser Brand Logo" width={150} height={63} unoptimized />
+              <Image src="/images/logo1.png" alt="Ceaser Brand Logo" width={150} height={63} priority />
             </Link>
             <p className="text-sm leading-relaxed text-gray-400">
               Apparel engineered for the relentless pursuit of greatness.
