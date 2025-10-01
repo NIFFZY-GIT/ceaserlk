@@ -59,14 +59,14 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   const FilterContent = () => (
     <>
       {/* Category Filter (static for now) */}
-      <div className="mb-8 space-y-4">
+      {/* <div className="mb-8 space-y-4">
         <h3 className="font-semibold text-gray-800">Category</h3>
         <ul className="space-y-2 text-gray-600">
           <li><a href="#" className="hover:text-primary">All Apparel</a></li>
           <li><a href="#" className="hover:text-primary">New Arrivals</a></li>
           <li><a href="#" className="hover:text-primary">On Sale</a></li>
         </ul>
-      </div>
+      </div> */}
 
       {/* Price Filter */}
       <div className="mb-8">
