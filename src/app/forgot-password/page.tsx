@@ -225,6 +225,8 @@ const ForgotPasswordPage = () => {
                 <span className="font-medium">{error}</span>
               </div>
             )}
+            {/* Add extra space between input and button */}
+            <div className="h-2" />
             <button
               type="submit"
               disabled={loading}

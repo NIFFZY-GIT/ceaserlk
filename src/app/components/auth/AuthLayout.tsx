@@ -26,38 +26,15 @@ interface AuthLayoutProps {
 }
 
 const LogoMark = () => (
-  <span className="inline-flex items-center gap-2 text-base font-semibold tracking-tight text-slate-800">
-    <svg
-      aria-hidden="true"
-      className="h-9 w-9 text-slate-900"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M12 2L2 7L12 12L22 7L12 2Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M2 17L12 22L22 17"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M2 12L12 17L22 12"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-    <span>Ceaser</span>
-  </span>
+  <Image
+    src="/assets/logo3.png"
+    alt="Ceaser Designs"
+    width={150}
+    height={63}
+    priority
+    className="w-auto h-auto max-h-12"
+    style={{ height: 'auto', width: 'auto' }}
+  />
 );
 
 const AuthLayout = ({
@@ -79,8 +56,8 @@ const AuthLayout = ({
         </div>
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col justify-center px-6 py-12 sm:px-10 lg:px-16">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 lg:flex-row lg:items-center lg:gap-16">
+      <div className="relative z-10 flex flex-col justify-center min-h-screen px-6 py-12 sm:px-10 lg:px-16">
+        <div className="flex flex-col w-full max-w-6xl gap-12 mx-auto lg:flex-row lg:items-center lg:gap-16">
           <div className="relative order-2 w-full text-white lg:order-1 lg:max-w-xl">
             <div className="absolute inset-0 -z-10 hidden overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/5 shadow-[0_40px_140px_-60px_rgba(15,23,42,0.8)] lg:block">
               <Image
@@ -94,7 +71,7 @@ const AuthLayout = ({
             </div>
             <div className="space-y-8 rounded-[2.5rem] border border-white/10 bg-white/5 p-8 backdrop-blur-md lg:border-none lg:bg-transparent lg:p-0 lg:backdrop-blur-0">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.35em] text-white/70">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
                 {hero.eyebrow}
               </span>
               <div>
@@ -108,10 +85,10 @@ const AuthLayout = ({
                   {hero.highlights.map((item, index) => (
                     <div
                       key={index}
-                      className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-lg"
+                      className="p-5 border rounded-2xl border-white/10 bg-white/10 backdrop-blur-lg"
                     >
                       <div className="flex items-center gap-3 text-sm font-semibold text-white">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 text-white">
+                        <span className="flex items-center justify-center text-white h-9 w-9 rounded-xl bg-white/15">
                           {item.icon}
                         </span>
                         {item.title}
@@ -144,7 +121,7 @@ const AuthLayout = ({
               </div>
             </div>
             {bottomSlot && (
-              <div className="mt-8 text-center text-sm text-white/80">
+              <div className="mt-8 text-sm text-center text-white/80">
                 {bottomSlot}
               </div>
             )}
