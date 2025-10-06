@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback, use } from 'react';
 import { notFound, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, X, Volume2, VolumeX, Video } from 'lucide-react';
+import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, X, Volume2, VolumeX, Video, AlertTriangle, Sparkles, BellRing } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 import { gsap } from 'gsap';
 
@@ -71,6 +72,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const stockDropIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [showStockDropAlert, setShowStockDropAlert] = useState(false);
   const [recentPurchases, setRecentPurchases] = useState<string[]>([]);
+  const [hideUrgencyBanner, setHideUrgencyBanner] = useState(false);
+  const [audioInteractionRequired, setAudioInteractionRequired] = useState(false);
   const lastAlertAtRef = useRef<number>(0);
   const lastDropAtRef = useRef<number>(0);
 
@@ -154,21 +157,108 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     } catch {}
   }, [selectedVariant, selectedVariantId]);
 
-  // Auto-play audio when product loads
+  // Auto-play audio when product loads with graceful fallback for strict autoplay policies
   useEffect(() => {
-    if (product?.audio_url && audioRef.current && !isAudioPlaying) {
-      const playAudio = async () => {
-        try {
-          audioRef.current!.volume = isAudioMuted ? 0 : 0.5; // Set initial volume
-          await audioRef.current!.play();
-          setIsAudioPlaying(true);
-        } catch (error) {
-          console.log('Audio autoplay prevented by browser:', error);
+    const audioElement = audioRef.current;
+    if (!product?.audio_url || !audioElement) return;
+
+  const interactionEvents: Array<keyof WindowEventMap> = ['pointerdown', 'touchstart', 'keydown'];
+    let fallbackArmed = false;
+    let fadeFrame: number | null = null;
+
+    const cancelFade = () => {
+      if (fadeFrame !== null) {
+        cancelAnimationFrame(fadeFrame);
+        fadeFrame = null;
+      }
+    };
+
+    const fadeInVolume = (element: HTMLAudioElement, targetVolume: number, durationMs = 1400) => {
+      cancelFade();
+      const startTime = performance.now();
+
+      const step = (now: number) => {
+        const progress = Math.min(1, (now - startTime) / durationMs);
+        element.volume = targetVolume * progress;
+        if (progress < 1) {
+          fadeFrame = requestAnimationFrame(step);
+        } else {
+          fadeFrame = null;
         }
       };
-      playAudio();
+
+      fadeFrame = requestAnimationFrame(step);
+    };
+
+    const syncAudioSettings = () => {
+      if (!audioRef.current) return;
+      audioRef.current.muted = isAudioMuted;
+      audioRef.current.volume = isAudioMuted ? 0 : 0.5;
+    };
+
+    const detachFallback = () => {
+      if (!fallbackArmed) return;
+      fallbackArmed = false;
+      interactionEvents.forEach(event => {
+        window.removeEventListener(event, handleInteraction, true);
+      });
+      setAudioInteractionRequired(false);
+    };
+
+    const armFallback = () => {
+      if (fallbackArmed) return;
+      fallbackArmed = true;
+      interactionEvents.forEach(event => {
+        window.addEventListener(event, handleInteraction, { once: true, capture: true });
+      });
+      setAudioInteractionRequired(true);
+    };
+
+    const attemptPlayback = async (fromUserGesture = false) => {
+      const element = audioRef.current;
+      if (!element) return;
+
+      const allowAudibleStart = !isAudioMuted;
+
+      if (!fromUserGesture && !element.paused) {
+        return;
+      }
+
+      // Prepare for autoplay by starting muted, then fade up if allowed
+      element.muted = true;
+      element.volume = 0;
+
+      try {
+        await element.play();
+        setIsAudioPlaying(true);
+        setAudioInteractionRequired(false);
+
+        if (allowAudibleStart) {
+          element.muted = false;
+          fadeInVolume(element, 0.5);
+        }
+
+        detachFallback();
+      } catch (error) {
+        if (!fromUserGesture) {
+          armFallback();
+          console.debug('Audio autoplay deferred until user interaction:', error);
+        }
+      }
+    };
+
+    function handleInteraction() {
+      attemptPlayback(true);
     }
-  }, [product?.audio_url, isAudioMuted, isAudioPlaying]);
+
+    syncAudioSettings();
+    attemptPlayback();
+
+    return () => {
+      cancelFade();
+      detachFallback();
+    };
+  }, [product?.audio_url, isAudioMuted]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -282,6 +372,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     if (audioRef.current) {
       const newMutedState = !isAudioMuted;
       setIsAudioMuted(newMutedState);
+      audioRef.current.muted = newMutedState;
       audioRef.current.volume = newMutedState ? 0 : 0.5;
     }
   };
@@ -297,6 +388,21 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const handleAudioEnded = () => {
     setIsAudioPlaying(false);
+  };
+
+  const handleManualAudioStart = async () => {
+    const element = audioRef.current;
+    if (!element) return;
+
+    try {
+      element.muted = isAudioMuted;
+      element.volume = isAudioMuted ? 0 : element.volume > 0 ? element.volume : 0.5;
+      await element.play();
+      setIsAudioPlaying(true);
+      setAudioInteractionRequired(false);
+    } catch (error) {
+      console.debug('Manual audio start failed:', error);
+    }
   };
 
   // Fake stock drop system to create urgency (more realistic, less sudden)
@@ -424,19 +530,112 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const currentStockForSelectedSize = Math.max(0, originalStock - fakeStockReduction);
   const isSoldOut = selectedVariant.stock.reduce((sum, s) => sum + s.stock, 0) === 0;
   const isSelectedMediaVideo = selectedMedia ? isVideoUrl(selectedMedia.url) : false;
+  const hasRecentPurchases = recentPurchases.length > 0;
+  const recentPurchasesToDisplay = recentPurchases.slice(0, 2);
+  const hasUrgencyContent = (showStockDropAlert && currentStockForSelectedSize > 0) || hasRecentPurchases;
+  const shouldShowMobileUrgency = !hideUrgencyBanner && hasUrgencyContent;
+  const showUrgencyLauncher = hideUrgencyBanner && hasUrgencyContent;
+  const totalBaselineStock = originalStock > 0 ? originalStock : currentStockForSelectedSize;
+  const stockPercentage = totalBaselineStock > 0 ? Math.round((currentStockForSelectedSize / totalBaselineStock) * 100) : 0;
+  const stockProgressWidth = Math.min(100, Math.max(0, stockPercentage));
+  const stockSeverityClass = currentStockForSelectedSize <= 2 ? 'bg-red-500' : currentStockForSelectedSize <= 5 ? 'bg-orange-400' : 'bg-amber-300';
+  const UrgencyIcon = (showStockDropAlert && currentStockForSelectedSize > 0) ? AlertTriangle : BellRing;
+  const handleDismissUrgency = () => {
+    setHideUrgencyBanner(true);
+  };
 
   return (
     <div ref={containerRef} className="min-h-screen bg-white">
+      {shouldShowMobileUrgency && (
+        <div className="sticky inset-x-0 top-0 z-30 px-4 pt-4 md:hidden">
+          <div className="relative overflow-hidden border shadow-xl rounded-3xl border-white/60 bg-white/95 shadow-black/10 backdrop-blur">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-red-500 via-orange-400 to-amber-300" />
+            <div className="flex items-start gap-3 px-4 pt-4">
+              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${showStockDropAlert && currentStockForSelectedSize > 0 ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'}`}>
+                <UrgencyIcon className="w-5 h-5" aria-hidden="true" />
+              </div>
+              <div className="flex-1 pb-4 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Live stock alerts</p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {showStockDropAlert && currentStockForSelectedSize > 0
+                        ? `Only ${Math.max(1, currentStockForSelectedSize)} pieces left in your selected size`
+                        : 'Shoppers are buying right now'}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {showStockDropAlert && currentStockForSelectedSize > 0
+                        ? 'Sizes move fast—checkout now to reserve yours.'
+                        : 'Fresh orders are rolling in from the community.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDismissUrgency}
+                    className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="Dismiss live alerts"
+                  >
+                    <X className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                </div>
+
+                {showStockDropAlert && currentStockForSelectedSize > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs font-semibold tracking-wide uppercase text-slate-400">
+                      <span>Size availability</span>
+                      <span className="text-slate-500">{Math.max(1, currentStockForSelectedSize)} left</span>
+                    </div>
+                    <div className="relative h-2 rounded-full bg-slate-200">
+                      <span
+                        className={`absolute inset-y-0 left-0 rounded-full ${stockSeverityClass}`}
+                        style={{ width: `${stockProgressWidth}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {hasRecentPurchases && (
+                  <div className="px-3 py-3 space-y-2 text-white shadow-inner rounded-2xl bg-slate-950/95 shadow-black/30">
+                    <p className="text-xs font-semibold tracking-wide uppercase text-slate-300">Live shopper feed</p>
+                    <ul className="space-y-1.5 text-sm">
+                      {recentPurchasesToDisplay.map((purchase, index) => (
+                        <li key={`${purchase}-${index}`} className="flex items-start gap-2">
+                          <Sparkles className="mt-0.5 h-4 w-4 text-amber-300" aria-hidden="true" />
+                          <span className="leading-snug">{purchase}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showUrgencyLauncher && (
+        <button
+          type="button"
+          onClick={() => setHideUrgencyBanner(false)}
+          className="fixed z-30 flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition -translate-x-1/2 rounded-full shadow-xl bottom-6 left-1/2 bg-slate-950 shadow-black/30 hover:-translate-y-1 md:hidden"
+        >
+          <BellRing className="w-4 h-4" aria-hidden="true" />
+          Live shopper alerts
+        </button>
+      )}
       {/* Breadcrumb Navigation */}
       <div className="border-b border-gray-200">
         <div className="container px-4 py-4 mx-auto sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <button className="transition-colors hover:text-gray-900">Home</button>
-            <ChevronDown className="w-4 h-4 rotate-[-90deg]" />
-            <button className="transition-colors hover:text-gray-900">Shop</button>
-            <ChevronDown className="w-4 h-4 rotate-[-90deg]" />
-            <span className="font-medium text-gray-900">{product.name}</span>
-          </div>
+          <nav className="flex items-center gap-2 text-sm text-gray-500" aria-label="Breadcrumb">
+            <Link href="/" className="transition-colors hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white">
+              Home
+            </Link>
+            <ChevronDown className="w-4 h-4 rotate-[-90deg]" aria-hidden="true" />
+            <Link href="/shop" className="transition-colors hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white">
+              Shop
+            </Link>
+            <ChevronDown className="w-4 h-4 rotate-[-90deg]" aria-hidden="true" />
+            <span className="font-medium text-gray-900" aria-current="page">{product.name}</span>
+          </nav>
         </div>
       </div>
 
@@ -468,9 +667,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         alt={`${product.name} - ${selectedVariant.colorName}`}
                         fill
                         priority
+                        fetchPriority="high"
                         sizes="(max-width: 1024px) 100vw, 50vw"
                         className={`object-cover transition-all duration-500 group-hover:scale-105 ${loadedMediaId === selectedMedia.id ? 'opacity-100' : 'opacity-0'} transition-opacity`}
-                        onLoadingComplete={() => setLoadedMediaId(selectedMedia.id)}
+                        onLoad={() => setLoadedMediaId(selectedMedia.id)}
                         placeholder="empty"
                       />
                     )}
@@ -571,7 +771,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
             {/* Audio Player Controls */}
             {product.audio_url && (
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-gray-50">
+              <div className="flex flex-col gap-3 p-4 rounded-lg bg-gray-50 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   {isAudioPlaying ? (
                     <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
@@ -589,12 +789,24 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 >
                   {isAudioMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                 </button>
+                {audioInteractionRequired && (
+                  <button
+                    type="button"
+                    onClick={handleManualAudioStart}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-slate-900/20 transition hover:-translate-y-0.5 hover:bg-slate-800"
+                  >
+                    <BellRing className="w-4 h-4" aria-hidden="true" />
+                    Enable sound
+                  </button>
+                )}
                 <audio 
                   ref={audioRef}
                   src={product.audio_url}
                   onEnded={handleAudioEnded}
                   onPlay={() => setIsAudioPlaying(true)}
                   onPause={() => setIsAudioPlaying(false)}
+                  autoPlay
+                  muted={isAudioMuted}
                   loop
                   preload="auto"
                 />

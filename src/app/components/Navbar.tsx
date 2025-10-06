@@ -72,6 +72,8 @@ const Navbar = () => {
             width={150}
             height={63}
             priority
+            className="h-auto w-auto max-h-12"
+            style={{ height: 'auto', width: 'auto' }}
           />
         </Link>
         {/* DESKTOP NAVIGATION (Simplified) */}
