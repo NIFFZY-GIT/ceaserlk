@@ -99,7 +99,7 @@ const Navbar = () => {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                className="hidden transition-colors hover:text-primary md:block"
+                className="hidden p-2 transition-colors rounded-full md:block hover:bg-gray-800"
               >
                 <CircleUser size={26} />
               </button>
@@ -136,15 +136,17 @@ const Navbar = () => {
               )}
             </div>
           ) : (
-            <Link href="/login" className="hidden transition-colors hover:text-primary md:block">
+            <Link href="/login" className="hidden p-2 transition-colors rounded-full md:block hover:bg-gray-800">
               <CircleUser size={26} />
             </Link>
           )}
           
-          <button onClick={openCart} className="relative transition-colors hover:text-primary">
-            <ShoppingCart size={26} />
-            {cartCount > 0 && (<span className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white rounded-full -top-2 -right-2 bg-accent">{cartCount}</span>)}
-          </button>
+          {user && (
+            <button onClick={openCart} className="relative transition-colors hover:text-primary">
+              <ShoppingCart size={26} />
+              {cartCount > 0 && (<span className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white rounded-full -top-2 -right-2 bg-accent">{cartCount}</span>)}
+            </button>
+          )}
           <button className="p-2 md:hidden" onClick={toggleMobileMenu} aria-label="Toggle menu">
             {isMobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
