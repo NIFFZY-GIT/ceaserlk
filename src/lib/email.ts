@@ -281,3 +281,54 @@ export function generateAdminOrderNotificationEmail(notificationData: {
     </html>
   `;
 }
+
+// Generate order status update email HTML
+export function generateOrderStatusUpdateEmail(updateData: {
+  customerName: string;
+  orderId: string;
+  newStatus: string;
+  profileUrl: string;
+}): string {
+  const statusDescriptions: Record<string, string> = {
+    PROCESSING: 'Your order is now being processed. We are getting your items ready for shipment.',
+    PACKED: 'Your order has been packed and is awaiting pickup by our courier.',
+    SHIPPED: 'Good news! Your order has been shipped and is on its way to you.',
+    DELIVERED: 'Your order has been delivered. We hope you enjoy your new items!',
+    CANCELLED: 'Your order has been cancelled as requested.',
+    REFUNDED: 'Your order has been refunded. The funds should appear in your account shortly.'
+  };
+
+  const description = statusDescriptions[updateData.newStatus] || `Your order status has been updated to: ${updateData.newStatus}.`;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Order Status Update - Ceaser LK</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #000; margin-bottom: 10px;">Ceaser LK</h1>
+        <h2 style="color: #666; font-weight: normal;">Order Status Update</h2>
+      </div>
+      
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+        <h3 style="color: #000; margin-top: 0;">Hello, ${updateData.customerName}!</h3>
+        <p>The status of your order <strong>#${updateData.orderId}</strong> has been updated to: <strong>${updateData.newStatus}</strong>.</p>
+        <p>${description}</p>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 30px;">
+        <p>You can view the full details of your order by visiting your profile:</p>
+        <a href="${updateData.profileUrl}" style="display: inline-block; background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">View My Orders</a>
+      </div>
+
+      <div style="text-align: center; margin-top: 30px; font-size: 0.9em; color: #666;">
+        <p>Thank you for shopping with Ceaser LK. If you have any questions, please reply to this email.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}

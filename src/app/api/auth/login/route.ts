@@ -13,8 +13,8 @@ const loginSchema = z.object({
 
 // Rate limiting for login attempts (simple in-memory store)
 const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
-const MAX_LOGIN_ATTEMPTS = 10;
-const LOCKOUT_DURATION = 10 * 60 * 1000; // 10 minutes
+const MAX_LOGIN_ATTEMPTS = 25;
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes
 
 function checkRateLimit(email: string): { allowed: boolean; remaining?: number } {
   const now = Date.now();

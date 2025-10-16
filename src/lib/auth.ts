@@ -12,7 +12,8 @@ export interface UserJwtPayload {
 }
 
 // JWT Configuration
-const JWT_EXPIRY = '30d'; // 30 days
+const ADMIN_JWT_EXPIRY = '8h'; // 8 hours for admins
+const USER_JWT_EXPIRY = '30d'; // 30 days for regular users
 const REFRESH_THRESHOLD = 7 * 24 * 60 * 60; // 7 days in seconds
 
 /**
@@ -62,6 +63,8 @@ export async function verifyAdminAuth(request: NextRequest): Promise<UserJwtPayl
 export async function createJWT(payload: Omit<UserJwtPayload, 'iat' | 'exp'>): Promise<string> {
   const secret = getJWTSecret();
   
+  const expiry = payload.role === 'ADMIN' ? ADMIN_JWT_EXPIRY : USER_JWT_EXPIRY;
+
   const jwt = await new jose.SignJWT({
     userId: payload.userId,
     email: payload.email,
@@ -70,7 +73,7 @@ export async function createJWT(payload: Omit<UserJwtPayload, 'iat' | 'exp'>): P
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime(JWT_EXPIRY)
+    .setExpirationTime(expiry)
     .setIssuer(process.env.JWT_ISSUER || 'ceaserlk')
     .setAudience(process.env.JWT_AUDIENCE || 'ceaserlk-users')
     .sign(secret);

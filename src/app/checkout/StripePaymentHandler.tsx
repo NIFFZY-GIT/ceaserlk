@@ -81,7 +81,7 @@ export default function StripePaymentHandler({ cart, shippingDetails }: Omit<Str
         <button
           type="submit"
           disabled={isLoading || !stripe || !elements}
-          className="flex items-center justify-center w-full px-6 py-4 text-base font-bold text-white bg-black border border-transparent rounded-lg shadow-sm hover:bg-gray-800 disabled:bg-gray-400"
+          className="flex items-center justify-center w-full px-6 py-4 text-base font-bold text-white transition-colors bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 disabled:bg-gray-500"
         >
           {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : `Pay LKR ${cart.totalAmount.toFixed(2)}`}
         </button>

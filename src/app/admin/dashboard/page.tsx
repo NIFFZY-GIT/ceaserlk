@@ -14,7 +14,7 @@ interface DashboardData {
 // --- 2. UPDATE THE DATA FETCHING FUNCTION ---
 async function getDashboardData(): Promise<DashboardData | null> {
   try {
-  const baseUrl = await resolveServerBaseUrl();
+    const baseUrl = await resolveServerBaseUrl();
     const serializedCookies = await serializeRequestCookies();
 
     const res = await fetch(`${baseUrl}/api/admin/dashboard`, {

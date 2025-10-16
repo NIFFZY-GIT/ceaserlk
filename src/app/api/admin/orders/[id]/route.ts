@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { sendEmail, generateOrderStatusUpdateEmail } from '@/lib/email';
 // import { verifyAuth } from '@/lib/auth'; // TEMPORARILY DISABLED FOR TESTING
 
 // --- GET a single order's full details (with corrected signature) ---
@@ -100,6 +101,32 @@ export async function PUT(
     if (rows.length === 0) {
       return NextResponse.json({ error: "Order not found to update" }, { status: 404 });
     }
+
+    const updatedOrder = rows[0];
+
+    // --- 📧 Send Status Update Email ---
+    if (updatedOrder.email) {
+      try {
+        const profileUrl = `${process.env.NEXT_PUBLIC_APP_URL}/profile`;
+        const emailHtml = generateOrderStatusUpdateEmail({
+          customerName: updatedOrder.shipping_address?.firstName || 'Valued Customer',
+          orderId: updatedOrder.id,
+          newStatus: updatedOrder.status,
+          profileUrl: profileUrl,
+        });
+
+        await sendEmail({
+          to: updatedOrder.email,
+          subject: `Your Ceaser LK Order #${updatedOrder.id} has been updated`,
+          html: emailHtml,
+        });
+        console.log(`Sent status update email to ${updatedOrder.email} for order ${updatedOrder.id}`);
+      } catch (emailError) {
+        console.error(`Failed to send status update email for order ${updatedOrder.id}:`, emailError);
+        // Do not block the API response if email fails
+      }
+    }
+    // --- End of Email Logic ---
 
     // Fetch the complete order data including items (same as GET endpoint)
     const fullOrderQuery = `
