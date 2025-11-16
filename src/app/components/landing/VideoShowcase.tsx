@@ -92,13 +92,12 @@ const VideoShowcase = () => {
     <section ref={sectionRef} className="relative h-[90vh] min-h-[700px] w-full bg-brand-black text-white flex items-center">
       {/* Background Video */}
       <video
-        src="/Assets/v1.mp4"
+        src="/assets/v1.mp4" // You'll need to add a video file here
         className="absolute top-0 left-0 w-full h-full object-cover z-0"
         autoPlay
         loop
         muted
         playsInline
-        preload="metadata"
       />
       <div className="absolute inset-0 bg-black/70 z-10" />
 
