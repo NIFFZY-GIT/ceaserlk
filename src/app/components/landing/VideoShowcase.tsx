@@ -44,9 +44,10 @@ const VideoShowcase = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const progressAnimation = useRef<gsap.core.Tween | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [videoEligible, setVideoEligible] = useState(false);
+  const [videoEligible, setVideoEligible] = useState(true);
   const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [manualOverride, setManualOverride] = useState(false);
 
   // Animation for the entire section entering the viewport
   useLayoutEffect(() => {
@@ -74,6 +75,10 @@ const VideoShowcase = () => {
     const connection = (navigator as Navigator & { connection?: NetworkInformation }).connection;
 
     const evaluateEligibility = () => {
+      if (manualOverride) {
+        setVideoEligible(true);
+        return;
+      }
       const prefersReducedMotion = reduceMotionQuery.matches;
       const saveData = Boolean(connection?.saveData);
       const slowConnection = Boolean(connection?.effectiveType && /(slow-)?2g|3g/i.test(connection.effectiveType));
@@ -95,7 +100,7 @@ const VideoShowcase = () => {
       reduceMotionQuery.removeEventListener('change', handleChange);
       connection?.removeEventListener?.('change', handleChange);
     };
-  }, []);
+  }, [manualOverride]);
 
   // Lazy-load the background video when the hero nears the viewport
   useEffect(() => {
@@ -126,6 +131,12 @@ const VideoShowcase = () => {
       playPromise.catch(() => undefined);
     }
   }, [shouldLoadVideo, videoEligible]);
+
+  const handleManualStart = () => {
+    setManualOverride(true);
+    setVideoEligible(true);
+    setShouldLoadVideo(true);
+  };
 
   // Effect to handle the auto-playing slideshow and text animations
   useEffect(() => {
@@ -189,6 +200,24 @@ const VideoShowcase = () => {
             className="object-cover"
             priority
           />
+        </div>
+      )}
+      {!videoEligible && !manualOverride && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+          <div className="rounded-full bg-black/60 px-6 py-3 text-sm font-semibold text-white uppercase tracking-widest shadow-lg">
+            Video paused for slow connection
+          </div>
+        </div>
+      )}
+      {!videoEligible && !manualOverride && (
+        <div className="absolute bottom-10 right-10 z-40">
+          <button
+            type="button"
+            onClick={handleManualStart}
+            className="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-full shadow-md hover:bg-primary/90"
+          >
+            Play background video
+          </button>
         </div>
       )}
       {!videoReady && videoEligible && (
