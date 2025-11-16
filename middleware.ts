@@ -12,59 +12,6 @@ interface UserJwtPayload {
   exp: number;
 }
 
-// Rate limiting storage (in production, use Redis)
-const rateLimitStore = new Map<string, { count: number; lastReset: number }>();
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
-const RATE_LIMIT_MAX_ATTEMPTS = 100; // per IP per window
-
-// Enhanced rate limiting for sensitive endpoints
-const sensitiveEndpointsLimits = new Map<string, { count: number; lastReset: number }>();
-const SENSITIVE_RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes
-const SENSITIVE_RATE_LIMIT_MAX = 10; // much stricter for auth endpoints
-
-const AUTH_SENSITIVE_ENDPOINTS = [
-  '/api/auth/login',
-  '/api/auth/signup',
-  '/api/auth/forgot-password',
-  '/api/auth/reset-password',
-  '/api/auth/verify-reset-code',
-];
-
-const AUTH_RATE_LIMIT_EXCEPTIONS = [
-  '/api/auth/me',
-  '/api/auth/refresh',
-];
-
-function getRateLimitKey(request: NextRequest): string {
-  // Use IP address for rate limiting with better fallback handling
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
-  const cfConnectingIp = request.headers.get('cf-connecting-ip'); // Cloudflare
-  return cfConnectingIp || forwarded?.split(',')[0] || realIp || 'unknown';
-}
-
-function isRateLimited(key: string, isSensitive: boolean = false): boolean {
-  const now = Date.now();
-  const store = isSensitive ? sensitiveEndpointsLimits : rateLimitStore;
-  const window = isSensitive ? SENSITIVE_RATE_LIMIT_WINDOW : RATE_LIMIT_WINDOW;
-  const maxAttempts = isSensitive ? SENSITIVE_RATE_LIMIT_MAX : RATE_LIMIT_MAX_ATTEMPTS;
-  
-  const record = store.get(key);
-  
-  if (!record || now - record.lastReset > window) {
-    // Reset or create new record
-    store.set(key, { count: 1, lastReset: now });
-    return false;
-  }
-  
-  if (record.count >= maxAttempts) {
-    return true;
-  }
-  
-  record.count++;
-  return false;
-}
-
 // Generate secure random string for CSRF tokens
 async function verifyJWT(token: string): Promise<UserJwtPayload | null> {
   try {
@@ -174,27 +121,7 @@ export async function middleware(request: NextRequest) {
 
   // Security logging (in production, use structured logging)
   if (process.env.NODE_ENV === 'development') {
-    console.log(`${new Date().toISOString()} - ${request.method} ${pathname} - IP: ${getRateLimitKey(request)}`);
-  }
-
-  // Apply enhanced rate limiting based on endpoint sensitivity
-  const isAuthEndpoint = pathname.startsWith('/api/auth/');
-  const isWhitelistedAuthEndpoint = isAuthEndpoint && AUTH_RATE_LIMIT_EXCEPTIONS.some((safePath) => pathname.startsWith(safePath));
-  const isSensitiveAuthEndpoint = isAuthEndpoint && !isWhitelistedAuthEndpoint && AUTH_SENSITIVE_ENDPOINTS.some((sensitivePath) => pathname.startsWith(sensitivePath));
-
-  const isSensitiveEndpoint = isSensitiveAuthEndpoint || pathname.startsWith('/api/admin/');
-
-  if (pathname.startsWith('/admin') || pathname.startsWith('/api/')) {
-    const rateLimitKey = getRateLimitKey(request);
-    
-    if (isRateLimited(rateLimitKey, isSensitiveEndpoint)) {
-      const response = createSecureErrorResponse(
-        'Too many requests. Please try again later.',
-        429
-      );
-      response.headers.set('Retry-After', '900'); // 15 minutes
-      return response;
-    }
+    console.log(`${new Date().toISOString()} - ${request.method} ${pathname}`);
   }
 
   // Validate Content-Type for POST/PUT/PATCH requests to prevent CSRF
