@@ -72,6 +72,91 @@ const Input = (props: React.InputHTMLAttributes<HTMLInputElement> & { label: str
   </div>
 );
 
+const VariantMediaPreview = ({
+  variantId,
+  file,
+  isThumbnail,
+  onSelectThumbnail,
+  onRemove,
+}: {
+  variantId: number;
+  file: File;
+  isThumbnail: boolean;
+  onSelectThumbnail: (variantId: number, imageName: string) => void;
+  onRemove: (variantId: number, file: File) => void;
+}) => {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [file]);
+
+  if (!previewUrl) {
+    return (
+      <div className="relative overflow-hidden border rounded-lg border-slate-200 bg-slate-100 aspect-square animate-pulse" />
+    );
+  }
+
+  const isVideo = isVideoFile(file);
+
+  return (
+    <div className="relative overflow-hidden border rounded-lg group border-slate-200 bg-slate-50 aspect-square">
+      {isVideo ? (
+        <video
+          src={previewUrl}
+          className="object-cover w-full h-full"
+          muted
+          controls={false}
+          playsInline
+          loop
+        />
+      ) : (
+        <Image
+          src={previewUrl}
+          alt="upload preview"
+          fill
+          className="object-cover"
+          unoptimized
+        />
+      )}
+      <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity rounded-lg opacity-0 bg-black/60 group-hover:opacity-100">
+        <button
+          type="button"
+          title="Set as thumbnail"
+          onClick={() => onSelectThumbnail(variantId, file.name)}
+          className="p-1.5 text-white rounded-full bg-black/60 hover:bg-primary"
+        >
+          <Star size={14} fill={isThumbnail ? 'currentColor' : 'none'} />
+        </button>
+        <button
+          type="button"
+          title="Remove file"
+          onClick={() => onRemove(variantId, file)}
+          className="p-1.5 text-white rounded-full bg-black/60 hover:bg-red-600"
+        >
+          <X size={14} />
+        </button>
+      </div>
+      {isVideo && (
+        <div className="absolute top-1 left-1 flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-white">
+          <Video size={12} />
+          Video
+        </div>
+      )}
+      {isThumbnail && (
+        <div className="absolute p-1 bg-white rounded-full shadow top-1 right-1">
+          <Star size={10} className="text-primary" fill="currentColor" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Minimal rich text editor to support basic formatting
 const RichTextEditor = ({
   value,
@@ -594,45 +679,16 @@ const AddProductPage = () => {
                                 Debug: Variant {activeVariant.id} has {activeVariant.variantMedia.length} files
                               </div>
                               <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-                                {activeVariant.variantMedia.map((file, i) => {
-                                  const previewUrl = URL.createObjectURL(file);
-                                  const isVideo = isVideoFile(file);
-                                  return (
-                                    <div key={i} className="relative overflow-hidden border rounded-lg group border-slate-200 bg-slate-50 aspect-square">
-                                      {isVideo ? (
-                                        <video
-                                          src={previewUrl}
-                                          className="object-cover w-full h-full"
-                                          muted
-                                          controls={false}
-                                          playsInline
-                                          loop
-                                        />
-                                      ) : (
-                                        <Image src={previewUrl} alt="upload preview" layout="fill" className="object-cover" />
-                                      )}
-                                      <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity rounded-lg opacity-0 bg-black/60 group-hover:opacity-100">
-                                        <button type="button" title="Set as thumbnail" onClick={() => setThumbnail(activeVariant.id, file.name)} className="p-1.5 text-white rounded-full bg-black/60 hover:bg-primary">
-                                          <Star size={14} fill={activeVariant.thumbnailImageName === file.name ? 'currentColor' : 'none'} />
-                                        </button>
-                                        <button type="button" title="Remove file" onClick={() => removeMedia(activeVariant.id, file)} className="p-1.5 text-white rounded-full bg-black/60 hover:bg-red-600">
-                                          <X size={14} />
-                                        </button>
-                                      </div>
-                                      {isVideo && (
-                                        <div className="absolute top-1 left-1 flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-white">
-                                          <Video size={12} />
-                                          Video
-                                        </div>
-                                      )}
-                                      {activeVariant.thumbnailImageName === file.name && (
-                                        <div className="absolute p-1 bg-white rounded-full shadow top-1 right-1">
-                                          <Star size={10} className="text-primary" fill="currentColor" />
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                                {activeVariant.variantMedia.map((file, i) => (
+                                  <VariantMediaPreview
+                                    key={`${activeVariant.id}-${file.name}-${file.lastModified}-${i}`}
+                                    variantId={activeVariant.id}
+                                    file={file}
+                                    isThumbnail={activeVariant.thumbnailImageName === file.name}
+                                    onSelectThumbnail={setThumbnail}
+                                    onRemove={removeMedia}
+                                  />
+                                ))}
                                 <label htmlFor={`variantImage-upload-${activeVariant.id}`} className="flex flex-col items-center justify-center text-center transition bg-white border-2 border-dashed rounded-lg cursor-pointer aspect-square border-slate-300 hover:border-primary hover:bg-primary/5">
                                   <ImageIcon size={20} className="text-slate-400" />
                                   <span className="mt-1 text-xs text-slate-500">Add</span>

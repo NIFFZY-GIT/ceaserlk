@@ -657,6 +657,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                                       fill
                                       sizes="(max-width: 640px) 33vw, 100px"
                                       className="object-cover border rounded-lg border-slate-200"
+                                      unoptimized={mediaItem instanceof File}
                                     />
                                   )}
                                   <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity bg-black bg-opacity-50 rounded-lg opacity-0 group-hover:opacity-100">
