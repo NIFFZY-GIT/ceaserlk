@@ -199,7 +199,12 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
       {/* Mobile Filter Overlay */}
       <div className={`fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose} />
-      <div className={`fixed top-0 left-0 h-full w-4/5 max-w-sm bg-white z-50 transform transition-transform duration-300 lg:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div
+        id="shop-mobile-filters"
+        role="dialog"
+        aria-modal="true"
+        className={`fixed top-0 left-0 h-full w-4/5 max-w-sm bg-white z-50 transform transition-transform duration-300 lg:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
         <div className="h-full p-6 overflow-y-auto modern-scrollbar scroll-smooth">
           <div className="flex items-center justify-between mb-8">
             <h2 className="flex items-center gap-2 text-xl font-bold">

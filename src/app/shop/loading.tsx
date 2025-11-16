@@ -1,52 +1,61 @@
+const shimmerBlock = 'relative overflow-hidden rounded-2xl bg-white/10 animate-pulse';
+
 export default function ShopLoading() {
   return (
-    <div className="py-12 bg-white">
-      <div className="container px-6 mx-auto">
-        {/* Header Skeleton */}
-        <div className="mb-8">
-          <div className="h-8 bg-gray-200 rounded w-48 mb-4 animate-pulse"></div>
-          <div className="h-4 bg-gray-200 rounded w-96 animate-pulse"></div>
+    <div className="min-h-[80vh] w-full bg-gradient-to-b from-black via-slate-950 to-black py-16 text-white">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6">
+        <div className="space-y-4">
+          <div className="h-4 w-40 rounded-full bg-white/20" />
+          <div className="h-10 w-3/4 rounded-2xl bg-white/10" />
+          <div className="h-4 w-2/4 rounded-full bg-white/10" />
         </div>
 
-        {/* Filter Sidebar Skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1">
+        <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
+          <aside className="space-y-6 rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+            <div className="h-5 w-24 rounded-full bg-white/20" />
             <div className="space-y-6">
-              {/* Filter sections */}
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="border-b border-gray-200 pb-4">
-                  <div className="h-5 bg-gray-200 rounded w-24 mb-3 animate-pulse"></div>
+              {Array.from({ length: 4 }).map((_, sectionIndex) => (
+                <div key={sectionIndex} className="space-y-3">
+                  <div className="h-4 w-28 rounded-full bg-white/20" />
                   <div className="space-y-2">
-                    {[1, 2, 3].map((j) => (
-                      <div key={j} className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
+                    {Array.from({ length: 3 }).map((__, optionIndex) => (
+                      <div key={optionIndex} className="h-3 w-32 rounded-full bg-white/20" />
                     ))}
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+            <div className="h-9 w-full rounded-full bg-white/20" />
+          </aside>
 
-          {/* Products Grid Skeleton */}
-          <div className="lg:col-span-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
-                <div key={i} className="bg-white rounded-lg shadow-sm border animate-pulse">
-                  {/* Product Image Skeleton */}
-                  <div className="aspect-square bg-gray-200 rounded-t-lg"></div>
-                  
-                  {/* Product Info Skeleton */}
-                  <div className="p-4">
-                    <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
-                    <div className="flex justify-between items-center">
-                      <div className="h-6 bg-gray-200 rounded w-16"></div>
-                      <div className="h-8 bg-gray-200 rounded w-20"></div>
+          <section className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="h-4 w-32 rounded-full bg-white/20" />
+              <div className="flex gap-3">
+                <div className="h-9 w-20 rounded-full bg-white/10" />
+                <div className="h-9 w-28 rounded-full bg-white/10" />
+              </div>
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 9 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] p-5"
+                >
+                  <div className={`${shimmerBlock} aspect-[4/5]`} />
+                  <div className="mt-6 space-y-4">
+                    <div className="h-5 w-3/4 rounded-full bg-white/20" />
+                    <div className="h-4 w-1/2 rounded-full bg-white/20" />
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="h-5 w-16 rounded-full bg-white/10" />
+                      <div className="h-9 w-24 rounded-full bg-white/10" />
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         </div>
       </div>
     </div>

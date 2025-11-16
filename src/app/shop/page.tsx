@@ -44,6 +44,7 @@ const ShopPage = () => {
   // UI State
   const [isMobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [isDesktopFilterVisible, setDesktopFilterVisible] = useState(true);
+  const activeFilterCount = filters.sizes.length + filters.colors.length + (filters.maxPrice < priceRange.maxPrice ? 1 : 0);
   // Combined effect to fetch initial data and products in one go
   useEffect(() => {
     let isMounted = true;
@@ -130,6 +131,20 @@ const ShopPage = () => {
     };
   }, [filters, initialDataLoaded, priceRange.maxPrice]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResponsiveLayout = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileFilterOpen(false);
+      } else {
+        setDesktopFilterVisible(true);
+      }
+    };
+    handleResponsiveLayout();
+    window.addEventListener('resize', handleResponsiveLayout);
+    return () => window.removeEventListener('resize', handleResponsiveLayout);
+  }, []);
+
 
   const handleFilterChange = (filterType: keyof Filters, value: string | number) => {
     setFilters(prev => {
@@ -167,12 +182,29 @@ const ShopPage = () => {
           )}
           <main className={`transition-all duration-300 ${isDesktopFilterVisible ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
             <div className="flex items-center justify-between pb-4 mb-8 border-b border-gray-200">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMobileFilterOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:border-brand-black hover:text-brand-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-black lg:hidden"
+                  aria-expanded={isMobileFilterOpen}
+                  aria-controls="shop-mobile-filters"
+                >
+                  <SlidersHorizontal size={16} />
+                  <span>Filters</span>
+                  {activeFilterCount > 0 && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
                 <button onClick={() => setDesktopFilterVisible(v => !v)} className="items-center hidden gap-2 p-2 text-sm font-medium transition-colors border rounded-md lg:flex hover:bg-gray-100">
                   <SlidersHorizontal size={16} /><span>Filters</span>
                 </button>
-                <p className="text-sm text-gray-600">Showing <span className="font-semibold text-black">{products.length}</span> products</p>
               </div>
+              <p className="text-sm text-gray-600">
+                Showing <span className="font-semibold text-black">{products.length}</span> products
+              </p>
             </div>
             {loading ? (
               <div className="flex items-center justify-center h-96"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>
