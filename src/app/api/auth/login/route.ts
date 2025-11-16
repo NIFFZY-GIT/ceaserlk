@@ -11,33 +11,56 @@ const loginSchema = z.object({
   password: z.string().min(1, { message: 'Password is required.' }),
 });
 
-// Rate limiting for login attempts (simple in-memory store)
-const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
-const MAX_LOGIN_ATTEMPTS = 25;
+type RateLimitRecord = {
+  count: number;
+  firstAttempt: number;
+};
+
+const loginAttempts = new Map<string, RateLimitRecord>();
+const MAX_LOGIN_ATTEMPTS = 10;
 const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes
 
-function checkRateLimit(email: string): { allowed: boolean; remaining?: number } {
-  const now = Date.now();
-  const attempts = loginAttempts.get(email);
-  
-  if (!attempts || now - attempts.lastAttempt > LOCKOUT_DURATION) {
-    // Reset or create new record
-    loginAttempts.set(email, { count: 1, lastAttempt: now });
-    return { allowed: true, remaining: MAX_LOGIN_ATTEMPTS - 1 };
-  }
-  
-  if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
-    return { allowed: false };
-  }
-  
-  attempts.count++;
-  attempts.lastAttempt = now;
-  
-  return { allowed: true, remaining: MAX_LOGIN_ATTEMPTS - attempts.count };
+function getClientIdentifier(request: Request, email: string): string {
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const ip = forwardedFor?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
+  return `${email}::${ip}`;
 }
 
-function resetRateLimit(email: string) {
-  loginAttempts.delete(email);
+function getRateLimitStatus(identifier: string) {
+  const record = loginAttempts.get(identifier);
+  if (!record) {
+    return { blocked: false, remaining: MAX_LOGIN_ATTEMPTS };
+  }
+
+  const elapsed = Date.now() - record.firstAttempt;
+  if (elapsed > LOCKOUT_DURATION) {
+    loginAttempts.delete(identifier);
+    return { blocked: false, remaining: MAX_LOGIN_ATTEMPTS };
+  }
+
+  if (record.count >= MAX_LOGIN_ATTEMPTS) {
+    const retryAfterMs = Math.max(LOCKOUT_DURATION - elapsed, 0);
+    return { blocked: true, retryAfterMs, remaining: 0 };
+  }
+
+  return { blocked: false, remaining: Math.max(MAX_LOGIN_ATTEMPTS - record.count, 0) };
+}
+
+function recordFailedAttempt(identifier: string) {
+  const now = Date.now();
+  const record = loginAttempts.get(identifier);
+
+  if (!record || now - record.firstAttempt > LOCKOUT_DURATION) {
+    loginAttempts.set(identifier, { count: 1, firstAttempt: now });
+    return;
+  }
+
+  record.count += 1;
+  loginAttempts.set(identifier, record);
+}
+
+function resetRateLimit(identifier: string) {
+  loginAttempts.delete(identifier);
 }
 
 export async function POST(request: Request) {
@@ -56,13 +79,18 @@ export async function POST(request: Request) {
     const { email, password } = validation.data;
     const normalizedEmail = email.toLowerCase();
 
-    // 2. Check rate limiting
-    const rateCheck = checkRateLimit(normalizedEmail);
-    if (!rateCheck.allowed) {
-      return NextResponse.json({ 
-        error: 'Too many login attempts. Please try again in 15 minutes.',
-        code: 'RATE_LIMITED'
+    // 2. Check rate limiting (per email + client IP)
+    const rateLimitIdentifier = getClientIdentifier(request, normalizedEmail);
+    const rateStatus = getRateLimitStatus(rateLimitIdentifier);
+    if (rateStatus.blocked) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((rateStatus.retryAfterMs || 0) / 1000));
+      const response = NextResponse.json({
+        error: 'Too many login attempts detected. Please wait a few minutes and try again.',
+        code: 'RATE_LIMITED',
+        retryAfterSeconds,
       }, { status: 429 });
+      response.headers.set('Retry-After', String(retryAfterSeconds));
+      return response;
     }
 
     // 3. Find user in the database
@@ -73,10 +101,19 @@ export async function POST(request: Request) {
 
     if (userResult.rows.length === 0) {
       // Use a generic error message for security (prevents email enumeration)
-      return NextResponse.json({ 
+      recordFailedAttempt(rateLimitIdentifier);
+      const retryStatus = getRateLimitStatus(rateLimitIdentifier);
+      const retryAfterSeconds = retryStatus.blocked ? Math.max(1, Math.ceil((retryStatus.retryAfterMs || 0) / 1000)) : undefined;
+      const response = NextResponse.json({ 
         error: 'No user found with this email address.',
-        code: 'USER_NOT_FOUND'
+        code: 'USER_NOT_FOUND',
+        remainingAttempts: retryStatus.blocked ? 0 : retryStatus.remaining,
+        retryAfterSeconds,
       }, { status: 404 });
+      if (retryAfterSeconds) {
+        response.headers.set('Retry-After', String(retryAfterSeconds));
+      }
+      return response;
     }
 
     const user = userResult.rows[0];
@@ -85,14 +122,23 @@ export async function POST(request: Request) {
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
-      return NextResponse.json({ 
+      recordFailedAttempt(rateLimitIdentifier);
+      const retryStatus = getRateLimitStatus(rateLimitIdentifier);
+      const retryAfterSeconds = retryStatus.blocked ? Math.max(1, Math.ceil((retryStatus.retryAfterMs || 0) / 1000)) : undefined;
+      const response = NextResponse.json({ 
         error: 'Incorrect password. Please try again.',
-        code: 'INVALID_PASSWORD'
+        code: 'INVALID_PASSWORD',
+        remainingAttempts: retryStatus.blocked ? 0 : retryStatus.remaining,
+        retryAfterSeconds,
       }, { status: 401 });
+      if (retryAfterSeconds) {
+        response.headers.set('Retry-After', String(retryAfterSeconds));
+      }
+      return response;
     }
 
     // 5. Reset rate limiting on successful login
-    resetRateLimit(normalizedEmail);
+    resetRateLimit(rateLimitIdentifier);
 
     // 6. Create JWT token using the new auth library
     const tokenPayload = {
