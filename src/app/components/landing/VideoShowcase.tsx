@@ -33,8 +33,10 @@ const showcaseData = [
 const VideoShowcase = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const sectionRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const progressAnimation = useRef<gsap.core.Tween | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
 
   // Animation for the entire section entering the viewport
   useLayoutEffect(() => {
@@ -53,6 +55,36 @@ const VideoShowcase = () => {
     }, sectionRef);
     return () => ctx.revert();
   }, []);
+
+  // Lazy-load the background video when the hero nears the viewport
+  useEffect(() => {
+    if (!sectionRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting) {
+          setShouldLoadVideo(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '320px' }
+    );
+
+    observer.observe(sectionRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Ensure playback kicks in once sources attach
+  useEffect(() => {
+    if (!shouldLoadVideo || !videoRef.current) return;
+    const player = videoRef.current;
+    const playPromise = player.play();
+    if (playPromise && typeof playPromise.then === 'function') {
+      playPromise.catch(() => undefined);
+    }
+  }, [shouldLoadVideo]);
 
   // Effect to handle the auto-playing slideshow and text animations
   useEffect(() => {
@@ -92,13 +124,19 @@ const VideoShowcase = () => {
     <section ref={sectionRef} className="relative h-[90vh] min-h-[700px] w-full bg-brand-black text-white flex items-center">
       {/* Background Video */}
       <video
-        src="/assets/v1.mp4" // You'll need to add a video file here
+        ref={videoRef}
         className="absolute top-0 left-0 w-full h-full object-cover z-0"
         autoPlay
         loop
         muted
         playsInline
-      />
+        poster="/images/image.jpg"
+        preload={shouldLoadVideo ? 'auto' : 'metadata'}
+      >
+        {shouldLoadVideo && (
+          <source src="/Assets/v1.mp4" type="video/mp4" />
+        )}
+      </video>
       <div className="absolute inset-0 bg-black/70 z-10" />
 
       {/* Content */}
