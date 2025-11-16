@@ -5,6 +5,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useObjectUrl } from '@/lib/hooks/useObjectUrl';
 import { 
   Plus, 
   Trash2, 
@@ -196,6 +197,8 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
   const [currentTradingCardUrl, setCurrentTradingCardUrl] = useState<string | null>(null);
   const [tradingImage, setTradingImage] = useState<File | null>(null);
   const [removeTradingCard, setRemoveTradingCard] = useState(false);
+
+  const tradingCardPreviewUrl = useObjectUrl(tradingImage);
   
   // Variants State
   const [variants, setVariants] = useState<VariantFormState[]>([]);
@@ -582,6 +585,19 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                           <div className={`p-2 text-sm rounded-md ${removeTradingCard ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
                             {removeTradingCard ? 'Trading card will be removed on save.' : `New card selected.`}
                             <button type="button" onClick={() => { setRemoveTradingCard(false); setTradingImage(null); }} className="ml-2 text-xs font-semibold underline">Undo</button>
+                          </div>
+                        )}
+                        {tradingCardPreviewUrl && !removeTradingCard && (
+                          <div className="flex items-center gap-2 p-2 mt-2 rounded-md bg-green-50">
+                            <Image
+                              src={tradingCardPreviewUrl}
+                              alt="Trading card preview"
+                              width={48}
+                              height={64}
+                              className="object-cover rounded"
+                              unoptimized
+                            />
+                            <p className="text-sm text-green-700">{tradingImage?.name || 'New card selected'}</p>
                           </div>
                         )}
                         <label htmlFor="tradingImage" className="flex flex-col items-center justify-center w-full p-4 text-center transition bg-white border-2 border-dashed rounded-lg cursor-pointer border-slate-300 hover:border-blue-500 hover:bg-blue-50">

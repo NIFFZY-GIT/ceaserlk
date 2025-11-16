@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useObjectUrl } from '@/lib/hooks/useObjectUrl';
 
 // --- TYPE DEFINITIONS ---
 type ExistingColor = { colorName: string; colorHex: string };
@@ -26,6 +27,12 @@ const MAX_TOTAL_UPLOAD_BYTES = 200 * 1024 * 1024;
 const MAX_FILE_UPLOAD_BYTES = 100 * 1024 * 1024;
 const MAX_TOTAL_UPLOAD_MB = MAX_TOTAL_UPLOAD_BYTES / (1024 * 1024);
 const MAX_FILE_UPLOAD_MB = MAX_FILE_UPLOAD_BYTES / (1024 * 1024);
+
+const debugLog = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(...args);
+  }
+};
 
 const isVideoFile = (file: File) => {
   if (file.type) {
@@ -85,16 +92,7 @@ const VariantMediaPreview = ({
   onSelectThumbnail: (variantId: number, imageName: string) => void;
   onRemove: (variantId: number, file: File) => void;
 }) => {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl);
-    return () => {
-      URL.revokeObjectURL(objectUrl);
-    };
-  }, [file]);
+  const previewUrl = useObjectUrl(file);
 
   if (!previewUrl) {
     return (
@@ -278,6 +276,8 @@ const AddProductPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [existingColors, setExistingColors] = useState<ExistingColor[]>([]);
 
+  const tradingCardPreviewUrl = useObjectUrl(tradingImage);
+
   // Fetch existing colors from API
   useEffect(() => {
     async function fetchColors() {
@@ -287,7 +287,9 @@ const AddProductPage = () => {
         const data: ExistingColor[] = await res.json();
         setExistingColors(data);
       } catch (e) {
-        console.warn('Failed to load colors', e);
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('Failed to load colors', e);
+        }
       }
     }
     fetchColors();
@@ -336,13 +338,13 @@ const AddProductPage = () => {
   }, [activeVariantId]);
   
   const handleMediaChange = useCallback((id: number, files: FileList | null) => {
-    console.log(`🖼️ handleMediaChange called for variant ${id}`, files);
+    debugLog(`🖼️ handleMediaChange called for variant ${id}`, files);
     if (!files) {
-      console.log('❌ No files provided');
+      debugLog('❌ No files provided');
       return;
     }
     const newMedia = Array.from(files);
-    console.log(`📁 Adding ${newMedia.length} new files:`, newMedia.map(file => file.name));
+    debugLog(`📁 Adding ${newMedia.length} new files:`, newMedia.map(file => file.name));
     setVariants(prev => {
       const updated = prev.map(v => {
         if (v.id === id) {
@@ -352,12 +354,12 @@ const AddProductPage = () => {
             variantMedia: mergedMedia,
             thumbnailImageName: v.thumbnailImageName ?? mergedMedia[0]?.name ?? null
           };
-          console.log(`✅ Updated variant ${id} now has ${updatedVariant.variantMedia.length} files`);
+          debugLog(`✅ Updated variant ${id} now has ${updatedVariant.variantMedia.length} files`);
           return updatedVariant;
         }
         return v;
       });
-      console.log('📊 Updated variants state:', updated);
+      debugLog('📊 Updated variants state:', updated);
       return updated;
     });
   }, []);
@@ -430,8 +432,8 @@ const AddProductPage = () => {
         }
       }
 
-      console.log('🚀 Starting form submission...');
-      console.log('📊 Current variants state:', variants);
+      debugLog('🚀 Starting form submission...');
+      debugLog('📊 Current variants state:', variants);
       
       const formData = new FormData();
       formData.append('productName', productName);
@@ -440,35 +442,35 @@ const AddProductPage = () => {
       if (audioFile) formData.append('audioFile', audioFile);
       if (tradingImage) formData.append('tradingImage', tradingImage);
       
-  // Include client-side IDs for media mapping, exclude variantMedia from JSON
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const variantsForApi = variants.map(({ variantMedia, ...rest }) => rest);
-      console.log('🔍 Variants being sent to API:', variantsForApi);
+      // Include client-side IDs for media mapping, exclude variantMedia from JSON
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const variantsForApi = variants.map(({ variantMedia, ...rest }) => rest);
+      debugLog('🔍 Variants being sent to API:', variantsForApi);
       formData.append('variants', JSON.stringify(variantsForApi));
       
       // Add variant-specific images only
       variants.forEach(variant => {
-        console.log(`🖼️ Adding media for variant ${variant.id} (${variant.colorName}): ${variant.variantMedia.length} files`);
-  // Add variant-specific media
+        debugLog(`🖼️ Adding media for variant ${variant.id} (${variant.colorName}): ${variant.variantMedia.length} files`);
+      // Add variant-specific media
         variant.variantMedia.forEach((file, index) => {
-          console.log(`📎 Adding file ${index + 1}: ${file.name} (${file.size} bytes) as variantMedia_${variant.id}`);
+          debugLog(`📎 Adding file ${index + 1}: ${file.name} (${file.size} bytes) as variantMedia_${variant.id}`);
           formData.append(`variantMedia_${variant.id}`, file);
         });
       });
 
-      console.log('📤 Submitting form data...');
+      debugLog('📤 Submitting form data...');
       // Debug: Log all FormData entries
-      console.log('🔍 FormData contents:');
+      debugLog('🔍 FormData contents:');
       for (const [key, value] of formData.entries()) {
         if (value instanceof File) {
-          console.log(`  ${key}: ${value.name} (${value.size} bytes)`);
+          debugLog(`  ${key}: ${value.name} (${value.size} bytes)`);
         } else {
-          console.log(`  ${key}: ${value}`);
+          debugLog(`  ${key}: ${value}`);
         }
       }
   const response = await fetch('/api/admin/products', { method: 'POST', body: formData });
       
-      console.log('API Response Status:', response.status);
+      debugLog('API Response Status:', response.status);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => {
@@ -596,10 +598,17 @@ const AddProductPage = () => {
                           <span className="text-xs text-slate-500">PNG, JPG, WEBP (Max 5MB)</span>
                           <input id="tradingImage" type="file" className="hidden" accept="image/*" onChange={(e) => setTradingImage(e.target.files?.[0] || null)} />
                         </label>
-                        {tradingImage && (
+                        {tradingCardPreviewUrl && (
                           <div className="flex items-center gap-2 p-2 rounded-md bg-green-50">
-                            <Image src={URL.createObjectURL(tradingImage)} alt="preview" width={32} height={40} className="object-cover rounded" />
-                            <p className="text-sm text-green-700">{tradingImage.name} selected</p>
+                            <Image
+                              src={tradingCardPreviewUrl}
+                              alt="Trading card preview"
+                              width={32}
+                              height={40}
+                              className="object-cover rounded"
+                              unoptimized
+                            />
+                            <p className="text-sm text-green-700">{tradingImage?.name} selected</p>
                           </div>
                         )}
                       </div>
@@ -674,10 +683,6 @@ const AddProductPage = () => {
                         <div className="space-y-6">
                            <div>
                               <label className="block mb-2 text-sm font-medium text-slate-700">Variant Media (Color-specific)</label>
-                              {/* Debug: Show current variant state */}
-                              <div className="mb-2 text-xs text-slate-500">
-                                Debug: Variant {activeVariant.id} has {activeVariant.variantMedia.length} files
-                              </div>
                               <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
                                 {activeVariant.variantMedia.map((file, i) => (
                                   <VariantMediaPreview

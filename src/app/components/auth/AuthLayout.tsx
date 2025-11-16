@@ -27,7 +27,7 @@ interface AuthLayoutProps {
 
 const LogoMark = () => (
   <Image
-    src="/assets/logo3.png"
+    src="/Assets/logo3.png"
     alt="Ceaser Designs"
     width={150}
     height={63}
