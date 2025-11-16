@@ -7,11 +7,16 @@ const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address'),
 });
 
+const emailPort = parseInt(process.env.EMAIL_PORT || '587', 10);
+const emailSecure = process.env.EMAIL_SECURE
+  ? process.env.EMAIL_SECURE.toLowerCase() === 'true'
+  : emailPort === 465;
+
 // Create email transporter
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT || '587'),
-  secure: false,
+  port: emailPort,
+  secure: emailSecure,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,

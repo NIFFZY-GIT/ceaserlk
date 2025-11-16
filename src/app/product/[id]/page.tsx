@@ -1002,7 +1002,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </Accordion.Header>
                 <Accordion.Content className="overflow-hidden transition-all animate-slideDown data-[state=closed]:animate-slideUp">
                   <div className="p-4 pt-0 text-sm leading-relaxed text-gray-600">
-                    <div dangerouslySetInnerHTML={{ __html: product.description || 'No description available.' }} />
+                    <div
+                      className="space-y-3 [&_p]:leading-relaxed [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:text-gray-600"
+                      dangerouslySetInnerHTML={{ __html: product.description || 'No description available.' }}
+                    />
                   </div>
                 </Accordion.Content>
               </Accordion.Item>

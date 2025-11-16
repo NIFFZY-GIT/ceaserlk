@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
-import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck } from 'lucide-react';
+import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import StripePaymentHandler from './StripePaymentHandler';
@@ -12,7 +13,8 @@ import StripePaymentHandler from './StripePaymentHandler';
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export default function CheckoutPage() {
-  const { cart, loading: cartLoading, cartCount } = useCart();
+  const router = useRouter();
+  const { cart, loading: cartLoading, cartCount, fetchCart } = useCart();
 
   const [shippingDetails, setShippingDetails] = useState({
     email: '',
@@ -24,6 +26,63 @@ export default function CheckoutPage() {
     postalCode: '',
     country: 'Sri Lanka'
   });
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cod'>('card');
+  const [codSubmitting, setCodSubmitting] = useState(false);
+  const [codError, setCodError] = useState<string | null>(null);
+
+  const validateShippingDetails = () => {
+    return Object.entries(shippingDetails)
+      .filter(([, value]) => value.trim() === '')
+      .map(([key]) => key);
+  };
+
+  const handleCodOrder = async () => {
+    setCodError(null);
+
+    const missingFields = validateShippingDetails();
+    if (missingFields.length > 0) {
+      setCodError('Please fill out all contact and shipping details before placing your order.');
+      return;
+    }
+
+    if (!cart?.id) {
+      setCodError('Your cart could not be found. Please refresh and try again.');
+      return;
+    }
+
+    try {
+      setCodSubmitting(true);
+      const response = await fetch('/api/checkout/place-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cartId: cart.id,
+          shippingDetails,
+          paymentMethod: 'PAY_ON_DELIVERY',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const message = errorData.error || 'Failed to place order. Please try again.';
+        setCodError(message);
+        return;
+      }
+
+      const data = await response.json();
+      if (data?.orderId) {
+        await fetchCart();
+        router.push(`/order-confirmation?orderId=${data.orderId}`);
+      } else {
+        setCodError('Order was created but no confirmation was returned.');
+      }
+    } catch (error) {
+      console.error('Pay on delivery order error:', error);
+      setCodError('Unexpected error while placing order. Please try again.');
+    } finally {
+      setCodSubmitting(false);
+    }
+  };
 
   const inputClass = 'w-full rounded-2xl border border-gray-700/50 bg-gray-900/25 px-5 py-4 text-base text-brand-white placeholder-gray-400 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30';
   const labelClass = 'text-base font-semibold text-gray-200';
@@ -31,6 +90,9 @@ export default function CheckoutPage() {
   const sectionCardClass = 'relative overflow-hidden rounded-3xl border border-gray-700/50 bg-gradient-to-br from-gray-950 via-gray-900/70 to-gray-950 p-6 sm:p-8 shadow-[0_28px_55px_-28px_rgba(0,0,0,0.75)] backdrop-blur-xl';
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (codError) {
+      setCodError(null);
+    }
     setShippingDetails({ ...shippingDetails, [e.target.name]: e.target.value });
   };
 
@@ -88,17 +150,32 @@ export default function CheckoutPage() {
     },
     {
       label: 'Payment & Confirmation',
-      description: 'Secure Stripe checkout',
+      description: 'Choose payment method',
       status: 'up-next' as const,
       icon: CreditCard,
+    },
+  ];
+
+  const paymentOptions = [
+    {
+      value: 'card' as const,
+      label: 'Card payment (Stripe)',
+      description: 'Pay securely with Visa, Mastercard, Amex, Apple Pay, or Google Pay.',
+      icon: CreditCard,
+    },
+    {
+      value: 'cod' as const,
+      label: 'Pay on delivery',
+      description: 'Place your order now and pay when it arrives at your doorstep.',
+      icon: Banknote,
     },
   ];
 
   const heroHighlights = [
     {
       icon: Shield,
-      title: 'Payment protection',
-      copy: '256-bit SSL encrypted checkout powered by Stripe.',
+      title: 'Flexible payments',
+      copy: 'Pay securely online or choose pay on delivery across Sri Lanka.',
     },
     {
       icon: Truck,
@@ -375,8 +452,7 @@ export default function CheckoutPage() {
                     <p className={labelClass}>Step 3</p>
                     <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Payment</h2>
                     <p className={helperTextClass}>
-                      Stripe encrypts your card details end-to-end. We never store payment information on our
-                      servers.
+                      Choose your preferred payment method to complete the order securely.
                     </p>
                   </div>
                   <div className="p-3 border rounded-3xl border-primary/40 bg-primary/10 text-primary">
@@ -384,17 +460,88 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                  <div className="p-4 mt-6 border rounded-3xl border-gray-700/50 bg-black/15 sm:p-6">
-                  <Elements stripe={stripePromise} options={options}>
-                    <StripePaymentHandler cart={cart} shippingDetails={shippingDetails} />
-                  </Elements>
-                    <div className="flex flex-wrap items-center gap-2 mt-4 text-sm font-medium text-gray-400">
-                    <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Visa</span>
-                    <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Mastercard</span>
-                    <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Amex</span>
-                    <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Apple Pay</span>
-                    <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Google Pay</span>
+                <div className="mt-8 space-y-6">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {paymentOptions.map((option) => {
+                      const Icon = option.icon;
+                      const isActive = paymentMethod === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          aria-pressed={isActive}
+                          onClick={() => {
+                            setPaymentMethod(option.value);
+                            setCodError(null);
+                          }}
+                          className={`flex w-full items-start gap-4 rounded-2xl border px-5 py-4 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                            isActive
+                              ? 'border-primary/60 bg-primary/10 shadow-[0_16px_45px_-24px_rgba(255,96,96,0.65)]'
+                              : 'border-gray-700/60 bg-gray-900/40 hover:border-primary/40 hover:bg-primary/5'
+                          }`}
+                        >
+                          <span
+                            className={`inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border text-sm font-semibold ${
+                              isActive
+                                ? 'border-primary/40 bg-primary/20 text-primary'
+                                : 'border-gray-800/70 bg-gray-900/50 text-gray-400'
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                          </span>
+                          <div>
+                            <p className="text-base font-semibold text-brand-white">{option.label}</p>
+                            <p className="mt-1 text-sm text-gray-300">{option.description}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
+
+                  {paymentMethod === 'card' ? (
+                    <div className="p-4 border rounded-3xl border-gray-700/50 bg-black/15 sm:p-6">
+                      <Elements stripe={stripePromise} options={options}>
+                        <StripePaymentHandler cart={cart} shippingDetails={shippingDetails} />
+                      </Elements>
+                      <div className="flex flex-wrap items-center gap-2 mt-4 text-sm font-medium text-gray-400">
+                        <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Visa</span>
+                        <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Mastercard</span>
+                        <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Amex</span>
+                        <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Apple Pay</span>
+                        <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Google Pay</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 border rounded-3xl border-primary/40 bg-primary/5 sm:p-6">
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                          <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-primary/40 bg-primary/15 text-primary">
+                            <Banknote className="w-4 h-4" />
+                          </span>
+                          <div>
+                            <p className="text-lg font-semibold text-brand-white">Pay on delivery</p>
+                            <p className="mt-1 text-sm text-gray-300">
+                              Our courier will contact you prior to drop-off and collect payment when your order
+                              arrives. Cash and card payments are accepted at the doorstep.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCodOrder}
+                          disabled={codSubmitting}
+                          className="flex items-center justify-center w-full px-6 py-4 text-base font-bold text-brand-black transition-colors bg-primary border border-transparent rounded-lg shadow-sm hover:bg-primary/90 disabled:bg-gray-500 disabled:text-gray-200"
+                        >
+                          {codSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Place order - Pay on delivery'}
+                        </button>
+                        {codError && <p className="text-sm text-red-500">{codError}</p>}
+                        <p className="text-xs leading-relaxed text-gray-400">
+                          Need a different arrangement? Reply to your confirmation email and we&apos;ll coordinate a
+                          convenient delivery window.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
@@ -477,7 +624,7 @@ export default function CheckoutPage() {
                         Total
                       </span>
                       <div className="text-right">
-                        <p className="text-2xl font-black text-transparent bg-gradient-to-r from-primary to-accent bg-clip-text">
+                        <p className="text-2xl font-white text-white bg-gradient-to-r from-primary to-accent bg-clip-text">
                           LKR {cart.totalAmount.toFixed(2)}
                         </p>
                         <p className={helperTextClass}>All taxes included</p>

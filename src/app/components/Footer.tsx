@@ -7,9 +7,15 @@ import { Facebook, Instagram, Twitter } from 'lucide-react';
 const Footer = () => {
   return (
     <footer className="text-white bg-brand-black">
-      <div className="container px-6 mx-auto">
-       
-
+      <div className="relative container px-6 mx-auto">
+        <a
+          href="https://koombiyodelivery.lk/track"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute top-6 right-6 inline-flex items-center justify-center px-5 py-2 text-sm font-semibold transition-colors border rounded-full bg-blue-500 hover:bg-blue-600 text-brand-white border-blue-500/70"
+        >
+          Track Delivery
+        </a>
         {/* Section 2: Main Footer Links */}
         <div className="grid grid-cols-2 gap-8 py-16 md:grid-cols-4">
           {/* Column 1: Brand */}
@@ -59,15 +65,14 @@ const Footer = () => {
       {/* Section 3: Bottom Bar (Credits & Socials) */}
       <div className="py-6 bg-black border-t border-gray-800/80">
         <div className="container flex flex-col items-center justify-between gap-4 px-6 mx-auto text-center md:flex-row md:text-left">
-          <div className="space-y-1 text-sm text-gray-500">
-            <p>© {new Date().getFullYear()} Ceaser.lk All rights reserved.</p>
-            <p>
-              Designed &amp; developed by{' '}
+          <div className="space-y-2 text-sm text-center md:text-left">
+            <p className="font-semibold tracking-wide text-gray-300">
+              © {new Date().getFullYear()} Ceaser.lk • All rights reserved • Designed &amp; developed by{' '}
               <a
                 href="https://zevarone.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold transition-colors text-primary hover:text-primary/80"
+                className="underline transition-colors text-white hover:text-primary"
               >
                 ZEVARONE
               </a>

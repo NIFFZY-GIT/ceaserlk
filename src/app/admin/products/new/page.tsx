@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -71,6 +71,95 @@ const Input = (props: React.InputHTMLAttributes<HTMLInputElement> & { label: str
     </div>
   </div>
 );
+
+// Minimal rich text editor to support basic formatting
+const RichTextEditor = ({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (html: string) => void;
+  placeholder?: string;
+}) => {
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value || '';
+    }
+  }, [value]);
+
+  const applyFormat = (command: string) => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand(command, false);
+    handleInput();
+  };
+
+  const handleInput = () => {
+    if (!editorRef.current) return;
+    onChange(editorRef.current.innerHTML);
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const text = event.clipboardData.getData('text/plain');
+    document.execCommand('insertText', false, text);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            applyFormat('bold');
+          }}
+          className="px-3 py-1 text-sm font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-md hover:bg-slate-200"
+        >
+          Bold
+        </button>
+        <button
+          type="button"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            applyFormat('insertUnorderedList');
+          }}
+          className="px-3 py-1 text-sm font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-md hover:bg-slate-200"
+        >
+          Bullet List
+        </button>
+        <button
+          type="button"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            applyFormat('insertParagraph');
+          }}
+          className="px-3 py-1 text-sm font-medium text-slate-600 bg-slate-100 border border-slate-200 rounded-md hover:bg-slate-200"
+        >
+          Line Break
+        </button>
+      </div>
+      <div className="relative">
+        <div
+          ref={editorRef}
+          contentEditable
+          onInput={handleInput}
+          onBlur={handleInput}
+          onPaste={handlePaste}
+          className="min-h-[160px] w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:text-slate-900"
+        />
+        {!value?.replace(/<br\s*\/?>|&nbsp;|\s/g, '').trim() && (
+          <span className="absolute text-sm text-slate-400 pointer-events-none left-4 top-3">
+            {placeholder}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
 
 
 // --- MAIN COMPONENT ---
@@ -388,14 +477,12 @@ const AddProductPage = () => {
                   />
                   <div>
                     <label htmlFor="description" className="block mb-2 text-sm font-medium text-slate-700">Description</label>
-                    <textarea 
-                      id="description" 
-                      value={description} 
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={5}
-                      className="block w-full border rounded-lg shadow-sm text-slate-900 bg-slate-50 border-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm"
+                    <RichTextEditor
+                      value={description}
+                      onChange={setDescription}
                       placeholder="Describe your product..."
                     />
+                    <p className="mt-2 text-xs text-slate-500">Use the toolbar to add line breaks, bullet points, and bold highlights.</p>
                   </div>
                 </div>
               </Card>

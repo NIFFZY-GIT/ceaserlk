@@ -62,8 +62,8 @@ const Navbar = () => {
     closeMobileMenu();
   };
   return (
-    <header className="sticky top-0 z-30 shadow-lg bg-brand-black text-brand-white">
-      <nav className="container flex items-center justify-between px-6 py-6 mx-auto">
+  <header className="sticky top-0 z-30 border-b border-white/10 bg-[rgba(0,0,0,0.9)] text-brand-white shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-[rgba(0,0,0,0.85)]">
+      <nav className="container mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4 md:py-5">
         {/* LOGO */}
         <Link href="/" onClick={handleLinkClick} className="transition-opacity rounded-sm hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
           <Image
@@ -84,10 +84,16 @@ const Navbar = () => {
               <Link
                 key={link.label}
                 href={link.href}
-                className={`relative uppercase font-bold text-sm tracking-wider transition-colors ${isActive ? 'text-primary' : 'hover:text-primary'}`}
+                className={`group relative flex flex-col items-center gap-1 uppercase text-[13px] tracking-[0.25em] transition-all duration-200 ${isActive ? 'text-white font-semibold' : 'text-white/50 font-medium hover:text-white hover:font-semibold'}`}
               >
-                {link.label}
-                {isActive && <span className="absolute -bottom-6 left-0 w-full h-[3px] bg-accent rounded-full"></span>}
+                <span>{link.label}</span>
+                <span
+                  className={`absolute -bottom-5 left-1/2 flex h-[3px] w-14 -translate-x-1/2 transform overflow-hidden rounded-full transition-all duration-200 ${isActive ? 'scale-100 opacity-100' : 'scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100'}`}
+                >
+                  <span className="flex-1 bg-[#009246]"></span>
+                  <span className="flex-1 bg-white"></span>
+                  <span className="flex-1 bg-[#ce2b37]"></span>
+                </span>
               </Link>
             );
           })}
@@ -99,7 +105,7 @@ const Navbar = () => {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                className="hidden p-2 transition-colors rounded-full md:block hover:bg-gray-800"
+                className="hidden rounded-full p-2 transition-colors md:block hover:bg-white/10 hover:text-white"
               >
                 <CircleUser size={26} />
               </button>
@@ -136,18 +142,18 @@ const Navbar = () => {
               )}
             </div>
           ) : (
-            <Link href="/login" className="hidden p-2 transition-colors rounded-full md:block hover:bg-gray-800">
+            <Link href="/login" className="hidden rounded-full p-2 transition-colors md:block hover:bg-white/10 hover:text-white">
               <CircleUser size={26} />
             </Link>
           )}
           
           {user && (
-            <button onClick={openCart} className="relative transition-colors hover:text-primary">
+            <button onClick={openCart} className="relative rounded-full p-2 transition-colors hover:bg-white/10 hover:text-white">
               <ShoppingCart size={26} />
               {cartCount > 0 && (<span className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white rounded-full -top-2 -right-2 bg-accent">{cartCount}</span>)}
             </button>
           )}
-          <button className="p-2 md:hidden" onClick={toggleMobileMenu} aria-label="Toggle menu">
+          <button className="rounded-full p-2 transition-colors hover:bg-white/10 md:hidden" onClick={toggleMobileMenu} aria-label="Toggle menu">
             {isMobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
         </div>
@@ -158,11 +164,11 @@ const Navbar = () => {
         aria-hidden={!isMobileMenuOpen}
       >
         <div
-          className={`absolute inset-0 bg-black/85 backdrop-blur transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+          className={`absolute inset-0 bg-black/70 backdrop-blur transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0'}`}
           onClick={closeMobileMenu}
         />
         <div
-          className={`absolute right-0 top-0 flex h-full w-full max-w-[320px] flex-col border-l border-gray-900 bg-brand-black transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className={`absolute right-0 top-0 flex h-full w-full max-w-[320px] flex-col border-l border-white/10 bg-[rgba(0,0,0,0.92)] backdrop-blur-xl transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
           role="dialog"
           aria-modal="true"
         >

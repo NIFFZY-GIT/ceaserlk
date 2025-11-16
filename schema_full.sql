@@ -5,7 +5,7 @@
 -- Dumped from database version 17.5
 -- Dumped by pg_dump version 17.5
 
--- Started on 2025-09-20 00:23:05
+-- Started on 2025-10-19 02:21:07
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -605,8 +605,7 @@ COPY public.cart_items (id, cart_id, sku_id, quantity, added_at) FROM stdin;
 --
 
 COPY public.carts (id, session_id, user_id, created_at, expires_at) FROM stdin;
-9eb392d6-0ddc-4e4d-8a3f-ae15da063e5a	938ddb9c-dc60-4bac-85c1-988fb32f0e18	\N	2025-09-19 23:49:07.440129+05:30	2025-09-20 00:43:12.096+05:30
-895d0497-875e-4986-8c28-a705f4071b81	9b1900d0-0c73-4acd-a816-68d72fa1e809	\N	2025-09-19 23:02:04.523517+05:30	2025-09-20 00:45:13.198+05:30
+d05bbc4a-a5b3-43a2-a7ca-505bc2253d1b	938ddb9c-dc60-4bac-85c1-988fb32f0e18	\N	2025-10-16 22:17:24.672985+05:30	2025-10-16 22:47:24.672+05:30
 \.
 
 
@@ -627,6 +626,7 @@ COPY public.download_logs (id, user_email, product_id, order_id, download_type, 
 --
 
 COPY public.order_items (id, order_id, product_name, variant_color, variant_size, price_paid, quantity, product_id, sku_id) FROM stdin;
+89759a93-c871-4fa5-9451-0b34cc7cc641	ae5e5e85-4900-40a7-9aa4-d8c6a56eb029	fs	Default	M	435.00	1	\N	\N
 \.
 
 
@@ -637,6 +637,7 @@ COPY public.order_items (id, order_id, product_name, variant_color, variant_size
 --
 
 COPY public.orders (id, user_id, status, customer_email, shipping_address_line1, shipping_address_line2, shipping_city, shipping_postal_code, shipping_country, subtotal, shipping_cost, total_amount, payment_intent_id, created_at, full_name, phone_number, trading_card_url) FROM stdin;
+ae5e5e85-4900-40a7-9aa4-d8c6a56eb029	722e9dc0-5b31-41b5-a791-2a8b46a2f062	PAID	k.nipuna.dasun@gmail.com	1 377 1/A, Magammana, Homagama	\N	Homagama	10200	Sri Lanka	435.00	500.00	935.00	pi_3SDXsXPg7NaxGrmp1b60OaOo	2025-10-02 03:18:09.027663+05:30	Kotalawalage Dasun	+94766604984	\N
 \.
 
 
@@ -647,7 +648,7 @@ COPY public.orders (id, user_id, status, customer_email, shipping_address_line1,
 --
 
 COPY public.password_reset_codes (id, user_id, email, code, expires_at, used, used_at, created_at) FROM stdin;
-232ba70c-3515-401f-907a-14b9cdbce77a	722e9dc0-5b31-41b5-a791-2a8b46a2f062	k.nipuna.dasun@gmail.com	947178	2025-09-19 03:11:37.399+05:30	t	2025-09-19 03:02:12.470252+05:30	2025-09-19 03:01:37.399996+05:30
+232ba70c-3515-401f-907a-14b9cdbce77a	722e9dc0-5b31-41b5-a791-2a8b46a2f062	k.nipuna.dasun@gmail.com	446911	2025-10-01 21:36:35.279+05:30	f	2025-10-01 02:02:57.815132+05:30	2025-10-01 21:26:35.280714+05:30
 \.
 
 
@@ -658,7 +659,8 @@ COPY public.password_reset_codes (id, user_id, email, code, expires_at, used, us
 --
 
 COPY public.product_variants (id, product_id, color_name, color_hex_code, price, sku, created_at, thumbnail_url, compare_at_price) FROM stdin;
-ddf6aac9-fc26-49bc-8da9-b72a39cd9c70	0a756d3f-f08d-4f57-a32f-a95d1548c505	Black	#000000	2500.00	asdffsd	2025-09-20 00:21:23.922684+05:30	\N	3000.00
+3ea8ce25-6da4-4aa9-9b97-493a32c44b94	e659d906-05b3-4032-b0c4-49e32add35f8	Blue	#001c8a	5000.00	asdasd	2025-10-06 21:29:09.68628+05:30	/uploads/products/1759766349710-variant-0-bs.webp	6000.00
+2fb1fe52-e5c1-4919-b55a-ee5dd84667c8	e659d906-05b3-4032-b0c4-49e32add35f8	White	#ffffff	8000.00	sad	2025-10-06 21:29:09.68628+05:30	/uploads/products/1759766349726-variant-0-bs.jpg	10000.00
 \.
 
 
@@ -669,7 +671,7 @@ ddf6aac9-fc26-49bc-8da9-b72a39cd9c70	0a756d3f-f08d-4f57-a32f-a95d1548c505	Black	
 --
 
 COPY public.products (id, name, description, category, brand, is_published, created_at, updated_at, audio_url, shipping_cost, trading_card_image) FROM stdin;
-0a756d3f-f08d-4f57-a32f-a95d1548c505	Ronaldo	sdfsdfsdf	\N	\N	t	2025-09-20 00:21:23.922684+05:30	2025-09-20 00:21:23.922684+05:30	/uploads/audio/1758307883917-epic1.mp3	500.00	/uploads/trading-cards/1758307883920-WhatsApp-Image-2025-09-17-at-8.44.49-PM.jpeg
+e659d906-05b3-4032-b0c4-49e32add35f8	Black	sdasdasd	\N	\N	t	2025-10-06 21:29:09.68628+05:30	2025-10-09 20:45:08.286561+05:30	/uploads/audio/1759766349670-a1.mp3	500.00	/uploads/trading-cards/1759766349682-p2.jpeg
 \.
 
 
@@ -680,7 +682,9 @@ COPY public.products (id, name, description, category, brand, is_published, crea
 --
 
 COPY public.stock_keeping_units (id, variant_id, size, stock_quantity) FROM stdin;
-4d63878e-5bcf-46df-bd33-758de83c1876	ddf6aac9-fc26-49bc-8da9-b72a39cd9c70	S	8
+a765b857-d3c7-4ad1-81e0-153d3705f83a	2fb1fe52-e5c1-4919-b55a-ee5dd84667c8	S	10
+ab39f274-b9ec-4c8a-976f-263d2e583a1c	3ea8ce25-6da4-4aa9-9b97-493a32c44b94	M	188
+0535fc66-1983-48da-b3f3-939c50d7c4b0	3ea8ce25-6da4-4aa9-9b97-493a32c44b94	S	50
 \.
 
 
@@ -692,7 +696,9 @@ COPY public.stock_keeping_units (id, variant_id, size, stock_quantity) FROM stdi
 
 COPY public.users (id, first_name, last_name, email, phone_number, password_hash, role, is_verified, created_at, updated_at) FROM stdin;
 9e91947c-eb75-4829-bcf1-8a575c9f69fa	admin	test	admin@gmail.com	0112753029	$2b$10$9XFwSJOUf2cyrkgNPXU4wOGcRFc1e2jVlj8iadllldYVmC9cts9wK	ADMIN	f	2025-09-12 16:43:30.016663+05:30	2025-09-12 16:45:50.481676+05:30
-722e9dc0-5b31-41b5-a791-2a8b46a2f062	Kotalawalage	Dasun	k.nipuna.dasun@gmail.com	0766604984	$2b$10$Hyk5eb7C2PAJbsXV/KsGouBC.b/WtxQGpKFVRAuU2cHiSkCA4i0rq	USER	f	2025-09-12 16:40:54.536048+05:30	2025-09-19 03:02:12.470252+05:30
+4efe663e-81cf-4339-a125-8a152716c4fc	Kotalawalage	Dasun	niffzy@gmail.com	1254865426	$2b$10$ngtQ0iimS7rRXDApSL9ZZuhu3ERfrL81NAv4QJ.aJAt628cqM1jl6	USER	f	2025-10-01 20:28:28.632663+05:30	2025-10-01 20:28:28.632663+05:30
+722e9dc0-5b31-41b5-a791-2a8b46a2f062	Kotalawalage	Dasun	k.nipuna.dasun@gmail.com	0766604984	$2b$10$4w9OPXBbIAQ3zM40SO0J6uicF6xnKUOPgZ7JRJuFbwg7JnOFbozyW	ADMIN	f	2025-09-12 16:40:54.536048+05:30	2025-10-01 21:22:43.896743+05:30
+e32d3070-98b4-41be-9a2c-18a624d4472a	Kotalawalage	Dasun	zevarone@gmail.com	1234567890	$2b$10$7uPu1zB.edYIfyPlmrFRfOxxpTpaIf91/IQJiblMsUPhDMJ7BvOeW	USER	f	2025-10-02 02:34:22.480139+05:30	2025-10-02 02:34:22.480139+05:30
 \.
 
 
@@ -703,6 +709,10 @@ COPY public.users (id, first_name, last_name, email, phone_number, password_hash
 --
 
 COPY public.variant_images (id, variant_id, image_url, alt_text, display_order) FROM stdin;
+3491c16a-9e7a-43f0-83e8-ff0f0a7b4893	3ea8ce25-6da4-4aa9-9b97-493a32c44b94	/uploads/products/1759766349710-variant-0-bs.webp	Black - Black - Variant Media 1	0
+c55ace0d-8ab7-4f86-bd7e-e35fe28652cc	3ea8ce25-6da4-4aa9-9b97-493a32c44b94	/uploads/products/1759766349717-variant-1-istockphoto-1393137501-612x612.jpg	Black - Black - Variant Media 2	1
+a94a5fd8-20a5-4476-b51b-cece9457a9c9	2fb1fe52-e5c1-4919-b55a-ee5dd84667c8	/uploads/products/1759766349726-variant-0-bs.jpg	Black - White - Variant Media 1	0
+75579aee-0e84-46e7-8975-ba17ca184bca	2fb1fe52-e5c1-4919-b55a-ee5dd84667c8	/uploads/products/1759766349733-variant-1-Exp-193.jpg	Black - White - Variant Media 2	1
 \.
 
 
@@ -1130,7 +1140,7 @@ ALTER TABLE ONLY public.variant_images
     ADD CONSTRAINT variant_images_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id) ON DELETE CASCADE;
 
 
--- Completed on 2025-09-20 00:23:05
+-- Completed on 2025-10-19 02:21:07
 
 --
 -- PostgreSQL database dump complete
