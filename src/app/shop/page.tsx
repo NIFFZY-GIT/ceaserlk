@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ProductCard } from '@/app/components/ProductCard';
 import FilterSidebar, { Filters, AvailableColors } from '@/app/components/FilterSidebar';
 import { SlidersHorizontal, Loader2 } from 'lucide-react';
@@ -44,6 +44,8 @@ const ShopPage = () => {
   // UI State
   const [isMobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [isDesktopFilterVisible, setDesktopFilterVisible] = useState(true);
+  const [isMobileView, setIsMobileView] = useState(false);
+  const previousIsMobileRef = useRef<boolean | null>(null);
   const activeFilterCount = filters.sizes.length + filters.colors.length + (filters.maxPrice < priceRange.maxPrice ? 1 : 0);
   // Combined effect to fetch initial data and products in one go
   useEffect(() => {
@@ -133,13 +135,22 @@ const ShopPage = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
     const handleResponsiveLayout = () => {
-      if (window.innerWidth >= 1024) {
+      const mobile = window.innerWidth < 1024;
+      setIsMobileView(mobile);
+
+      if (!mobile) {
         setMobileFilterOpen(false);
-      } else {
+      }
+
+      if (previousIsMobileRef.current !== null && previousIsMobileRef.current && !mobile) {
         setDesktopFilterVisible(true);
       }
+
+      previousIsMobileRef.current = mobile;
     };
+
     handleResponsiveLayout();
     window.addEventListener('resize', handleResponsiveLayout);
     return () => window.removeEventListener('resize', handleResponsiveLayout);
@@ -166,23 +177,29 @@ const ShopPage = () => {
   
   return (
     <div className="bg-gray-50">
-      <div className="container px-4 py-16 mx-auto sm:px-6 lg:px-8">
-        <div className="mb-12 text-center">
-          <h1 className="text-4xl font-extrabold tracking-wider text-black uppercase md:text-5xl">The Collection</h1>
-          <p className="mt-2 text-lg text-gray-600">Apparel designed for the relentless.</p>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-4 lg:gap-12">
-          {isDesktopFilterVisible && (
-            <FilterSidebar 
-              isOpen={isMobileFilterOpen} onClose={() => setMobileFilterOpen(false)}
-              filters={filters} onFilterChange={handleFilterChange}
-              availableSizes={availableSizes} availableColors={availableColors}
-              clearFilters={clearFilters} minPrice={priceRange.minPrice} maxPrice={priceRange.maxPrice}
-            />
-          )}
-          <main className={`transition-all duration-300 ${isDesktopFilterVisible ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
-            <div className="flex items-center justify-between pb-4 mb-8 border-b border-gray-200">
-              <div className="flex items-center gap-3">
+      <main className="container mx-auto w-full px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-12 lg:px-8">
+        <header className="mb-8 text-center sm:mb-12">
+          <div className="mx-auto max-w-2xl space-y-2 sm:space-y-3">
+            <h1 className="text-3xl font-extrabold uppercase tracking-[0.12em] text-black sm:text-4xl sm:tracking-[0.2em] lg:text-5xl">The Collection</h1>
+            <p className="text-sm text-gray-600 sm:text-base">Apparel designed for the relentless.</p>
+          </div>
+        </header>
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-4 lg:gap-12">
+          <FilterSidebar
+            showDesktop={isDesktopFilterVisible}
+            isOpen={isMobileFilterOpen}
+            onClose={() => setMobileFilterOpen(false)}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            availableSizes={availableSizes}
+            availableColors={availableColors}
+            clearFilters={clearFilters}
+            minPrice={priceRange.minPrice}
+            maxPrice={priceRange.maxPrice}
+          />
+          <section className={`flex flex-col gap-8 transition-all duration-300 ${isDesktopFilterVisible ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
+            <div className="flex flex-col gap-4 border-b border-gray-200 pb-4 sm:flex-row sm:items-center sm:justify-between lg:sticky lg:top-24 lg:z-10 lg:bg-gray-50 lg:pb-5">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setMobileFilterOpen(true)}
@@ -198,16 +215,16 @@ const ShopPage = () => {
                     </span>
                   )}
                 </button>
-                <button onClick={() => setDesktopFilterVisible(v => !v)} className="items-center hidden gap-2 p-2 text-sm font-medium transition-colors border rounded-md lg:flex hover:bg-gray-100">
+                <button onClick={() => setDesktopFilterVisible(v => !v)} className="hidden items-center gap-2 rounded-md border p-2 text-sm font-medium transition-colors hover:bg-gray-100 lg:flex">
                   <SlidersHorizontal size={16} /><span>Filters</span>
                 </button>
               </div>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 sm:text-right" aria-live="polite">
                 Showing <span className="font-semibold text-black">{products.length}</span> products
               </p>
             </div>
             {loading ? (
-              <div className="flex items-center justify-center h-96"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>
+              <div className="flex min-h-[55vh] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
             ) : products.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-center h-96">
                 <h3 className="text-2xl font-semibold text-gray-800">No Products Found</h3>
@@ -215,15 +232,33 @@ const ShopPage = () => {
                 <button onClick={clearFilters} className="px-5 py-2 mt-6 text-sm font-semibold text-white rounded-md bg-primary hover:bg-primary/90">Clear All Filters</button>
               </div>
             ) : (
-              <div className={`grid grid-cols-1 gap-8 sm:grid-cols-2 transition-all duration-300 ${isDesktopFilterVisible ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
+              <div className={`grid grid-cols-1 gap-5 sm:grid-cols-2 md:gap-8 transition-all duration-300 ${isDesktopFilterVisible ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             )}
-          </main>
+          </section>
         </div>
-      </div>
+      </main>
+      {isMobileView && !isMobileFilterOpen && (
+        <div className="fixed inset-x-0 bottom-5 z-40 flex justify-center lg:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileFilterOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-black/20 transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+            aria-label="Open filters"
+          >
+            <SlidersHorizontal size={16} />
+            <span>Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-black">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 
 // Define the shape of the filters object that will be passed around
 export interface Filters {
@@ -27,6 +27,7 @@ interface FilterSidebarProps {
   clearFilters: () => void;
   minPrice: number;
   maxPrice: number;
+  showDesktop: boolean;
 }
 
 const FilterSidebar: React.FC<FilterSidebarProps> = ({
@@ -39,7 +40,24 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   clearFilters,
   minPrice,
   maxPrice,
+  showDesktop,
 }) => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const previousOverflow = document.body.style.overflow;
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }
+
+    document.body.style.overflow = previousOverflow;
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   // Helper function to handle toggling array filters (sizes, colors)
   const handleToggle = (filterType: 'sizes' | 'colors', value: string) => {
     onFilterChange(filterType, value);
@@ -49,12 +67,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   const activeFilterCount = filters.sizes.length + filters.colors.length + (filters.maxPrice < maxPrice ? 1 : 0);
 
   // Colors are already deduplicated from the API, so use them directly
-  const uniqueColors: AvailableColors[] = useMemo(() => {
-    console.log('FilterSidebar received colors:', availableColors);
-    const filtered = availableColors.filter(c => c.name && c.name.trim());
-    console.log('FilterSidebar filtered colors:', filtered);
-    return filtered;
-  }, [availableColors]);
+  const uniqueColors: AvailableColors[] = useMemo(
+    () => availableColors.filter((color) => color.name && color.name.trim()),
+    [availableColors]
+  );
 
   const FilterContent = () => (
     <>
@@ -168,7 +184,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block lg:col-span-1">
+      <aside className={`${showDesktop ? 'hidden lg:block lg:col-span-1' : 'hidden'}`}>
         <div className="sticky top-28">
           <div className="flex items-center justify-between mb-6">
             <h2 className="flex items-center gap-2 text-xl font-bold text-black">
@@ -203,27 +219,31 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         id="shop-mobile-filters"
         role="dialog"
         aria-modal="true"
-        className={`fixed top-0 left-0 h-full w-4/5 max-w-sm bg-white z-50 transform transition-transform duration-300 lg:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        aria-labelledby="shop-mobile-filters-title"
+        className={`fixed top-0 left-0 h-full w-full max-w-sm bg-white shadow-2xl z-50 transform transition-transform duration-300 lg:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full'} sm:max-w-md`}
       >
-        <div className="h-full p-6 overflow-y-auto modern-scrollbar scroll-smooth">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="flex items-center gap-2 text-xl font-bold">
+        <div className="flex h-full flex-col bg-white">
+          <div className="flex items-center justify-between px-6 pb-4 pt-6">
+            <h2 id="shop-mobile-filters-title" className="flex items-center gap-2 text-xl font-bold">
               Filters
               {activeFilterCount > 0 && (
-                <span className="px-2 py-1 text-xs text-white rounded-full bg-primary">
+                <span className="rounded-full bg-primary px-2 py-1 text-xs text-white">
                   {activeFilterCount}
                 </span>
               )}
             </h2>
-            <button onClick={onClose} className="p-1 rounded hover:bg-gray-100">
-              <X size={24} />
+            <button onClick={onClose} className="rounded-full p-1.5 text-gray-600 transition hover:bg-gray-100 hover:text-gray-900" aria-label="Close filters">
+              <X size={22} />
             </button>
           </div>
-          <FilterContent />
-          <div className="flex flex-col gap-4 pt-6 mt-8 border-t">
-              <button 
-                onClick={clearFilters} 
-                className={`w-full py-3 text-sm font-semibold border rounded-md transition-colors ${
+          <div className="flex-1 overflow-y-auto px-6 pb-6 modern-scrollbar">
+            <FilterContent />
+          </div>
+          <div className="border-t border-gray-200 bg-white px-6 py-6">
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={clearFilters}
+                className={`w-full rounded-md border py-3 text-sm font-semibold transition-colors ${
                   activeFilterCount > 0
                     ? 'border-red-300 text-red-600 hover:bg-red-50'
                     : 'border-gray-300 text-gray-400'
@@ -232,12 +252,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
               >
                 Clear All Filters
               </button>
-              <button 
-                onClick={onClose} 
-                className="w-full py-3 text-sm font-semibold text-white transition-colors rounded-md bg-primary hover:bg-primary/90"
+              <button
+                onClick={onClose}
+                className="w-full rounded-md bg-primary py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
               >
                 Apply Filters ({activeFilterCount})
               </button>
+            </div>
           </div>
         </div>
       </div>
