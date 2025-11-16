@@ -7,10 +7,18 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Image from 'next/image';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const SLIDE_DURATION_MS = 5000; // 5 seconds per slide
+
+type NetworkInformation = {
+  saveData?: boolean;
+  effectiveType?: string;
+  addEventListener?: (type: 'change', listener: () => void) => void;
+  removeEventListener?: (type: 'change', listener: () => void) => void;
+};
 
 const showcaseData = [
   {
@@ -36,7 +44,9 @@ const VideoShowcase = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const progressAnimation = useRef<gsap.core.Tween | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [videoEligible, setVideoEligible] = useState(false);
   const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
 
   // Animation for the entire section entering the viewport
   useLayoutEffect(() => {
@@ -56,9 +66,40 @@ const VideoShowcase = () => {
     return () => ctx.revert();
   }, []);
 
+  // Detect user/device preferences before ever loading the video asset
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const connection = (navigator as Navigator & { connection?: NetworkInformation }).connection;
+
+    const evaluateEligibility = () => {
+      const prefersReducedMotion = reduceMotionQuery.matches;
+      const saveData = Boolean(connection?.saveData);
+      const slowConnection = Boolean(connection?.effectiveType && /(slow-)?2g|3g/i.test(connection.effectiveType));
+
+      const eligible = !prefersReducedMotion && !saveData && !slowConnection;
+      setVideoEligible(eligible);
+      if (!eligible) {
+        setShouldLoadVideo(false);
+      }
+    };
+
+    evaluateEligibility();
+
+    const handleChange = () => evaluateEligibility();
+    reduceMotionQuery.addEventListener('change', handleChange);
+    connection?.addEventListener?.('change', handleChange);
+
+    return () => {
+      reduceMotionQuery.removeEventListener('change', handleChange);
+      connection?.removeEventListener?.('change', handleChange);
+    };
+  }, []);
+
   // Lazy-load the background video when the hero nears the viewport
   useEffect(() => {
-    if (!sectionRef.current) return;
+    if (!videoEligible || !sectionRef.current) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -74,17 +115,17 @@ const VideoShowcase = () => {
     observer.observe(sectionRef.current);
 
     return () => observer.disconnect();
-  }, []);
+  }, [videoEligible]);
 
   // Ensure playback kicks in once sources attach
   useEffect(() => {
-    if (!shouldLoadVideo || !videoRef.current) return;
+    if (!shouldLoadVideo || !videoEligible || !videoRef.current) return;
     const player = videoRef.current;
     const playPromise = player.play();
     if (playPromise && typeof playPromise.then === 'function') {
       playPromise.catch(() => undefined);
     }
-  }, [shouldLoadVideo]);
+  }, [shouldLoadVideo, videoEligible]);
 
   // Effect to handle the auto-playing slideshow and text animations
   useEffect(() => {
@@ -123,20 +164,44 @@ const VideoShowcase = () => {
   return (
     <section ref={sectionRef} className="relative h-[90vh] min-h-[700px] w-full bg-brand-black text-white flex items-center">
       {/* Background Video */}
-      <video
-        ref={videoRef}
-        className="absolute top-0 left-0 w-full h-full object-cover z-0"
-        autoPlay
-        loop
-        muted
-        playsInline
-        poster="/images/image.jpg"
-        preload={shouldLoadVideo ? 'auto' : 'metadata'}
-      >
-        {shouldLoadVideo && (
-          <source src="/Assets/v1.mp4" type="video/mp4" />
-        )}
-      </video>
+      {videoEligible ? (
+        <video
+          ref={videoRef}
+          className="absolute top-0 left-0 w-full h-full object-cover z-0"
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster="/images/image.jpg"
+          preload={shouldLoadVideo ? 'metadata' : 'none'}
+          onLoadedData={() => setVideoReady(true)}
+        >
+          {shouldLoadVideo && (
+            <source src="/Assets/v1.mp4" type="video/mp4" />
+          )}
+        </video>
+      ) : (
+        <div className="absolute top-0 left-0 w-full h-full z-0">
+          <Image
+            src="/images/image.jpg"
+            alt="Athletic apparel background"
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+      )}
+      {!videoReady && videoEligible && (
+        <div className="absolute top-0 left-0 w-full h-full z-0">
+          <Image
+            src="/images/image.jpg"
+            alt="Athletic apparel background placeholder"
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+      )}
       <div className="absolute inset-0 bg-black/70 z-10" />
 
       {/* Content */}
