@@ -188,7 +188,7 @@ const VideoShowcase = () => {
           onLoadedData={() => setVideoReady(true)}
         >
           {shouldLoadVideo && (
-            <source src="/Assets/v1.mp4" type="video/mp4" />
+            <source src="/assets/v1.mp4" type="video/mp4" />
           )}
         </video>
       ) : (
