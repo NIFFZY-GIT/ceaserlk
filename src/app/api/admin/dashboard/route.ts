@@ -13,8 +13,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
   }
 
+  let client;
   try {
-    const client = await db.connect();
+    client = await db.connect();
 
     // --- We will run all queries concurrently for maximum performance ---
 
@@ -75,18 +76,19 @@ export async function GET(request: NextRequest) {
         recentOrdersQuery,
         lowStockQuery
     ]);
-    
-    client.release();
+
+    const revenueRow = revenueResult.rows[0] || { totalRevenue: '0', totalSales: '0' };
+    const customersRow = customersResult.rows[0] || { newCustomers: '0' };
 
     const dashboardData = {
       kpis: {
-        totalRevenue: revenueResult.rows[0].totalRevenue || '0',
-        totalSales: revenueResult.rows[0].totalSales || '0',
-        newCustomers: customersResult.rows[0].newCustomers || '0',
+        totalRevenue: revenueRow.totalRevenue ?? '0',
+        totalSales: revenueRow.totalSales ?? '0',
+        newCustomers: customersRow.newCustomers ?? '0',
       },
       salesData: salesDataResult.rows.map(r => ({
           date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          revenue: parseFloat(r.revenue)
+          revenue: parseFloat(r.revenue ?? 0)
       })),
       recentOrders: recentOrdersResult.rows,
       lowStockItems: lowStockResult.rows,
@@ -97,5 +99,13 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("API Dashboard Error:", error);
     return NextResponse.json({ error: "Failed to fetch dashboard data" }, { status: 500 });
+  } finally {
+    if (client) {
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('Failed to release DB client in dashboard route:', releaseError);
+      }
+    }
   }
 }
