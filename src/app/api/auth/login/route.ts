@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { serialize } from 'cookie';
 import { z } from 'zod';
 import { createJWT, getSecureCookieOptions } from '@/lib/auth';

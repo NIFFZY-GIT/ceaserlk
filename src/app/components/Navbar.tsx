@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Menu, User, CircleUser, X, Settings, Sparkles, ChevronRight, LogOut } from 'lucide-react';
+import { ShoppingCart, Menu, User, X, Settings, ChevronRight, LogOut } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 
