@@ -1,10 +1,11 @@
 "use client";
 
 import { useCart, CartItem } from "@/context/CartContext";
-import { X, Trash2, Plus, Minus, ShoppingBag, Loader2, Clock, Video } from "lucide-react";
+import { X, Trash2, Plus, Minus, ShoppingBag, Loader2, Clock, Video, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useLayoutEffect, useState, useEffect } from 'react';
+import { useAuth } from "@/context/AuthContext";
 
 // const FREE_SHIPPING_THRESHOLD = 10000;
 
@@ -223,6 +224,7 @@ const CountdownTimer = ({ expiresAt }: { expiresAt: string | null }) => {
 
 export const CartDrawer = () => {
   const { isCartOpen, closeCart, cart, cartCount, loading } = useCart();
+  const { user } = useAuth();
   // --- UPDATED SUBTOTAL CALCULATION ---
   const subtotal = cart?.items.reduce((total, item) => total + Number(item.sku.variant.price) * item.quantity, 0) || 0;
   const drawerRef = useRef(null);
@@ -251,39 +253,59 @@ export const CartDrawer = () => {
               <X size={24} />
             </button>
           </div>
-          {loading && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm"><Loader2 className="w-10 h-10 animate-spin text-primary"/></div>}
-          {hasItems ? (
-            <div className="flex-grow p-6 space-y-6 overflow-y-auto md:p-8">
-              {cart.items.map(item => <CartItemCard key={item.id} item={item} />)}
+          {!user ? (
+            <div className="flex flex-col items-center justify-center flex-grow p-8 text-center">
+              <User size={80} className="mb-6 text-gray-800" />
+              <h3 className="text-2xl font-semibold">Please Login</h3>
+              <p className="max-w-xs mt-2 text-gray-500">
+                You need to be logged in to view your cart.
+              </p>
+              <div className="flex flex-col w-full gap-3 mt-8">
+                <Link href="/login" onClick={closeCart} className="w-full px-8 py-3 font-bold text-white transition-colors rounded-md bg-primary hover:bg-opacity-90">
+                  Login
+                </Link>
+                <Link href="/signup" onClick={closeCart} className="w-full px-8 py-3 font-bold text-white transition-colors border border-gray-700 rounded-md hover:bg-gray-800">
+                  Create Account
+                </Link>
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center flex-grow p-8 text-center">
-              <ShoppingBag size={80} className="mb-6 text-gray-800" />
-              <h3 className="text-2xl font-semibold">Your Cart is Empty</h3>
-              <p className="max-w-xs mt-2 text-gray-500">
-                Looks like you haven&apos;t added anything yet. Let&apos;s change that.
-              </p>
-              <Link href="/shop" onClick={closeCart} className="px-8 py-3 mt-8 font-bold text-white transition-colors rounded-md bg-primary hover:bg-opacity-90">
-                Start Shopping
-              </Link>
-            </div>
-          )}
-          {hasItems && (
-            <div className="p-6 bg-black border-t border-gray-800 md:p-8 cart-footer-gsap">
-              {/* <FreeShippingMeter subtotal={subtotal} /> */}
-              <CountdownTimer expiresAt={cart.expiresAt} />
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-400">
-                  {cartCount} {cartCount === 1 ? 'item' : 'items'} in cart
-                </span>
-                <span className="text-lg font-semibold text-gray-300">Subtotal</span>
-                <span className="text-2xl font-bold text-white">LKR {subtotal.toFixed(2)}</span>
-              </div>
-              <p className="mb-4 text-xs text-center text-gray-500">Shipping & taxes calculated at checkout.</p>
-              <Link href="/checkout" onClick={closeCart} className="block w-full py-4 font-bold tracking-wider text-center text-white uppercase transition-all duration-300 rounded-md bg-accent hover:bg-red-500 hover:shadow-lg focus:outline-none focus:ring-4 ring-accent/50">
-                Proceed to Checkout
-              </Link>
-            </div>
+            <>
+              {loading && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm"><Loader2 className="w-10 h-10 animate-spin text-primary"/></div>}
+              {hasItems ? (
+                <div className="flex-grow p-6 space-y-6 overflow-y-auto md:p-8">
+                  {cart.items.map(item => <CartItemCard key={item.id} item={item} />)}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center flex-grow p-8 text-center">
+                  <ShoppingBag size={80} className="mb-6 text-gray-800" />
+                  <h3 className="text-2xl font-semibold">Your Cart is Empty</h3>
+                  <p className="max-w-xs mt-2 text-gray-500">
+                    Looks like you haven&apos;t added anything yet. Let&apos;s change that.
+                  </p>
+                  <Link href="/shop" onClick={closeCart} className="px-8 py-3 mt-8 font-bold text-white transition-colors rounded-md bg-primary hover:bg-opacity-90">
+                    Start Shopping
+                  </Link>
+                </div>
+              )}
+              {hasItems && (
+                <div className="p-6 bg-black border-t border-gray-800 md:p-8 cart-footer-gsap">
+                  {/* <FreeShippingMeter subtotal={subtotal} /> */}
+                  <CountdownTimer expiresAt={cart.expiresAt} />
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-400">
+                      {cartCount} {cartCount === 1 ? 'item' : 'items'} in cart
+                    </span>
+                    <span className="text-lg font-semibold text-gray-300">Subtotal</span>
+                    <span className="text-2xl font-bold text-white">LKR {subtotal.toFixed(2)}</span>
+                  </div>
+                  <p className="mb-4 text-xs text-center text-gray-500">Shipping & taxes calculated at checkout.</p>
+                  <Link href="/checkout" onClick={closeCart} className="block w-full py-4 font-bold tracking-wider text-center text-white uppercase transition-all duration-300 rounded-md bg-accent hover:bg-red-500 hover:shadow-lg focus:outline-none focus:ring-4 ring-accent/50">
+                    Proceed to Checkout
+                  </Link>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

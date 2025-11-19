@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Menu, User, CircleUser, X, Settings, Sparkles, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Menu, User, CircleUser, X, Settings, Sparkles, ChevronRight, LogOut } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -71,6 +71,10 @@ const Navbar = () => {
     openCart();
   };
 
+  const handleCartClick = () => {
+    openCart();
+  };
+
   const hasItems = cartCount > 0;
 
   return (
@@ -101,34 +105,95 @@ const Navbar = () => {
           {/* Desktop Profile Icon */}
           <div className="hidden md:block">
             {user ? (
-              <div className="relative" ref={dropdownRef}>
-                <button onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)} className="rounded-full p-2 transition-colors hover:bg-white/10 hover:text-white">
-                  <CircleUser size={26} />
+              <div 
+                className="relative" 
+                ref={dropdownRef}
+                onMouseEnter={() => setIsProfileDropdownOpen(true)}
+                onMouseLeave={() => setIsProfileDropdownOpen(false)}
+              >
+                <button 
+                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)} 
+                  className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 border ${
+                    isProfileDropdownOpen 
+                      ? 'bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-105' 
+                      : 'bg-white/10 text-white border-transparent hover:bg-white hover:text-black hover:border-white'
+                  }`}
+                >
+                  <span className="text-sm font-bold">
+                    {user.firstName ? user.firstName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                  </span>
                 </button>
-                {isProfileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                    <Link href="/profile" onClick={handleLinkClick} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <User className="w-4 h-4 mr-2" /> Profile
-                    </Link>
-                    {user.role === 'ADMIN' && (
-                      <Link href="/admin/dashboard" onClick={handleLinkClick} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                        <Settings className="w-4 h-4 mr-2" /> Dashboard
+                
+                {/* Dropdown Menu */}
+                <div 
+                  className={`absolute right-0 top-full pt-4 w-72 z-50 transition-all duration-300 origin-top-right ${
+                    isProfileDropdownOpen 
+                      ? 'opacity-100 translate-y-0 scale-100' 
+                      : 'opacity-0 translate-y-2 scale-95 pointer-events-none'
+                  }`}
+                >
+                  <div className="overflow-hidden bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 ring-1 ring-black/5">
+                    {/* User Header */}
+                    <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-br from-gray-50 to-white">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Signed in as</p>
+                      <p className="text-base font-bold text-gray-900 truncate">{user.firstName || 'User'}</p>
+                      <p className="text-xs font-medium text-gray-500 truncate">{user.email}</p>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="p-2 space-y-1">
+                      <Link 
+                        href="/profile" 
+                        onClick={handleLinkClick} 
+                        className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 rounded-xl hover:bg-gray-100 transition-all group"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-500 group-hover:bg-white group-hover:text-black group-hover:shadow-md transition-all duration-300">
+                          <User size={16} />
+                        </div>
+                        <span className="group-hover:translate-x-1 transition-transform duration-300">My Profile</span>
                       </Link>
-                    )}
-                    <button onClick={handleLogout} className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <X className="w-4 h-4 mr-2" /> Logout
-                    </button>
+                      
+                      {user.role === 'ADMIN' && (
+                        <Link 
+                          href="/admin/dashboard" 
+                          onClick={handleLinkClick} 
+                          className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 rounded-xl hover:bg-gray-100 transition-all group"
+                        >
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-500 group-hover:bg-white group-hover:text-black group-hover:shadow-md transition-all duration-300">
+                            <Settings size={16} />
+                          </div>
+                          <span className="group-hover:translate-x-1 transition-transform duration-300">Admin Dashboard</span>
+                        </Link>
+                      )}
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="p-2 border-t border-gray-100 bg-gray-50/50">
+                      <button 
+                        onClick={handleLogout} 
+                        className="flex items-center w-full gap-3 px-3 py-2.5 text-sm font-medium text-red-600 rounded-xl hover:bg-red-50 transition-all group"
+                      >
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100/50 text-red-500 group-hover:bg-red-100 group-hover:shadow-sm transition-all duration-300">
+                          <LogOut size={16} />
+                        </div>
+                        <span className="group-hover:translate-x-1 transition-transform duration-300">Sign Out</span>
+                      </button>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             ) : (
-              <Link href="/login" className="rounded-full p-2 transition-colors hover:bg-white/10 hover:text-white">
-                <CircleUser size={26} />
+              <Link 
+                href="/login" 
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 text-white border border-white/10 transition-all duration-300 hover:bg-white hover:text-black hover:border-white hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] group"
+                aria-label="Sign in"
+              >
+                <User size={20} className="transition-transform duration-300 group-hover:scale-110" />
               </Link>
             )}
           </div>
           
-          <button onClick={openCart} className="relative hidden p-2 transition-colors rounded-full md:block hover:bg-white/10 hover:text-white" aria-label="Open shopping cart">
+          <button onClick={handleCartClick} className="relative hidden p-2 transition-colors rounded-full md:block hover:bg-white/10 hover:text-white" aria-label="Open shopping cart">
               <ShoppingCart size={26} />
               {hasItems && (
                 <span className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white rounded-full -top-2 -right-2 bg-accent">{cartCount}</span>
