@@ -256,7 +256,7 @@ const SignUpPage = () => {
           />
           <span>
             I agree to the{' '}
-            <Link href="/terms" className="font-semibold text-slate-900 underline-offset-4 hover:underline">
+            <Link href="/terms-conditions" className="font-semibold text-slate-900 underline-offset-4 hover:underline">
               Terms of Service
             </Link>{' '}
             and{' '}

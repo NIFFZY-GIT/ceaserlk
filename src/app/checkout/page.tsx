@@ -534,6 +534,13 @@ export default function CheckoutPage() {
                         >
                           {codSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Place order - Pay on delivery'}
                         </button>
+                        <p className="mt-3 text-xs text-center text-gray-400">
+                          By placing this order, you agree to our{' '}
+                          <Link href="/terms-conditions" target="_blank" className="underline hover:text-primary">
+                            Terms & Conditions
+                          </Link>
+                          .
+                        </p>
                         {codError && <p className="text-sm text-red-500">{codError}</p>}
                         <p className="text-xs leading-relaxed text-gray-400">
                           Need a different arrangement? Reply to your confirmation email and we&apos;ll coordinate a

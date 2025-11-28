@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 import { Cart } from '@/context/CartContext';
 
 interface StripePaymentHandlerProps {
@@ -85,6 +86,13 @@ export default function StripePaymentHandler({ cart, shippingDetails }: Omit<Str
         >
           {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : `Pay LKR ${cart.totalAmount.toFixed(2)}`}
         </button>
+        <p className="mt-3 text-xs text-center text-gray-400">
+          By confirming payment, you agree to our{' '}
+          <Link href="/terms-conditions" target="_blank" className="underline hover:text-green-500">
+            Terms & Conditions
+          </Link>
+          .
+        </p>
       </div>
       {errorMessage && <div className="mt-4 text-sm text-center text-red-600">{errorMessage}</div>}
     </form>
