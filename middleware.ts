@@ -47,9 +47,10 @@ function createSecureRedirectResponse(url: string, request: NextRequest): NextRe
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   
   // Content Security Policy - restrictive but functional
+  // SECURITY: Removed 'unsafe-eval' to prevent code injection attacks (CVE-2025-55182)
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://js.stripe.com https://checkout.stripe.com",
+    "script-src 'self' 'unsafe-inline' blob: https://js.stripe.com https://checkout.stripe.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https:",
@@ -78,9 +79,10 @@ function createSecureNextResponse(init?: Parameters<typeof NextResponse.next>[0]
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   
   // Content Security Policy
+  // SECURITY: Removed 'unsafe-eval' to prevent code injection attacks (CVE-2025-55182)
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://js.stripe.com https://checkout.stripe.com",
+    "script-src 'self' 'unsafe-inline' blob: https://js.stripe.com https://checkout.stripe.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https:",
@@ -226,6 +228,9 @@ export const config = {
     '/api/orders/:path*',
     '/api/user/:path*',
     '/api/profile/:path*',
+    // SECURITY: Added protection for debug and setup routes
+    '/api/debug/:path*',
+    '/api/setup-database/:path*',
     // Apply security headers to all routes
     '/((?!_next/static|_next/image|favicon.ico|images|uploads).*)',
   ],

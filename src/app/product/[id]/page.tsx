@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, use } from 'react';
+import { useState, useEffect, useRef, useCallback, use, useMemo } from 'react';
 import { notFound, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -10,6 +10,36 @@ import { useRouter } from 'next/navigation';
 import { Minus, Plus, Loader2, ChevronDown, Heart, Share2, Shield, X, Volume2, VolumeX, Video, AlertTriangle, Sparkles, BellRing } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 import { gsap } from 'gsap';
+
+// SECURITY: HTML sanitization to prevent XSS attacks via product descriptions
+function sanitizeHtml(html: string): string {
+  if (!html) return '';
+  
+  // Allowed HTML tags and their safe attributes
+  const allowedTags = ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+  
+  // Remove script tags and their content
+  let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  
+  // Remove event handlers (onclick, onerror, onload, etc.)
+  sanitized = sanitized.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '');
+  sanitized = sanitized.replace(/\s*on\w+\s*=\s*[^\s>]+/gi, '');
+  
+  // Remove javascript: and data: URLs
+  sanitized = sanitized.replace(/javascript\s*:/gi, '');
+  sanitized = sanitized.replace(/data\s*:/gi, '');
+  
+  // Remove style tags and their content
+  sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+  
+  // Remove iframe, object, embed, form, input tags
+  sanitized = sanitized.replace(/<\s*\/?\s*(iframe|object|embed|form|input|button|textarea|select|link|meta|base)[^>]*>/gi, '');
+  
+  // Remove any remaining dangerous attributes
+  sanitized = sanitized.replace(/\s*(style|srcdoc|formaction|action)\s*=\s*["'][^"']*["']/gi, '');
+  
+  return sanitized;
+}
 
 // --- (All type definitions remain the same) ---
 type StockInfo = { id: string; size: string; stock: number };
@@ -1004,7 +1034,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   <div className="p-4 pt-0 text-sm leading-relaxed text-gray-600">
                     <div
                       className="space-y-3 [&_p]:leading-relaxed [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:text-gray-600"
-                      dangerouslySetInnerHTML={{ __html: product.description || 'No description available.' }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description || 'No description available.') }}
                     />
                   </div>
                 </Accordion.Content>

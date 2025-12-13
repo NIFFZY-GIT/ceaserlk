@@ -51,34 +51,58 @@ function OrderConfirmationContent() {
         }
       } catch (e) { console.error("Could not fetch order details", e); }
     };
-    
-    const orderIdParam = searchParams.get('orderId');
-    const paymentIntent = searchParams.get('payment_intent');
 
-    if (orderIdParam) {
-      processOrder(orderIdParam);
-    } else if (paymentIntent) {
-      const verifyPaymentAndCreateOrder = async () => {
+    // Verify PayHere payment status with polling
+    const verifyPayHerePayment = async (payhereOrderId: string) => {
+      let attempts = 0;
+      const maxAttempts = 10;
+      const pollInterval = 2000; // 2 seconds
+
+      const poll = async (): Promise<void> => {
         try {
-          const res = await fetch(`/api/checkout/verify-payment`, {
+          const res = await fetch('/api/checkout/payhere/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentIntentId: paymentIntent }),
+            body: JSON.stringify({ orderId: payhereOrderId }),
           });
-          if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.error || "Failed to create order.");
+
+          const data = await res.json();
+
+          if (data.success && data.orderId) {
+            router.replace(`/order-confirmation?orderId=${data.orderId}`);
+            processOrder(data.orderId);
+            return;
           }
-          const { orderId: newOrderId } = await res.json();
-          router.replace(`/order-confirmation?orderId=${newOrderId}`);
-          processOrder(newOrderId);
+
+          if (data.pending && attempts < maxAttempts) {
+            attempts++;
+            setTimeout(poll, pollInterval);
+            return;
+          }
+
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          throw new Error('Payment verification timeout. Please check your order status.');
         } catch (err: unknown) {
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+          const errorMessage = err instanceof Error ? err.message : 'Payment verification failed';
           setErrorMessage(errorMessage);
           setStatus('error');
         }
       };
-      verifyPaymentAndCreateOrder();
+
+      await poll();
+    };
+    
+    const orderIdParam = searchParams.get('orderId');
+    const payhereOrder = searchParams.get('payhere_order');
+
+    if (orderIdParam) {
+      processOrder(orderIdParam);
+    } else if (payhereOrder) {
+      // PayHere payment - verify status
+      verifyPayHerePayment(payhereOrder);
     } else {
       setErrorMessage("No order information found.");
       setStatus('error');
@@ -249,9 +273,9 @@ function OrderConfirmationContent() {
             <div className="space-y-4">
               {orderData.items
                 .filter((item: OrderItem) => item.trading_card_image)
-                .map((item: OrderItem) => (
+                .map((item: OrderItem, index: number) => (
                   <TradingCardDownload
-                    key={item.product_id}
+                    key={`${item.product_id}-${item.variant_color}-${item.variant_size}-${index}`}
                     userEmail={userEmail}
                     productId={item.product_id.toString()}
                     productName={item.product_name}

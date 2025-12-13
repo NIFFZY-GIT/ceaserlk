@@ -1,7 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { verifyAdminAuth } from '@/lib/auth';
 
-export async function POST() {
+// SECURITY: This endpoint requires admin authentication
+// This prevents unauthorized database modifications
+export async function POST(request: NextRequest) {
+    // Verify admin authentication
+    const adminUser = await verifyAdminAuth(request);
+    if (!adminUser) {
+        return NextResponse.json(
+            { error: 'Unauthorized - Admin access required' },
+            { status: 401 }
+        );
+    }
+
     try {
         // Create the product_images table for variant-specific product images
         const createTableQuery = `

@@ -3,14 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote } from 'lucide-react';
+import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote, Wallet } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import StripePaymentHandler from './StripePaymentHandler';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+import PayHerePaymentHandler from './PayHerePaymentHandler';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -26,7 +22,7 @@ export default function CheckoutPage() {
     postalCode: '',
     country: 'Sri Lanka'
   });
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'cod'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'payhere' | 'cod'>('payhere');
   const [codSubmitting, setCodSubmitting] = useState(false);
   const [codError, setCodError] = useState<string | null>(null);
 
@@ -129,12 +125,6 @@ export default function CheckoutPage() {
     );
   }
 
-  const options = {
-    mode: 'payment' as const,
-    amount: Math.round(cart.totalAmount * 100),
-    currency: 'lkr',
-  };
-
   const steps = [
     {
       label: 'Review Cart',
@@ -158,10 +148,10 @@ export default function CheckoutPage() {
 
   const paymentOptions = [
     {
-      value: 'card' as const,
-      label: 'Card payment (Stripe)',
-      description: 'Pay securely with Visa, Mastercard, Amex, Apple Pay, or Google Pay.',
-      icon: CreditCard,
+      value: 'payhere' as const,
+      label: 'Pay Online (Recommended)',
+      description: 'Pay securely with Visa, Mastercard, Amex, bank transfer, or mobile wallets like FriMi.',
+      icon: Wallet,
     },
     {
       value: 'cod' as const,
@@ -498,18 +488,9 @@ export default function CheckoutPage() {
                     })}
                   </div>
 
-                  {paymentMethod === 'card' ? (
-                    <div className="p-4 border rounded-3xl border-gray-700/50 bg-black/15 sm:p-6">
-                      <Elements stripe={stripePromise} options={options}>
-                        <StripePaymentHandler cart={cart} shippingDetails={shippingDetails} />
-                      </Elements>
-                      <div className="flex flex-wrap items-center gap-2 mt-4 text-sm font-medium text-gray-400">
-                        <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Visa</span>
-                        <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Mastercard</span>
-                        <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Amex</span>
-                        <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Apple Pay</span>
-                        <span className="px-3 py-1 border rounded-full border-gray-800/60 bg-gray-900/40">Google Pay</span>
-                      </div>
+                  {paymentMethod === 'payhere' ? (
+                    <div className="p-4 border rounded-3xl border-blue-500/30 bg-blue-500/5 sm:p-6">
+                      <PayHerePaymentHandler cart={cart} shippingDetails={shippingDetails} />
                     </div>
                   ) : (
                     <div className="p-4 border rounded-3xl border-primary/40 bg-primary/5 sm:p-6">

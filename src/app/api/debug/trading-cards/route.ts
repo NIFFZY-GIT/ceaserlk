@@ -1,7 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { verifyAdminAuth } from '@/lib/auth';
 
-export async function GET() {
+// SECURITY: This endpoint requires admin authentication
+export async function GET(request: NextRequest) {
+  // Verify admin authentication
+  const adminUser = await verifyAdminAuth(request);
+  if (!adminUser) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Admin access required' },
+      { status: 401 }
+    );
+  }
+
   try {
     // Check products with trading cards
     const productsQuery = `
