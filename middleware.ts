@@ -50,13 +50,13 @@ function createSecureRedirectResponse(url: string, request: NextRequest): NextRe
   // SECURITY: Removed 'unsafe-eval' to prevent code injection attacks (CVE-2025-55182)
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' blob: https://js.stripe.com https://checkout.stripe.com https://www.payhere.lk https://static.cloudflareinsights.com",
+    "script-src 'self' 'unsafe-inline' blob: https://js.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https:",
-    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://www.payhere.lk",
+    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk",
     "worker-src 'self' blob:",
-    "frame-src https://checkout.stripe.com https://js.stripe.com https://www.payhere.lk",
+    "frame-src https://checkout.stripe.com https://js.stripe.com https://www.payhere.lk https://sandbox.payhere.lk",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https://www.payhere.lk https://sandbox.payhere.lk"
@@ -82,13 +82,13 @@ function createSecureNextResponse(init?: Parameters<typeof NextResponse.next>[0]
   // SECURITY: Removed 'unsafe-eval' to prevent code injection attacks (CVE-2025-55182)
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' blob: https://js.stripe.com https://checkout.stripe.com https://www.payhere.lk https://static.cloudflareinsights.com",
+    "script-src 'self' 'unsafe-inline' blob: https://js.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https:",
-    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://www.payhere.lk",
+    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk",
     "worker-src 'self' blob:",
-    "frame-src https://checkout.stripe.com https://js.stripe.com https://www.payhere.lk",
+    "frame-src https://checkout.stripe.com https://js.stripe.com https://www.payhere.lk https://sandbox.payhere.lk",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https://www.payhere.lk https://sandbox.payhere.lk"
