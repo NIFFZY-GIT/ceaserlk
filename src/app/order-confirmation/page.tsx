@@ -55,7 +55,7 @@ function OrderConfirmationContent() {
     // Verify PayHere payment status with polling
     const verifyPayHerePayment = async (payhereOrderId: string) => {
       let attempts = 0;
-      const maxAttempts = 10;
+      const maxAttempts = 20; // Increased to 20 attempts (40 seconds total)
       const pollInterval = 2000; // 2 seconds
 
       const poll = async (): Promise<void> => {

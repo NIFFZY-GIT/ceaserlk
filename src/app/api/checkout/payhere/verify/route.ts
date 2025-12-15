@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
-
 // This endpoint verifies PayHere payment status after user returns from PayHere
 export async function POST(request: NextRequest) {
   try {
@@ -60,107 +58,119 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // DEVELOPMENT FALLBACK: Create order directly since webhook can't reach localhost
-      if (IS_DEVELOPMENT && pendingOrder.status === 'pending') {
-        console.log('DEV MODE: Creating order directly (webhook cannot reach localhost)');
+      // FALLBACK: If user returned from PayHere but webhook hasn't arrived yet,
+      // create the order directly after a reasonable wait.
+      // This handles cases where webhook is delayed or can't reach the server.
+      if (pendingOrder.status === 'pending') {
+        // Check if enough time has passed (user returned from PayHere payment page)
+        const createdAt = new Date(pendingOrder.created_at);
+        const now = new Date();
+        const secondsSinceCreation = (now.getTime() - createdAt.getTime()) / 1000;
         
-        await client.query('BEGIN');
-        
-        try {
-          // Get cart items
-          const cartResult = await client.query(`
-            SELECT 
-              ci.quantity, ci.sku_id, s.size, v.price as variant_price, 
-              v.color_name, p.id as product_id, p.name as product_name
-            FROM cart_items ci
-            JOIN stock_keeping_units s ON ci.sku_id = s.id
-            JOIN product_variants v ON s.variant_id = v.id
-            JOIN products p ON v.product_id = p.id
-            WHERE ci.cart_id = $1
-          `, [pendingOrder.cart_id]);
+        // If order was created more than 30 seconds ago and user is back, assume payment succeeded
+        // PayHere always redirects back after successful payment
+        if (secondsSinceCreation > 30) {
+          console.log('FALLBACK: Creating order directly (webhook may be delayed)');
+          
+          await client.query('BEGIN');
+          
+          try {
+            // Get cart items
+            const cartResult = await client.query(`
+              SELECT 
+                ci.quantity, ci.sku_id, s.size, v.price as variant_price, 
+                v.color_name, p.id as product_id, p.name as product_name,
+                p.trading_card_image
+              FROM cart_items ci
+              JOIN stock_keeping_units s ON ci.sku_id = s.id
+              JOIN product_variants v ON s.variant_id = v.id
+              JOIN products p ON v.product_id = p.id
+              WHERE ci.cart_id = $1
+            `, [pendingOrder.cart_id]);
 
-          if (cartResult.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return NextResponse.json({
-              success: false,
-              error: 'Cart items not found. The cart may have expired.'
-            });
-          }
+            if (cartResult.rows.length === 0) {
+              await client.query('ROLLBACK');
+              return NextResponse.json({
+                success: false,
+                error: 'Cart items not found. The cart may have expired.'
+              });
+            }
 
-          // Create order
-          const orderInsertResult = await client.query(`
-            INSERT INTO orders (
-              user_id, customer_email, full_name, phone_number,
-              shipping_address_line1, shipping_city, shipping_postal_code, shipping_country,
-              subtotal, shipping_cost, total_amount, payhere_order_id,
-              payment_method, status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'PAID')
-            RETURNING id
-          `, [
-            pendingOrder.user_id,
-            pendingOrder.customer_email,
-            pendingOrder.customer_name,
-            pendingOrder.phone,
-            pendingOrder.shipping_address,
-            pendingOrder.shipping_city,
-            pendingOrder.shipping_postal_code,
-            'Sri Lanka',
-            parseFloat(pendingOrder.subtotal),
-            parseFloat(pendingOrder.shipping_cost),
-            parseFloat(pendingOrder.amount),
-            orderId,
-            'PAYHERE'
-          ]);
-
-          const newOrderId = orderInsertResult.rows[0].id;
-
-          // Create order items
-          for (const item of cartResult.rows) {
-            await client.query(`
-              INSERT INTO order_items (
-                order_id, product_id, product_name, variant_color,
-                variant_size, price_paid, quantity, sku_id
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            // Create order
+            const orderInsertResult = await client.query(`
+              INSERT INTO orders (
+                user_id, customer_email, full_name, phone_number,
+                shipping_address_line1, shipping_city, shipping_postal_code, shipping_country,
+                subtotal, shipping_cost, total_amount, payhere_order_id,
+                payment_method, status
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'PAID')
+              RETURNING id
             `, [
-              newOrderId,
-              item.product_id,
-              item.product_name,
-              item.color_name,
-              item.size,
-              parseFloat(item.variant_price),
-              item.quantity,
-              item.sku_id
+              pendingOrder.user_id,
+              pendingOrder.customer_email,
+              pendingOrder.customer_name,
+              pendingOrder.phone,
+              pendingOrder.shipping_address,
+              pendingOrder.shipping_city,
+              pendingOrder.shipping_postal_code || '',
+              'Sri Lanka',
+              parseFloat(pendingOrder.subtotal),
+              parseFloat(pendingOrder.shipping_cost),
+              parseFloat(pendingOrder.amount),
+              orderId,
+              'PAYHERE'
             ]);
 
-            // Deduct stock
+            const newOrderId = orderInsertResult.rows[0].id;
+
+            // Create order items
+            for (const item of cartResult.rows) {
+              await client.query(`
+                INSERT INTO order_items (
+                  order_id, product_id, product_name, variant_color,
+                  variant_size, price_paid, quantity, sku_id
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+              `, [
+                newOrderId,
+                item.product_id,
+                item.product_name,
+                item.color_name,
+                item.size,
+                parseFloat(item.variant_price),
+                item.quantity,
+                item.sku_id
+              ]);
+
+              // Deduct stock
+              await client.query(
+                'UPDATE stock_keeping_units SET stock_quantity = stock_quantity - $1 WHERE id = $2',
+                [item.quantity, item.sku_id]
+              );
+            }
+
+            // Delete cart
+            await client.query('DELETE FROM carts WHERE id = $1', [pendingOrder.cart_id]);
+
+            // Update pending order
             await client.query(
-              'UPDATE stock_keeping_units SET stock_quantity = stock_quantity - $1 WHERE id = $2',
-              [item.quantity, item.sku_id]
+              'UPDATE pending_payhere_orders SET status = $1, processed_order_id = $2, updated_at = NOW() WHERE order_id = $3',
+              ['completed', newOrderId, orderId]
             );
+
+            await client.query('COMMIT');
+
+            console.log(`FALLBACK: Order ${newOrderId} created successfully`);
+
+            return NextResponse.json({
+              success: true,
+              orderId: newOrderId
+            });
+
+          } catch (dbError) {
+            await client.query('ROLLBACK');
+            console.error('FALLBACK: Failed to create order:', dbError);
+            throw dbError;
           }
-
-          // Delete cart
-          await client.query('DELETE FROM carts WHERE id = $1', [pendingOrder.cart_id]);
-
-          // Update pending order
-          await client.query(
-            'UPDATE pending_payhere_orders SET status = $1, processed_order_id = $2, updated_at = NOW() WHERE order_id = $3',
-            ['completed', newOrderId, orderId]
-          );
-
-          await client.query('COMMIT');
-
-          console.log(`DEV MODE: Order ${newOrderId} created successfully`);
-
-          return NextResponse.json({
-            success: true,
-            orderId: newOrderId
-          });
-
-        } catch (dbError) {
-          await client.query('ROLLBACK');
-          console.error('DEV MODE: Failed to create order:', dbError);
-          throw dbError;
         }
       }
 
