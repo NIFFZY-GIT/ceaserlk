@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { sendEmail, generateOrderConfirmationEmail, generateAdminOrderNotificationEmail } from '@/lib/email';
 import { generateInvoicePDF, generateInvoiceFilename, InvoiceData } from '@/lib/pdf-invoice';
@@ -40,10 +40,7 @@ export async function POST(request: NextRequest) {
     const payhereCurrency = formData.get('payhere_currency') as string;
     const statusCode = formData.get('status_code') as string;
     const md5sig = formData.get('md5sig') as string;
-    const method = formData.get('method') as string;
-    const cardHolderName = formData.get('card_holder_name') as string || '';
-    const cardNo = formData.get('card_no') as string || '';
-    const cardExpiry = formData.get('card_expiry') as string || '';
+    // Note: method, cardHolderName, cardNo, cardExpiry are available in formData if needed
 
     console.log(`PayHere notification received: order=${orderId}, status=${statusCode}, payment_id=${paymentId}`);
 

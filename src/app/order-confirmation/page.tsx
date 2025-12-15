@@ -275,7 +275,7 @@ function OrderConfirmationContent() {
                 .filter((item: OrderItem) => item.trading_card_image)
                 .map((item: OrderItem, index: number) => (
                   <TradingCardDownload
-                    key={`${item.product_id}-${item.variant_color}-${item.variant_size}-${index}`}
+                    key={`${item.product_id}-${index}`}
                     userEmail={userEmail}
                     productId={item.product_id.toString()}
                     productName={item.product_name}

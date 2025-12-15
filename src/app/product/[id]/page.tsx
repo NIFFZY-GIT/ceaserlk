@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, use, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, use } from 'react';
 import { notFound, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -14,9 +14,6 @@ import { gsap } from 'gsap';
 // SECURITY: HTML sanitization to prevent XSS attacks via product descriptions
 function sanitizeHtml(html: string): string {
   if (!html) return '';
-  
-  // Allowed HTML tags and their safe attributes
-  const allowedTags = ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
   
   // Remove script tags and their content
   let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');

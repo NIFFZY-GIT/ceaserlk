@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Loader2, CreditCard, AlertCircle } from 'lucide-react';
 import { Cart } from '@/context/CartContext';
 import Script from 'next/script';
