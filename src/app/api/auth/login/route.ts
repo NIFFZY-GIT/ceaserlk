@@ -34,11 +34,11 @@ export async function POST(request: Request) {
     );
 
     if (userResult.rows.length === 0) {
-      // Use a generic error message for security (prevents email enumeration)
+      // SECURITY: Generic error message to prevent email enumeration
       return NextResponse.json({
-        error: 'No user found with this email address.',
-        code: 'USER_NOT_FOUND',
-      }, { status: 404 });
+        error: 'Invalid email or password.',
+        code: 'INVALID_CREDENTIALS',
+      }, { status: 401 });
     }
 
     const user = userResult.rows[0];
@@ -47,9 +47,10 @@ export async function POST(request: Request) {
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
+      // SECURITY: Same generic error message to prevent enumeration
       return NextResponse.json({
-        error: 'Incorrect password. Please try again.',
-        code: 'INVALID_PASSWORD',
+        error: 'Invalid email or password.',
+        code: 'INVALID_CREDENTIALS',
       }, { status: 401 });
     }
 

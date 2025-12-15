@@ -84,14 +84,8 @@ export async function POST(request: Request) {
       newUserResult = await db.query(query);
     } catch (dbInsertErr) {
       console.error('DB_INSERT_USER_ERROR:', dbInsertErr);
-      // Return the actual error message for debugging (remove in production)
-      let dbErrorMsg = 'Unknown DB error';
-      if (dbInsertErr && typeof dbInsertErr === 'object' && 'message' in dbInsertErr) {
-        dbErrorMsg = (dbInsertErr as { message: string }).message;
-      } else if (typeof dbInsertErr === 'string') {
-        dbErrorMsg = dbInsertErr;
-      }
-      return NextResponse.json({ error: 'Database error while creating user.', details: dbErrorMsg }, { status: 500 });
+      // SECURITY: Do not expose database error details to clients
+      return NextResponse.json({ error: 'Failed to create account. Please try again.' }, { status: 500 });
     }
 
     const newUser = newUserResult.rows[0];

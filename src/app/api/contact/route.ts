@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
+// SECURITY: HTML sanitization to prevent XSS injection in emails
+function sanitizeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { name, email, subject, message } = await request.json();
@@ -13,6 +23,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SECURITY: Validate and limit input lengths
+    if (name.length > 100 || email.length > 254 || subject.length > 200 || message.length > 5000) {
+      return NextResponse.json(
+        { error: 'Input exceeds maximum allowed length' },
+        { status: 400 }
+      );
+    }
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -21,6 +39,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // SECURITY: Sanitize all user inputs before including in email
+    const safeName = sanitizeHtml(name.trim());
+    const safeEmail = sanitizeHtml(email.trim());
+    const safeSubject = sanitizeHtml(subject.trim());
+    const safeMessage = sanitizeHtml(message.trim());
 
     // Create transporter using environment variables
     const transporter = nodemailer.createTransport({
@@ -37,7 +61,7 @@ export async function POST(request: NextRequest) {
     const adminMailOptions = {
       from: `"${process.env.EMAIL_FROM_NAME || 'Ceaser LK'}" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER, // Send to the same email for admin notifications
-      subject: `New Contact Form: ${subject}`,
+      subject: `New Contact Form: ${safeSubject}`,
       html: `
         <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
@@ -50,24 +74,24 @@ export async function POST(request: NextRequest) {
               
               <div style="margin: 20px 0;">
                 <strong style="color: #667eea;">Name:</strong>
-                <p style="margin: 5px 0 15px 0; padding: 10px; background: #f5f5f5; border-left: 4px solid #667eea;">${name}</p>
+                <p style="margin: 5px 0 15px 0; padding: 10px; background: #f5f5f5; border-left: 4px solid #667eea;">${safeName}</p>
               </div>
               
               <div style="margin: 20px 0;">
                 <strong style="color: #667eea;">Email:</strong>
                 <p style="margin: 5px 0 15px 0; padding: 10px; background: #f5f5f5; border-left: 4px solid #667eea;">
-                  <a href="mailto:${email}" style="color: #667eea; text-decoration: none;">${email}</a>
+                  <a href="mailto:${safeEmail}" style="color: #667eea; text-decoration: none;">${safeEmail}</a>
                 </p>
               </div>
               
               <div style="margin: 20px 0;">
                 <strong style="color: #667eea;">Subject:</strong>
-                <p style="margin: 5px 0 15px 0; padding: 10px; background: #f5f5f5; border-left: 4px solid #667eea;">${subject}</p>
+                <p style="margin: 5px 0 15px 0; padding: 10px; background: #f5f5f5; border-left: 4px solid #667eea;">${safeSubject}</p>
               </div>
               
               <div style="margin: 20px 0;">
                 <strong style="color: #667eea;">Message:</strong>
-                <div style="margin: 5px 0 15px 0; padding: 15px; background: #f5f5f5; border-left: 4px solid #667eea; white-space: pre-wrap;">${message}</div>
+                <div style="margin: 5px 0 15px 0; padding: 15px; background: #f5f5f5; border-left: 4px solid #667eea; white-space: pre-wrap;">${safeMessage}</div>
               </div>
             </div>
             
@@ -84,7 +108,7 @@ export async function POST(request: NextRequest) {
     // Auto-reply email for the user
     const userReplyOptions = {
       from: `"${process.env.EMAIL_FROM_NAME || 'Ceaser LK'}" <${process.env.EMAIL_USER}>`,
-      to: email,
+      to: email, // Use original email for sending (it's validated)
       subject: 'Thank you for contacting Ceaser LK',
       html: `
         <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -95,13 +119,13 @@ export async function POST(request: NextRequest) {
           
           <div style="padding: 30px; background: #f9f9f9;">
             <div style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-              <h2 style="color: #333; margin-top: 0;">Hi ${name}!</h2>
+              <h2 style="color: #333; margin-top: 0;">Hi ${safeName}!</h2>
               
               <p>Thank you for contacting Ceaser Brand. We've received your message and appreciate you taking the time to reach out to us.</p>
               
               <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1a1a1a;">
                 <p style="margin: 0; font-weight: bold; color: #1a1a1a;">Your message summary:</p>
-                <p style="margin: 5px 0 0 0; color: #666;"><strong>Subject:</strong> ${subject}</p>
+                <p style="margin: 5px 0 0 0; color: #666;"><strong>Subject:</strong> ${safeSubject}</p>
               </div>
               
               <p>Our team will review your inquiry and get back to you within 24-48 hours during business hours (Mon-Fri, 9am-5pm EST).</p>

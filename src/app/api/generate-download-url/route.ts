@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import * as jose from 'jose';
+
+// SECURITY: Token expiration time (1 hour)
+const TOKEN_EXPIRY = '1h';
 
 // Generate secure download token server-side
 export async function POST(request: NextRequest) {
@@ -34,13 +38,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Trading card not available for this product' }, { status: 404 });
     }
 
-    // Generate server-side token with real JWT_SECRET
+    // SECURITY: Generate secure JWT token with expiration
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const token = Buffer.from(`${userEmail}-${productId}-${jwtSecret}`).toString('base64');
+    const secret = new TextEncoder().encode(jwtSecret);
+    const token = await new jose.SignJWT({ 
+      userEmail, 
+      productId,
+      type: 'download'
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime(TOKEN_EXPIRY)
+      .sign(secret);
 
     const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
     const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
@@ -58,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     const origin = `${protocol}://${host}`;
-    const downloadUrl = `${origin}/api/download/trading-card?token=${encodeURIComponent(token)}&product_id=${encodeURIComponent(productId)}&user_email=${encodeURIComponent(userEmail)}`;
+    const downloadUrl = `${origin}/api/download/trading-card?token=${encodeURIComponent(token)}`;
 
     return NextResponse.json({
       downloadUrl,

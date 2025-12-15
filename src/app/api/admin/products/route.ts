@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { verifyAdminAuth } from '@/lib/auth';
 
 const MAX_UPLOAD_BYTES = 200 * 1024 * 1024; // 200MB cap per submission
 const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100MB cap for a single file
@@ -18,8 +19,6 @@ class UploadLimitError extends Error {
     }
 }
 
-// --- (Your verifyAuth function would go here if you add security) ---
-
 type VariantPayload = {
     id: number; colorName: string; colorHex: string; price: string;
     compareAtPrice: string; sku: string;
@@ -27,8 +26,14 @@ type VariantPayload = {
     thumbnailImageName: string | null;
 };
 
-// GET function for the product list page (remains the same)
-export async function GET() {
+// GET function for the product list page
+export async function GET(request: NextRequest) {
+    // SECURITY: Verify admin authentication
+    const adminUser = await verifyAdminAuth(request);
+    if (!adminUser) {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     try {
         const query = `
             SELECT p.id, p.name, p.shipping_cost, p.is_published, p.created_at,
@@ -49,7 +54,13 @@ export async function GET() {
 }
 
 // POST function to create a new product
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+    // SECURITY: Verify admin authentication
+    const adminUser = await verifyAdminAuth(request);
+    if (!adminUser) {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     console.log('=== Product creation API called ===');
     const client = await db.connect();
     try {

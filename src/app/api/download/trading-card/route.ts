@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { promises as fs } from 'fs';
 import path from 'path';
+import * as jose from 'jose';
+
+// SECURITY: Interface for download token payload
+interface DownloadTokenPayload {
+  userEmail: string;
+  productId: string;
+  type: string;
+}
 
 // Secure download endpoint for trading images
 // Only allows users to download trading cards from their purchased products
@@ -9,32 +17,35 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
-    const productId = searchParams.get('product_id');
-    const userEmail = searchParams.get('user_email');
 
-    console.log('Download request params:', { token: token ? 'Present' : 'Missing', productId, userEmail });
-
-    if (!token || !productId || !userEmail) {
-      console.error('Missing parameters:', { token: !!token, productId: !!productId, userEmail: !!userEmail });
+    if (!token) {
+      console.error('Missing token parameter');
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    // Generate expected token for verification
+    // SECURITY: Verify JWT token
     const jwtSecret = process.env.JWT_SECRET;
-    console.log('JWT_SECRET available:', !!jwtSecret);
-    
     if (!jwtSecret) {
       console.error('JWT_SECRET not configured');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const expectedToken = Buffer.from(`${userEmail}-${productId}-${jwtSecret}`).toString('base64');
-    console.log('Token verification:', { provided: token.slice(0, 10) + '...', expected: expectedToken.slice(0, 10) + '...', match: token === expectedToken });
-    
-    if (token !== expectedToken) {
-      console.error('Token mismatch');
-      return NextResponse.json({ error: 'Invalid download token' }, { status: 403 });
+
+    let tokenPayload: DownloadTokenPayload;
+    try {
+      const secret = new TextEncoder().encode(jwtSecret);
+      const { payload } = await jose.jwtVerify(token, secret);
+      tokenPayload = payload as unknown as DownloadTokenPayload;
+      
+      // Validate token type
+      if (tokenPayload.type !== 'download') {
+        throw new Error('Invalid token type');
+      }
+    } catch (tokenError) {
+      console.error('Token verification failed:', tokenError);
+      return NextResponse.json({ error: 'Invalid or expired download token' }, { status: 403 });
     }
+
+    const { userEmail, productId } = tokenPayload;
 
     // Verify the user has purchased this product
     const purchaseQuery = `
@@ -48,9 +59,7 @@ export async function GET(request: NextRequest) {
       LIMIT 1
     `;
     
-    console.log('Purchase verification query:', { userEmail, productId });
     const { rows } = await db.query(purchaseQuery, [userEmail, productId]);
-    console.log('Purchase verification result:', rows);
 
     if (rows.length === 0) {
       console.error('No purchase found or order not paid');
@@ -58,7 +67,6 @@ export async function GET(request: NextRequest) {
     }
 
   const { order_id, trading_card_image, product_name } = rows[0];
-    console.log('Order details:', { order_id, trading_card_image, product_name });
 
     if (!trading_card_image) {
       console.error('No trading card image for product');
@@ -77,7 +85,6 @@ export async function GET(request: NextRequest) {
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [userEmail, productId, order_id, 'trading_image', trading_card_image, userAgent, ipAddress]
       );
-      console.log('Download logged successfully');
     } catch (logError) {
       // Don't fail the download if logging fails
       console.warn('Failed to log download (table may not exist):', logError);
