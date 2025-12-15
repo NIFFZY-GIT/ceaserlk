@@ -80,10 +80,10 @@ export default function CheckoutPage() {
     }
   };
 
-  const inputClass = 'w-full rounded-2xl border border-gray-700/50 bg-gray-900/25 px-5 py-4 text-base text-brand-white placeholder-gray-400 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30';
-  const labelClass = 'text-base font-semibold text-gray-200';
-  const helperTextClass = 'mt-2 text-sm text-gray-400';
-  const sectionCardClass = 'relative overflow-hidden rounded-3xl border border-gray-700/50 bg-gradient-to-br from-gray-950 via-gray-900/70 to-gray-950 p-6 sm:p-8 shadow-[0_28px_55px_-28px_rgba(0,0,0,0.75)] backdrop-blur-xl';
+  const inputClass = 'w-full rounded-lg sm:rounded-xl border border-gray-700/50 bg-gray-900/25 px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-brand-white placeholder-gray-400 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30';
+  const labelClass = 'text-xs sm:text-sm font-semibold text-gray-200';
+  const helperTextClass = 'mt-1 sm:mt-2 text-[10px] sm:text-xs text-gray-400';
+  const sectionCardClass = 'relative overflow-hidden rounded-xl sm:rounded-2xl border border-gray-700/50 bg-gradient-to-br from-gray-950 via-gray-900/70 to-gray-950 p-3 sm:p-5 md:p-6 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.75)] backdrop-blur-xl';
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (codError) {
@@ -180,17 +180,17 @@ export default function CheckoutPage() {
   ];
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-brand-black text-brand-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,86,86,0.18),_transparent_55%),_radial-gradient(circle_at_bottom,_rgba(255,184,108,0.14),_transparent_60%)]"></div>
-      <div className="relative z-10 flex flex-col min-h-screen">
+    <main className="relative min-h-screen overflow-x-hidden bg-brand-black text-brand-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,86,86,0.18),_transparent_55%),_radial-gradient(circle_at_bottom,_rgba(255,184,108,0.14),_transparent_60%)]" />
+      <div className="relative z-10 flex flex-col min-h-screen w-full max-w-full">
         <div className="border-b border-gray-800/60 bg-black/60 backdrop-blur-lg">
-          <div className="container flex items-center justify-between px-4 py-6 mx-auto">
+          <div className="container flex items-center justify-between px-4 py-4 sm:py-6 mx-auto max-w-7xl">
             <Link
               href="/shop"
-              className="inline-flex items-center gap-3 text-sm text-gray-400 transition-all duration-300 group hover:text-primary"
+              className="inline-flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400 transition-all duration-300 group hover:text-primary"
             >
-              <span className="p-2 transition-all duration-300 border rounded-full border-gray-800/70 bg-gray-900/40 group-hover:border-primary/60 group-hover:bg-primary/10">
-                <ArrowLeft className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1" />
+              <span className="p-1.5 sm:p-2 transition-all duration-300 border rounded-full border-gray-800/70 bg-gray-900/40 group-hover:border-primary/60 group-hover:bg-primary/10">
+                <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-300 group-hover:-translate-x-1" />
               </span>
               <span className="font-medium tracking-wide">Back to shop</span>
             </Link>
@@ -200,38 +200,38 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <header className="container px-4 py-10 mx-auto sm:py-14">
+        <header className="container px-4 py-6 sm:py-8 md:py-14 mx-auto max-w-7xl">
           <div className="max-w-3xl mx-auto text-center">
-            <span className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/50 bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.3em] text-primary uppercase">
-              <Shield className="w-4 h-4" /> Stripe protected
+            <span className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-full border border-primary/50 bg-primary/10 px-3 py-1.5 text-[10px] sm:text-xs font-semibold tracking-[0.15em] sm:tracking-[0.3em] text-primary uppercase">
+              <Shield className="w-3 h-3 sm:w-4 sm:h-4" /> Secure checkout
             </span>
-            <h1 className="mt-6 text-4xl font-black tracking-tight sm:text-5xl md:text-6xl">
+            <h1 className="mt-4 sm:mt-6 text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight">
               Complete your order
             </h1>
-            <p className="mt-4 text-base text-gray-400 sm:text-lg">
+            <p className="mt-2 sm:mt-4 text-xs sm:text-sm md:text-base text-gray-400">
               Review your details below and finish with our secure Stripe payment flow. Delivery updates will be
               sent to your inbox.
             </p>
           </div>
 
-          <div className="grid gap-4 mt-10 sm:grid-cols-3">
+          <div className="hidden sm:grid gap-3 mt-6 sm:mt-10 grid-cols-1 sm:grid-cols-3">
             {heroHighlights.map(({ icon: HighlightIcon, title, copy }) => (
               <div
                 key={title}
-                className="flex items-start gap-3 p-4 text-left border rounded-2xl border-gray-700/50 bg-gray-900/30"
+                className="flex items-start gap-3 p-3 sm:p-4 text-left border rounded-xl sm:rounded-2xl border-gray-700/50 bg-gray-900/30"
               >
-                <span className="inline-flex items-center justify-center flex-shrink-0 w-10 h-10 mt-1 border rounded-2xl border-primary/30 bg-primary/10 text-primary">
-                  <HighlightIcon className="w-5 h-5" />
+                <span className="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 mt-0.5 border rounded-xl sm:rounded-2xl border-primary/30 bg-primary/10 text-primary">
+                  <HighlightIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </span>
                 <div>
-                  <p className="text-base font-semibold text-brand-white">{title}</p>
-                  <p className="mt-1 text-sm text-gray-300">{copy}</p>
+                  <p className="text-sm sm:text-base font-semibold text-brand-white">{title}</p>
+                  <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-gray-300">{copy}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="grid gap-4 mt-8 sm:grid-cols-3">
+          <div className="hidden sm:grid gap-3 mt-6 sm:mt-8 grid-cols-1 sm:grid-cols-3">
             {steps.map((step) => {
               const Icon = step.icon;
               const isDone = step.status === 'done';
@@ -240,7 +240,7 @@ export default function CheckoutPage() {
               return (
                 <div
                   key={step.label}
-                  className={`relative overflow-hidden rounded-2xl border p-5 transition-colors duration-300 ${
+                  className={`relative overflow-hidden rounded-xl sm:rounded-2xl border p-4 sm:p-5 transition-colors duration-300 ${
                     isDone
                       ? 'border-primary/50 bg-primary/10'
                       : isCurrent
@@ -251,7 +251,7 @@ export default function CheckoutPage() {
                   <div className="absolute inset-0 transition-opacity duration-500 opacity-0 -z-10 bg-gradient-to-br from-white/10 via-transparent to-transparent hover:opacity-100" />
                   <div className="flex items-start gap-3">
                     <span
-                      className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl border text-sm font-semibold ${
+                      className={`inline-flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl sm:rounded-2xl border text-sm font-semibold flex-shrink-0 ${
                         isDone
                           ? 'border-primary/40 bg-primary/20 text-primary'
                           : isCurrent
@@ -259,14 +259,14 @@ export default function CheckoutPage() {
                           : 'border-gray-800/70 bg-gray-900/50 text-gray-400'
                       }`}
                     >
-                      <Icon className="w-4 h-4" />
+                      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </span>
                     <div>
-                      <p className="text-sm font-medium text-gray-300">
+                      <p className="text-xs sm:text-sm font-medium text-gray-300">
                         {isDone ? 'Completed' : isCurrent ? 'In progress' : 'Up next'}
                       </p>
-                      <p className="mt-2 text-lg font-semibold text-brand-white">{step.label}</p>
-                      <p className="mt-1 text-sm text-gray-300">{step.description}</p>
+                      <p className="mt-1 sm:mt-2 text-base sm:text-lg font-semibold text-brand-white">{step.label}</p>
+                      <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-gray-300">{step.description}</p>
                     </div>
                   </div>
                 </div>
@@ -275,22 +275,22 @@ export default function CheckoutPage() {
           </div>
         </header>
 
-        <div className="container flex-1 px-4 pb-16 mx-auto">
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-            <div className="space-y-8">
+        <div className="container flex-1 px-3 sm:px-4 pb-8 sm:pb-16 mx-auto max-w-7xl">
+          <div className="grid gap-4 sm:gap-6 lg:gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <div className="space-y-4 sm:space-y-6 lg:space-y-8 order-2 xl:order-1">
               <section className={sectionCardClass}>
-                <div className="flex items-start justify-between gap-4 sm:gap-6">
-                  <div>
-                    <p className={labelClass}>Step 1</p>
-                    <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Contact details</h2>
-                    <p className={helperTextClass}>We&apos;ll send receipts and delivery updates here.</p>
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-wider">Step 1</p>
+                    <h2 className="mt-1 sm:mt-2 text-base sm:text-xl md:text-2xl font-semibold tracking-tight">Contact details</h2>
+                    <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-gray-400">We&apos;ll send receipts here.</p>
                   </div>
-                  <div className="p-3 border rounded-3xl border-primary/40 bg-primary/10 text-primary">
-                    <Shield className="w-6 h-6" />
+                  <div className="p-1.5 sm:p-2 border rounded-lg sm:rounded-xl border-primary/40 bg-primary/10 text-primary flex-shrink-0">
+                    <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </div>
 
-                <div className="mt-8 space-y-6">
+                <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-5">
                   <div>
                     <label htmlFor="email" className={labelClass}>
                       Email address
@@ -312,8 +312,8 @@ export default function CheckoutPage() {
                     <label htmlFor="phone" className={labelClass}>
                       Mobile number
                     </label>
-                    <div className="flex">
-                      <span className="inline-flex items-center px-5 text-sm font-medium text-gray-300 border border-r-0 rounded-l-2xl border-gray-700/60 bg-gray-900/40">
+                    <div className="flex mt-1">
+                      <span className="inline-flex items-center px-2 sm:px-3 text-[10px] sm:text-xs font-medium text-gray-300 border border-r-0 rounded-l-lg sm:rounded-l-xl border-gray-700/60 bg-gray-900/40">
                         🇱🇰 +94
                       </span>
                       <input
@@ -327,7 +327,7 @@ export default function CheckoutPage() {
                         className={`${inputClass} rounded-l-none border-l-0`}
                       />
                     </div>
-                    <p className={helperTextClass}>We only use this if the courier needs extra delivery details.</p>
+                    <p className={`${helperTextClass} text-xs sm:text-sm`}>We only use this if the courier needs extra delivery details.</p>
                   </div>
 
                   <div>
@@ -361,18 +361,18 @@ export default function CheckoutPage() {
               </section>
 
               <section className={sectionCardClass}>
-                <div className="flex items-start justify-between gap-4 sm:gap-6">
-                  <div>
-                    <p className={labelClass}>Step 2</p>
-                    <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Delivery address</h2>
-                    <p className={helperTextClass}>Packages ship within 2 business days across Sri Lanka.</p>
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-xs font-semibold text-accent uppercase tracking-wider">Step 2</p>
+                    <h2 className="mt-1 sm:mt-2 text-base sm:text-xl md:text-2xl font-semibold tracking-tight">Delivery address</h2>
+                    <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-gray-400">Ships in 2 business days.</p>
                   </div>
-                  <div className="p-3 border rounded-3xl border-accent/40 bg-accent/10 text-accent">
-                    <Truck className="w-6 h-6" />
+                  <div className="p-1.5 sm:p-2 border rounded-lg sm:rounded-xl border-accent/40 bg-accent/10 text-accent flex-shrink-0">
+                    <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </div>
 
-                <div className="mt-8 space-y-6">
+                <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-5">
                   <div>
                     <label htmlFor="address" className={labelClass}>
                       Street address
@@ -437,21 +437,19 @@ export default function CheckoutPage() {
               </section>
 
               <section className={sectionCardClass}>
-                <div className="flex items-start justify-between gap-4 sm:gap-6">
-                  <div>
-                    <p className={labelClass}>Step 3</p>
-                    <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Payment</h2>
-                    <p className={helperTextClass}>
-                      Choose your preferred payment method to complete the order securely.
-                    </p>
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-wider">Step 3</p>
+                    <h2 className="mt-1 sm:mt-2 text-base sm:text-xl md:text-2xl font-semibold tracking-tight">Payment</h2>
+                    <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-gray-400">Choose your payment method.</p>
                   </div>
-                  <div className="p-3 border rounded-3xl border-primary/40 bg-primary/10 text-primary">
-                    <CreditCard className="w-6 h-6" />
+                  <div className="p-1.5 sm:p-2 border rounded-lg sm:rounded-xl border-primary/40 bg-primary/10 text-primary flex-shrink-0">
+                    <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </div>
 
-                <div className="mt-8 space-y-6">
-                  <div className="grid gap-4 sm:grid-cols-2">
+                <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-5">
+                  <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
                     {paymentOptions.map((option) => {
                       const Icon = option.icon;
                       const isActive = paymentMethod === option.value;
@@ -464,24 +462,24 @@ export default function CheckoutPage() {
                             setPaymentMethod(option.value);
                             setCodError(null);
                           }}
-                          className={`flex w-full items-start gap-4 rounded-2xl border px-5 py-4 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                          className={`flex w-full items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
                             isActive
-                              ? 'border-primary/60 bg-primary/10 shadow-[0_16px_45px_-24px_rgba(255,96,96,0.65)]'
-                              : 'border-gray-700/60 bg-gray-900/40 hover:border-primary/40 hover:bg-primary/5'
+                              ? 'border-primary/60 bg-primary/10'
+                              : 'border-gray-700/60 bg-gray-900/40'
                           }`}
                         >
                           <span
-                            className={`inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border text-sm font-semibold ${
+                            className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg sm:rounded-xl border text-sm font-semibold ${
                               isActive
                                 ? 'border-primary/40 bg-primary/20 text-primary'
                                 : 'border-gray-800/70 bg-gray-900/50 text-gray-400'
                             }`}
                           >
-                            <Icon className="w-4 h-4" />
+                            <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                           </span>
-                          <div>
-                            <p className="text-base font-semibold text-brand-white">{option.label}</p>
-                            <p className="mt-1 text-sm text-gray-300">{option.description}</p>
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-brand-white">{option.label}</p>
+                            <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400 line-clamp-2">{option.description}</p>
                           </div>
                         </button>
                       );
@@ -489,21 +487,20 @@ export default function CheckoutPage() {
                   </div>
 
                   {paymentMethod === 'payhere' ? (
-                    <div className="p-4 border rounded-3xl border-blue-500/30 bg-blue-500/5 sm:p-6">
+                    <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-blue-500/30 bg-blue-500/5">
                       <PayHerePaymentHandler cart={cart} shippingDetails={shippingDetails} />
                     </div>
                   ) : (
-                    <div className="p-4 border rounded-3xl border-primary/40 bg-primary/5 sm:p-6">
-                      <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                          <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-primary/40 bg-primary/15 text-primary">
-                            <Banknote className="w-4 h-4" />
+                    <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-primary/40 bg-primary/5">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="flex items-start gap-2 sm:gap-3">
+                          <span className="inline-flex h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 items-center justify-center rounded-lg sm:rounded-xl border border-primary/40 bg-primary/15 text-primary">
+                            <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </span>
                           <div>
-                            <p className="text-lg font-semibold text-brand-white">Pay on delivery</p>
-                            <p className="mt-1 text-sm text-gray-300">
-                              Our courier will contact you prior to drop-off and collect payment when your order
-                              arrives. Cash and card payments are accepted at the doorstep.
+                            <p className="text-sm sm:text-base font-semibold text-brand-white">Pay on delivery</p>
+                            <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400">
+                              Pay when your order arrives. Cash and card accepted.
                             </p>
                           </div>
                         </div>
@@ -511,22 +508,17 @@ export default function CheckoutPage() {
                           type="button"
                           onClick={handleCodOrder}
                           disabled={codSubmitting}
-                          className="flex items-center justify-center w-full px-6 py-4 text-base font-bold text-brand-black transition-colors bg-primary border border-transparent rounded-lg shadow-sm hover:bg-primary/90 disabled:bg-gray-500 disabled:text-gray-200"
+                          className="flex items-center justify-center w-full px-4 py-2.5 sm:py-3 text-sm font-bold text-brand-black transition-colors bg-primary border border-transparent rounded-lg shadow-sm hover:bg-primary/90 disabled:bg-gray-500 disabled:text-gray-200"
                         >
-                          {codSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Place order - Pay on delivery'}
+                          {codSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Place order'}
                         </button>
-                        <p className="mt-3 text-xs text-center text-gray-400">
+                        <p className="mt-2 text-[10px] text-center text-gray-400">
                           By placing this order, you agree to our{' '}
                           <Link href="/terms-conditions" target="_blank" className="underline hover:text-primary">
-                            Terms & Conditions
+                            Terms
                           </Link>
-                          .
                         </p>
-                        {codError && <p className="text-sm text-red-500">{codError}</p>}
-                        <p className="text-xs leading-relaxed text-gray-400">
-                          Need a different arrangement? Reply to your confirmation email and we&apos;ll coordinate a
-                          convenient delivery window.
-                        </p>
+                        {codError && <p className="text-xs text-red-500">{codError}</p>}
                       </div>
                     </div>
                   )}
@@ -534,28 +526,27 @@ export default function CheckoutPage() {
               </section>
             </div>
 
-            <aside className="space-y-6 xl:pl-2">
-              <div className="sticky top-6">
+            <aside className="space-y-4 sm:space-y-6 xl:pl-2 order-1 xl:order-2">
+              <div className="xl:sticky xl:top-6">
                 <div className={`${sectionCardClass} overflow-hidden`}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className={labelClass}>Order summary</p>
-                      <h2 className="mt-3 text-2xl font-semibold tracking-tight">You&apos;re almost there</h2>
-                      <p className="mt-2 text-sm text-gray-300">{cart.items.length} item{cart.items.length === 1 ? '' : 's'} in cart</p>
-                      <p className={helperTextClass}>Trusted by 10,000+ athletes across Sri Lanka.</p>
+                  <div className="flex items-start justify-between gap-2 sm:gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className={`${labelClass} text-xs sm:text-sm`}>Order summary</p>
+                      <h2 className="mt-1 sm:mt-3 text-lg sm:text-xl md:text-2xl font-semibold tracking-tight">You&apos;re almost there</h2>
+                      <p className="mt-1 text-xs text-gray-300">{cart.items.length} item{cart.items.length === 1 ? '' : 's'} in cart</p>
                     </div>
-                    <div className="p-3 border rounded-3xl border-primary/40 bg-primary/10 text-primary">
-                      <Sparkles className="w-6 h-6" />
+                    <div className="p-2 border rounded-xl sm:rounded-2xl border-primary/40 bg-primary/10 text-primary flex-shrink-0">
+                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
 
-                  <div className="pr-1 mt-6 space-y-4 overflow-y-auto max-h-80">
+                  <div className="mt-3 sm:mt-6 space-y-2 sm:space-y-3 overflow-y-auto max-h-48 sm:max-h-80">
                     {cart.items.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-4 p-4 transition-all duration-300 border rounded-2xl border-gray-800/60 bg-gray-900/40 hover:border-primary/40 hover:bg-primary/10"
+                        className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 transition-all duration-300 border rounded-lg sm:rounded-xl border-gray-800/60 bg-gray-900/40"
                       >
-                        <div className="relative flex-shrink-0 w-16 h-16 overflow-hidden border border-gray-800 rounded-xl">
+                        <div className="relative flex-shrink-0 w-10 h-10 sm:w-14 sm:h-14 overflow-hidden border border-gray-800 rounded-md sm:rounded-lg">
                           <Image
                             src={
                               item.sku.variant.variant_images && item.sku.variant.variant_images.length > 0
@@ -568,66 +559,63 @@ export default function CheckoutPage() {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate text-brand-white">
+                          <p className="text-[11px] sm:text-sm font-semibold truncate text-brand-white">
                             {item.sku.variant.product.name}
                           </p>
-                          <p className="mt-1 text-sm text-gray-300">
+                          <p className="text-[10px] sm:text-xs text-gray-300">
                             {item.sku.size} • {item.sku.variant.color_name}
                           </p>
-                          <div className="inline-flex items-center gap-2 mt-2">
-                            <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-primary">
-                              Qty {item.quantity}
-                            </span>
-                          </div>
+                          <span className="inline-block mt-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-primary">
+                            Qty {item.quantity}
+                          </span>
                         </div>
-                        <p className="text-sm font-semibold text-brand-white">
-                          LKR {(parseFloat(item.sku.variant.price) * item.quantity).toFixed(2)}
+                        <p className="text-[11px] sm:text-sm font-semibold text-brand-white whitespace-nowrap">
+                          LKR {(parseFloat(item.sku.variant.price) * item.quantity).toLocaleString()}
                         </p>
                       </div>
                     ))}
                   </div>
 
-                  <div className="pt-6 mt-8 space-y-4 text-sm border-t border-gray-800/60">
-                    <div className="flex justify-between text-gray-300">
+                  <div className="pt-3 sm:pt-6 mt-3 sm:mt-6 space-y-2 sm:space-y-3 text-[11px] sm:text-sm border-t border-gray-800/60">
+                    <div className="flex justify-between items-center text-gray-300">
                       <span>Subtotal</span>
-                      <span className="font-semibold text-brand-white">LKR {(cart.subtotal || 0).toFixed(2)}</span>
+                      <span className="font-semibold text-brand-white">LKR {(cart.subtotal || 0).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between text-gray-300">
+                    <div className="flex justify-between items-center text-gray-300">
                       <span>Shipping</span>
                       <span className="font-semibold text-brand-white">
                         {cart.totalShipping > 0 ? (
-                          `LKR ${cart.totalShipping.toFixed(2)}`
+                          `LKR ${cart.totalShipping.toLocaleString()}`
                         ) : (
-                            <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-sm font-semibold uppercase tracking-[0.2em] text-primary">
-                            <CheckCircle2 className="w-3 h-3" /> Free
+                          <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] sm:text-xs font-semibold uppercase text-primary">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> Free
                           </span>
                         )}
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-5 mt-6 border rounded-2xl border-primary/30 bg-primary/5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-base font-semibold uppercase tracking-[0.3em] text-gray-300">
+                  <div className="p-3 sm:p-4 mt-3 sm:mt-5 border rounded-lg sm:rounded-xl border-primary/30 bg-primary/5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs sm:text-sm font-semibold uppercase tracking-widest text-gray-300">
                         Total
                       </span>
                       <div className="text-right">
-                        <p className="text-2xl font-white text-white bg-gradient-to-r from-primary to-accent bg-clip-text">
-                          LKR {cart.totalAmount.toFixed(2)}
+                        <p className="text-lg sm:text-xl font-bold text-white">
+                          LKR {cart.totalAmount.toLocaleString()}
                         </p>
-                        <p className={helperTextClass}>All taxes included</p>
+                        <p className="text-[10px] sm:text-xs text-gray-400">All taxes included</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-4 mt-6 text-sm text-gray-300 border rounded-2xl border-gray-700/50 bg-black/20">
-                    <div className="flex items-center gap-2 text-gray-300">
-                      <Shield className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-semibold uppercase tracking-[0.2em]">30-day guarantee</span>
+                  <div className="p-2.5 sm:p-4 mt-3 sm:mt-5 text-gray-300 border rounded-lg sm:rounded-xl border-gray-700/50 bg-black/20">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                      <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">30-day guarantee</span>
                     </div>
-                    <p className="mt-2 leading-relaxed text-gray-300">
-                      Need help? Reach us at support@ceaserbrand.com. We&apos;re here to make sure your order arrives fast
-                      and in perfect shape.
+                    <p className="mt-1 sm:mt-2 text-[10px] sm:text-xs leading-relaxed text-gray-400">
+                      Need help? Reach us at support@ceaserbrand.com
                     </p>
                   </div>
                 </div>

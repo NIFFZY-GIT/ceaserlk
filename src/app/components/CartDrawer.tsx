@@ -60,8 +60,8 @@ const CartItemCard = ({ item }: { item: CartItem }) => {
   const primaryMedia = getPrimaryMedia();
 
   return (
-    <div className="flex items-start space-x-4 cart-item-gsap">
-      <Link href={`/product/${product.id}`} className="relative flex-shrink-0 overflow-hidden bg-gray-900 rounded-lg w-28 h-28 group">
+    <div className="flex items-start space-x-3 sm:space-x-4 cart-item-gsap">
+      <Link href={`/product/${product.id}`} className="relative flex-shrink-0 overflow-hidden bg-gray-900 rounded-lg w-20 h-20 sm:w-28 sm:h-28 group">
         {primaryMedia.isVideo ? (
           <>
             <video
@@ -72,8 +72,8 @@ const CartItemCard = ({ item }: { item: CartItem }) => {
               autoPlay
               playsInline
             />
-            <span className="absolute inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white bg-black/70 rounded-full bottom-1 left-1">
-              <Video size={12} /> Video
+            <span className="absolute inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] sm:text-[10px] font-semibold uppercase tracking-wide text-white bg-black/70 rounded-full bottom-1 left-1">
+              <Video size={10} /> Video
             </span>
           </>
         ) : (
@@ -85,12 +85,12 @@ const CartItemCard = ({ item }: { item: CartItem }) => {
           />
         )}
       </Link>
-      <div className="flex-grow">
-        <p className="text-lg font-bold leading-tight text-white">{product.name}</p>
-        <p className="text-sm text-gray-400">{size} / {variant.color_name}</p>
-        <p className="mt-1 text-base font-semibold text-primary">LKR {Number(variant.price).toFixed(2)}</p>
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex items-center gap-3">
+      <div className="flex-grow min-w-0">
+        <p className="text-sm sm:text-lg font-bold leading-tight text-white truncate">{product.name}</p>
+        <p className="text-xs sm:text-sm text-gray-400">{size} / {variant.color_name}</p>
+        <p className="mt-0.5 sm:mt-1 text-sm sm:text-base font-semibold text-primary">LKR {Number(variant.price).toLocaleString()}</p>
+        <div className="flex items-center justify-between mt-2 sm:mt-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button 
               onClick={() => {
                 const newQuantity = item.quantity - 1;
@@ -100,18 +100,18 @@ const CartItemCard = ({ item }: { item: CartItem }) => {
                   updateQuantity(item.id, newQuantity);
                 }
               }} 
-              className="flex items-center justify-center text-gray-400 transition-colors bg-gray-800 rounded-full w-7 h-7 hover:bg-gray-700 disabled:opacity-50" 
+              className="flex items-center justify-center text-gray-400 transition-colors bg-gray-800 rounded-full w-6 h-6 sm:w-7 sm:h-7 hover:bg-gray-700 disabled:opacity-50" 
               disabled={item.quantity <= 1}
             >
-              <Minus size={14} />
+              <Minus size={12} />
             </button>
-            <span className="w-4 font-semibold text-center">{item.quantity}</span>
-            <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="flex items-center justify-center text-gray-400 transition-colors bg-gray-800 rounded-full w-7 h-7 hover:bg-gray-700">
-              <Plus size={14} />
+            <span className="w-4 text-sm font-semibold text-center">{item.quantity}</span>
+            <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="flex items-center justify-center text-gray-400 transition-colors bg-gray-800 rounded-full w-6 h-6 sm:w-7 sm:h-7 hover:bg-gray-700">
+              <Plus size={12} />
             </button>
           </div>
           <button onClick={() => removeFromCart(item.id)} className="p-1 text-gray-500 transition-colors hover:text-accent">
-            <Trash2 size={18} />
+            <Trash2 size={16} />
           </button>
         </div>
       </div>
@@ -237,71 +237,73 @@ export const CartDrawer = () => {
 
   return (
     <>
-      <div ref={drawerRef} className={`fixed top-0 right-0 h-full w-full max-w-lg bg-black shadow-2xl z-50 transform transition-transform duration-500 ease-in-out ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div ref={drawerRef} className={`fixed top-0 right-0 h-full w-full sm:max-w-md md:max-w-lg bg-black shadow-2xl z-50 transform transition-transform duration-500 ease-in-out ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="relative flex flex-col h-full text-white">
-          <div className="flex items-center justify-between p-6 border-b border-gray-800 md:p-8 cart-header-gsap">
-            <div className="flex items-center gap-3">
-              <ShoppingBag className="text-primary" size={28}/>
-              <h2 className="text-2xl font-bold tracking-wider uppercase">
+          <div className="flex items-center justify-between p-4 sm:p-6 md:p-8 border-b border-gray-800 cart-header-gsap">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <ShoppingBag className="text-primary" size={24}/>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-wider uppercase">
                 Cart 
-                <span className="px-2 py-1 ml-2 text-sm font-bold text-black rounded-full bg-primary">
+                <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 ml-2 text-xs sm:text-sm font-bold text-black rounded-full bg-primary">
                   {cartCount}
                 </span>
               </h2>
             </div>
-            <button onClick={closeCart} className="p-2 text-gray-500 transition-colors rounded-full hover:bg-gray-800 hover:text-white">
-              <X size={24} />
+            <button onClick={closeCart} className="p-1.5 sm:p-2 text-gray-500 transition-colors rounded-full hover:bg-gray-800 hover:text-white">
+              <X size={22} />
             </button>
           </div>
           {!user ? (
-            <div className="flex flex-col items-center justify-center flex-grow p-8 text-center">
-              <User size={80} className="mb-6 text-gray-800" />
-              <h3 className="text-2xl font-semibold">Please Login</h3>
-              <p className="max-w-xs mt-2 text-gray-500">
+            <div className="flex flex-col items-center justify-center flex-grow p-6 sm:p-8 text-center">
+              <User size={60} className="mb-4 sm:mb-6 text-gray-800" />
+              <h3 className="text-xl sm:text-2xl font-semibold">Please Login</h3>
+              <p className="max-w-xs mt-2 text-sm text-gray-500">
                 You need to be logged in to view your cart.
               </p>
-              <div className="flex flex-col w-full gap-3 mt-8">
-                <Link href="/login" onClick={closeCart} className="w-full px-8 py-3 font-bold text-white transition-colors rounded-md bg-primary hover:bg-opacity-90">
+              <div className="flex flex-col w-full gap-2 sm:gap-3 mt-6 sm:mt-8">
+                <Link href="/login" onClick={closeCart} className="w-full px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors rounded-md bg-primary hover:bg-opacity-90">
                   Login
                 </Link>
-                <Link href="/signup" onClick={closeCart} className="w-full px-8 py-3 font-bold text-white transition-colors border border-gray-700 rounded-md hover:bg-gray-800">
+                <Link href="/signup" onClick={closeCart} className="w-full px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors border border-gray-700 rounded-md hover:bg-gray-800">
                   Create Account
                 </Link>
               </div>
             </div>
           ) : (
             <>
-              {loading && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm"><Loader2 className="w-10 h-10 animate-spin text-primary"/></div>}
+              {loading && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm"><Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-primary"/></div>}
               {hasItems ? (
-                <div className="flex-grow p-6 space-y-6 overflow-y-auto md:p-8">
+                <div className="flex-grow p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 overflow-y-auto">
                   {cart.items.map(item => <CartItemCard key={item.id} item={item} />)}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center flex-grow p-8 text-center">
-                  <ShoppingBag size={80} className="mb-6 text-gray-800" />
-                  <h3 className="text-2xl font-semibold">Your Cart is Empty</h3>
-                  <p className="max-w-xs mt-2 text-gray-500">
-                    Looks like you haven&apos;t added anything yet. Let&apos;s change that.
+                <div className="flex flex-col items-center justify-center flex-grow p-6 sm:p-8 text-center">
+                  <ShoppingBag size={60} className="mb-4 sm:mb-6 text-gray-800" />
+                  <h3 className="text-xl sm:text-2xl font-semibold">Your Cart is Empty</h3>
+                  <p className="max-w-xs mt-2 text-sm text-gray-500">
+                    Looks like you haven&apos;t added anything yet.
                   </p>
-                  <Link href="/shop" onClick={closeCart} className="px-8 py-3 mt-8 font-bold text-white transition-colors rounded-md bg-primary hover:bg-opacity-90">
+                  <Link href="/shop" onClick={closeCart} className="px-6 sm:px-8 py-2.5 sm:py-3 mt-6 sm:mt-8 text-sm sm:text-base font-bold text-white transition-colors rounded-md bg-primary hover:bg-opacity-90">
                     Start Shopping
                   </Link>
                 </div>
               )}
               {hasItems && (
-                <div className="p-6 bg-black border-t border-gray-800 md:p-8 cart-footer-gsap">
+                <div className="p-4 sm:p-6 md:p-8 bg-black border-t border-gray-800 cart-footer-gsap">
                   {/* <FreeShippingMeter subtotal={subtotal} /> */}
                   <CountdownTimer expiresAt={cart.expiresAt} />
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-400">
-                      {cartCount} {cartCount === 1 ? 'item' : 'items'} in cart
+                    <span className="text-xs sm:text-sm text-gray-400">
+                      {cartCount} {cartCount === 1 ? 'item' : 'items'}
                     </span>
-                    <span className="text-lg font-semibold text-gray-300">Subtotal</span>
-                    <span className="text-2xl font-bold text-white">LKR {subtotal.toFixed(2)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm sm:text-lg font-semibold text-gray-300">Total</span>
+                      <span className="text-lg sm:text-2xl font-bold text-white">LKR {subtotal.toLocaleString()}</span>
+                    </div>
                   </div>
-                  <p className="mb-4 text-xs text-center text-gray-500">Shipping & taxes calculated at checkout.</p>
-                  <Link href="/checkout" onClick={closeCart} className="block w-full py-4 font-bold tracking-wider text-center text-white uppercase transition-all duration-300 rounded-md bg-accent hover:bg-red-500 hover:shadow-lg focus:outline-none focus:ring-4 ring-accent/50">
-                    Proceed to Checkout
+                  <p className="mb-3 sm:mb-4 text-[10px] sm:text-xs text-center text-gray-500">Shipping & taxes at checkout</p>
+                  <Link href="/checkout" onClick={closeCart} className="block w-full py-3 sm:py-4 text-sm sm:text-base font-bold tracking-wider text-center text-white uppercase transition-all duration-300 rounded-md bg-accent hover:bg-red-500">
+                    Checkout
                   </Link>
                 </div>
               )}

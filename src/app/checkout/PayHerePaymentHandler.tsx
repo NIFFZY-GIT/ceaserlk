@@ -127,7 +127,7 @@ export default function PayHerePaymentHandler({ cart, shippingDetails }: PayHere
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-4">
       {/* PayHere SDK Script */}
       <Script
         src="https://www.payhere.lk/lib/payhere.js"
@@ -136,40 +136,38 @@ export default function PayHerePaymentHandler({ cart, shippingDetails }: PayHere
       />
 
       {/* Payment Info */}
-      <div className="p-4 border border-gray-700 rounded-xl bg-gray-900/50">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-blue-500/20">
-            <CreditCard className="w-5 h-5 text-blue-400" />
+      <div className="p-3 sm:p-4 border border-gray-700 rounded-lg sm:rounded-xl bg-gray-900/50">
+        <div className="flex items-start gap-2 sm:gap-3">
+          <div className="p-1.5 sm:p-2 rounded-md sm:rounded-lg bg-blue-500/20 flex-shrink-0">
+            <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">PayHere Secure Payment</h3>
-            <p className="mt-1 text-sm text-gray-400">
-              Pay securely with Visa, Mastercard, Amex, or local Sri Lankan payment methods including 
-              bank transfers and mobile wallets.
+            <h3 className="text-sm sm:text-base font-semibold text-white">PayHere Secure Payment</h3>
+            <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-sm text-gray-400">
+              Visa, Mastercard, bank transfers & mobile wallets.
             </p>
           </div>
         </div>
         
         {/* Payment methods logos */}
-        <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-gray-700/50">
-          <span className="text-xs text-gray-500">Accepted:</span>
-          <div className="flex items-center gap-2">
-            <div className="px-2 py-1 text-xs font-semibold text-white bg-blue-600 rounded">VISA</div>
-            <div className="px-2 py-1 text-xs font-semibold text-white bg-red-600 rounded">Mastercard</div>
-            <div className="px-2 py-1 text-xs font-semibold text-white bg-blue-800 rounded">AMEX</div>
-            <div className="px-2 py-1 text-xs font-semibold text-gray-900 bg-yellow-400 rounded">FriMi</div>
-            <div className="px-2 py-1 text-xs font-semibold text-white bg-green-600 rounded">Bank Transfer</div>
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-gray-700/50">
+          <span className="text-[10px] sm:text-xs text-gray-500">Accepted:</span>
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+            <div className="px-1.5 py-0.5 text-[9px] sm:text-xs font-semibold text-white bg-blue-600 rounded">VISA</div>
+            <div className="px-1.5 py-0.5 text-[9px] sm:text-xs font-semibold text-white bg-red-600 rounded">MC</div>
+            <div className="px-1.5 py-0.5 text-[9px] sm:text-xs font-semibold text-white bg-blue-800 rounded">AMEX</div>
+            <div className="px-1.5 py-0.5 text-[9px] sm:text-xs font-semibold text-gray-900 bg-yellow-400 rounded">FriMi</div>
           </div>
         </div>
       </div>
 
       {/* Error Message */}
       {errorMessage && (
-        <div className="flex items-start gap-3 p-4 border border-red-500/30 rounded-xl bg-red-500/10">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 p-2.5 sm:p-3 border border-red-500/30 rounded-lg bg-red-500/10">
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium text-red-400">Payment Error</p>
-            <p className="mt-1 text-sm text-red-300">{errorMessage}</p>
+            <p className="text-xs sm:text-sm font-medium text-red-400">Error</p>
+            <p className="text-[10px] sm:text-xs text-red-300">{errorMessage}</p>
           </div>
         </div>
       )}
@@ -179,29 +177,29 @@ export default function PayHerePaymentHandler({ cart, shippingDetails }: PayHere
         type="button"
         onClick={handlePayment}
         disabled={isLoading || !sdkLoaded}
-        className="flex items-center justify-center w-full gap-2 px-6 py-4 text-base font-bold text-white transition-all bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25"
+        className="flex items-center justify-center w-full gap-2 px-4 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition-all bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg sm:rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? (
           <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Processing...
+            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+            <span className="text-xs sm:text-sm">Processing...</span>
           </>
         ) : !sdkLoaded ? (
           <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Loading payment...
+            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+            <span className="text-xs sm:text-sm">Loading...</span>
           </>
         ) : (
           <>
-            <CreditCard className="w-5 h-5" />
-            Pay LKR {cart.totalAmount.toFixed(2)} with PayHere
+            <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Pay LKR {cart.totalAmount.toLocaleString()}</span>
           </>
         )}
       </button>
 
       {/* Security notice */}
-      <p className="text-xs text-center text-gray-500">
-        🔒 Your payment is secured by PayHere. We never store your card details.
+      <p className="text-[10px] sm:text-xs text-center text-gray-500">
+        🔒 Secured by PayHere
       </p>
     </div>
   );
