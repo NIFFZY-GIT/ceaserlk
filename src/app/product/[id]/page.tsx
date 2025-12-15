@@ -89,7 +89,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   
   // Audio player state
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [isAudioMuted, setIsAudioMuted] = useState(true); // Start muted for autoplay compatibility
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoMuted, setIsVideoMuted] = useState(true);
@@ -189,9 +189,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     const audioElement = audioRef.current;
     if (!product?.audio_url || !audioElement) return;
 
-  const interactionEvents: Array<keyof WindowEventMap> = ['pointerdown', 'touchstart', 'keydown'];
+    const interactionEvents: Array<keyof WindowEventMap> = ['pointerdown', 'touchstart', 'keydown', 'scroll', 'mousemove'];
     let fallbackArmed = false;
     let fadeFrame: number | null = null;
+    let hasUserInteracted = false;
 
     const cancelFade = () => {
       if (fadeFrame !== null) {
@@ -200,13 +201,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       }
     };
 
-    const fadeInVolume = (element: HTMLAudioElement, targetVolume: number, durationMs = 1400) => {
+    const fadeInVolume = (element: HTMLAudioElement, targetVolume: number, durationMs = 1000) => {
       cancelFade();
       const startTime = performance.now();
+      const clampedTarget = Math.max(0, Math.min(1, targetVolume));
 
       const step = (now: number) => {
-        const progress = Math.min(1, (now - startTime) / durationMs);
-        element.volume = targetVolume * progress;
+        const progress = Math.min(1, Math.max(0, (now - startTime) / durationMs));
+        element.volume = Math.max(0, Math.min(1, clampedTarget * progress));
         if (progress < 1) {
           fadeFrame = requestAnimationFrame(step);
         } else {
@@ -217,19 +219,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       fadeFrame = requestAnimationFrame(step);
     };
 
-    const syncAudioSettings = () => {
-      if (!audioRef.current) return;
-      audioRef.current.muted = isAudioMuted;
-      audioRef.current.volume = isAudioMuted ? 0 : 0.5;
-    };
-
     const detachFallback = () => {
       if (!fallbackArmed) return;
       fallbackArmed = false;
       interactionEvents.forEach(event => {
         window.removeEventListener(event, handleInteraction, true);
       });
-      setAudioInteractionRequired(false);
     };
 
     const armFallback = () => {
@@ -241,51 +236,74 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       setAudioInteractionRequired(true);
     };
 
-    const attemptPlayback = async (fromUserGesture = false) => {
+    const attemptUnmute = () => {
+      const element = audioRef.current;
+      if (!element || element.paused) return;
+      
+      // Unmute and fade in volume
+      element.muted = false;
+      setIsAudioMuted(false);
+      fadeInVolume(element, 0.5);
+      setAudioInteractionRequired(false);
+      detachFallback();
+    };
+
+    const attemptPlayback = async () => {
       const element = audioRef.current;
       if (!element) return;
 
-      const allowAudibleStart = !isAudioMuted;
-
-      if (!fromUserGesture && !element.paused) {
-        return;
-      }
-
-      // Prepare for autoplay by starting muted, then fade up if allowed
+      // Always start muted for autoplay compatibility
       element.muted = true;
       element.volume = 0;
 
       try {
         await element.play();
         setIsAudioPlaying(true);
-        setAudioInteractionRequired(false);
-
-        if (allowAudibleStart) {
-          element.muted = false;
-          fadeInVolume(element, 0.5);
-        }
-
-        detachFallback();
+        
+        // Audio is now playing (muted). Arm the fallback to unmute on interaction.
+        armFallback();
+        
       } catch (error) {
-        if (!fromUserGesture) {
-          armFallback();
-          console.debug('Audio autoplay deferred until user interaction:', error);
-        }
+        console.debug('Audio autoplay failed, waiting for user interaction:', error);
+        armFallback();
       }
     };
 
     function handleInteraction() {
-      attemptPlayback(true);
+      if (hasUserInteracted) return;
+      hasUserInteracted = true;
+      
+      const element = audioRef.current;
+      if (!element) return;
+      
+      if (element.paused) {
+        // Audio never started, try to play it now
+        element.muted = false;
+        element.volume = 0;
+        element.play().then(() => {
+          setIsAudioPlaying(true);
+          setIsAudioMuted(false);
+          fadeInVolume(element, 0.5);
+          setAudioInteractionRequired(false);
+        }).catch(() => {
+          console.debug('Manual audio start also failed');
+        });
+      } else {
+        // Audio is playing muted, unmute it
+        attemptUnmute();
+      }
+      
+      detachFallback();
     }
 
-    syncAudioSettings();
+    // Start playback attempt
     attemptPlayback();
 
     return () => {
       cancelFade();
       detachFallback();
     };
-  }, [product?.audio_url, isAudioMuted]);
+  }, [product?.audio_url]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -422,10 +440,31 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     if (!element) return;
 
     try {
-      element.muted = isAudioMuted;
-      element.volume = isAudioMuted ? 0 : element.volume > 0 ? element.volume : 0.5;
-      await element.play();
-      setIsAudioPlaying(true);
+      // If audio is already playing muted, just unmute it
+      if (isAudioPlaying && isAudioMuted) {
+        // Fade in volume for smooth transition
+        let currentVol = 0;
+        element.volume = 0;
+        element.muted = false;
+        setIsAudioMuted(false);
+        
+        const fadeIn = setInterval(() => {
+          currentVol += 0.05;
+          if (currentVol >= 0.5) {
+            element.volume = 0.5;
+            clearInterval(fadeIn);
+          } else {
+            element.volume = Math.max(0, Math.min(1, currentVol));
+          }
+        }, 50);
+      } else {
+        // Start playing with unmuted audio
+        element.muted = false;
+        element.volume = 0.5;
+        setIsAudioMuted(false);
+        await element.play();
+        setIsAudioPlaying(true);
+      }
       setAudioInteractionRequired(false);
     } catch (error) {
       console.debug('Manual audio start failed:', error);
@@ -701,18 +740,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         placeholder="empty"
                       />
                     )}
-                    {/* Overlay Icons */}
-                    <div className="absolute flex gap-2 transition-opacity opacity-0 top-4 right-4 group-hover:opacity-100">
-                      <button 
-                        onClick={() => setIsWishlisted(!isWishlisted)}
-                        className="p-2 transition-colors rounded-full shadow-lg bg-white/90 backdrop-blur-sm hover:bg-white"
-                      >
-                        <Heart className={`${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600'} w-5 h-5`} />
-                      </button>
-                      <button className="p-2 transition-colors rounded-full shadow-lg bg-white/90 backdrop-blur-sm hover:bg-white">
-                        <Share2 className="w-5 h-5 text-gray-600" />
-                      </button>
-                    </div>
                     {isSelectedMediaVideo && (
                       <button
                         type="button"
@@ -801,39 +828,44 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <div className="flex flex-col gap-3 p-4 rounded-lg bg-gray-50 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   {isAudioPlaying ? (
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <>
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-gray-700">
+                        {isAudioMuted ? '🔇 Playing (Muted)' : '🔊 Playing'}
+                      </span>
+                    </>
                   ) : (
-                    <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                    <>
+                      <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                      <span className="text-sm font-medium text-gray-700">Audio Ready</span>
+                    </>
                   )}
-                  <span className="text-sm font-medium text-gray-700">
-                    {isAudioPlaying ? 'Playing Audio' : 'Audio Ready'}
-                  </span>
                 </div>
-                <button
-                  onClick={toggleProductAudioMute}
-                  className="flex items-center justify-center w-10 h-10 text-gray-600 transition-all bg-white border-2 border-gray-200 rounded-full hover:border-gray-300 hover:text-gray-900 hover:scale-105"
-                  title={isAudioMuted ? "Unmute audio" : "Mute audio"}
-                >
-                  {isAudioMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                </button>
-                {audioInteractionRequired && (
+                <div className="flex items-center gap-2">
+                  {(audioInteractionRequired || isAudioMuted) && isAudioPlaying && (
+                    <button
+                      type="button"
+                      onClick={handleManualAudioStart}
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-green-700 animate-pulse"
+                    >
+                      <Volume2 className="w-4 h-4" aria-hidden="true" />
+                      Enable Sound
+                    </button>
+                  )}
                   <button
-                    type="button"
-                    onClick={handleManualAudioStart}
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-slate-900/20 transition hover:-translate-y-0.5 hover:bg-slate-800"
+                    onClick={toggleProductAudioMute}
+                    className="flex items-center justify-center w-10 h-10 text-gray-600 transition-all bg-white border-2 border-gray-200 rounded-full hover:border-gray-300 hover:text-gray-900 hover:scale-105"
+                    title={isAudioMuted ? "Unmute audio" : "Mute audio"}
                   >
-                    <BellRing className="w-4 h-4" aria-hidden="true" />
-                    Enable sound
+                    {isAudioMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                   </button>
-                )}
+                </div>
                 <audio 
                   ref={audioRef}
                   src={product.audio_url}
                   onEnded={handleAudioEnded}
                   onPlay={() => setIsAudioPlaying(true)}
                   onPause={() => setIsAudioPlaying(false)}
-                  autoPlay
-                  muted={isAudioMuted}
                   loop
                   preload="auto"
                 />

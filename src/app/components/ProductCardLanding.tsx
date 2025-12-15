@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clapperboard, Loader2 } from 'lucide-react';
+import { Clapperboard, Loader2, Check, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -39,6 +39,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [showAdded, setShowAdded] = useState(false);
 
   const hasValidData = product?.variants?.length > 0;
   const activeVariant = hasValidData ? product.variants[activeVariantIndex] : null;
@@ -99,6 +100,8 @@ export const ProductCard = ({ product }: { product: Product }) => {
     setIsAdding(true);
     try {
       await addToCart(selectedSku.id, 1);
+      setShowAdded(true);
+      setTimeout(() => setShowAdded(false), 2000);
     } catch (error) {
       console.error("Failed to add to cart:", error);
       alert("Could not add item to cart.");
@@ -113,7 +116,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex flex-col h-full p-4 transition-all duration-300 bg-white border border-gray-100 rounded-xl ">
+      <div className="relative flex flex-col h-full p-4 transition-all duration-300 bg-white border border-gray-100 rounded-xl ">
         <Link 
           href={`/product/${product.id}?variant=${activeVariant.variantId}`} 
           className="relative block w-full overflow-hidden rounded-md aspect-square"
@@ -190,12 +193,37 @@ export const ProductCard = ({ product }: { product: Product }) => {
             </div>
             <button
               onClick={handleAddToCart}
-              disabled={!selectedSize || totalStock === 0 || isAdding}
-              className="px-8 py-3 text-sm font-semibold text-white transition-colors bg-black rounded-full disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-800"
+              disabled={!selectedSize || totalStock === 0 || isAdding || showAdded}
+              className={`px-8 py-3 text-sm font-semibold text-white transition-all duration-300 rounded-full disabled:cursor-not-allowed ${
+                showAdded 
+                  ? 'bg-green-500 scale-105' 
+                  : 'bg-black hover:bg-gray-800 disabled:bg-gray-400'
+              }`}
             >
-              {isAdding ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Add to Cart'}
+              {isAdding ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : showAdded ? (
+                <span className="flex items-center gap-1.5 animate-pulse">
+                  <Check className="w-4 h-4" />
+                  Added!
+                </span>
+              ) : (
+                'Add to Cart'
+              )}
             </button>
           </div>
+          
+          {/* Success Animation Overlay */}
+          {showAdded && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="flex flex-col items-center gap-2 p-4 bg-white/95 rounded-xl shadow-lg animate-bounce-in">
+                <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full">
+                  <ShoppingBag className="w-6 h-6 text-green-600" />
+                </div>
+                <span className="text-sm font-semibold text-green-600">Added to Cart!</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
