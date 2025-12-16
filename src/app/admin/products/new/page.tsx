@@ -93,10 +93,36 @@ const VariantMediaPreview = ({
   onRemove: (variantId: number, file: File) => void;
 }) => {
   const previewUrl = useObjectUrl(file);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  // Reset states when file changes
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+  }, [file]);
 
   if (!previewUrl) {
     return (
-      <div className="relative overflow-hidden border rounded-lg border-slate-200 bg-slate-100 aspect-square animate-pulse" />
+      <div className="relative flex items-center justify-center overflow-hidden border rounded-lg border-slate-200 bg-slate-100 aspect-square animate-pulse">
+        <ImageIcon size={24} className="text-slate-400" />
+      </div>
+    );
+  }
+
+  if (imageError) {
+    return (
+      <div className="relative flex flex-col items-center justify-center gap-1 overflow-hidden border rounded-lg border-red-200 bg-red-50 aspect-square">
+        <ImageIcon size={24} className="text-red-400" />
+        <span className="text-xs text-red-500">Failed to load</span>
+        <button
+          type="button"
+          onClick={() => onRemove(variantId, file)}
+          className="mt-1 text-xs text-red-600 underline"
+        >
+          Remove
+        </button>
+      </div>
     );
   }
 
@@ -104,6 +130,12 @@ const VariantMediaPreview = ({
 
   return (
     <div className="relative overflow-hidden border rounded-lg group border-slate-200 bg-slate-50 aspect-square">
+      {/* Loading overlay */}
+      {!imageLoaded && !isVideo && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100 animate-pulse">
+          <ImageIcon size={24} className="text-slate-400" />
+        </div>
+      )}
       {isVideo ? (
         <video
           src={previewUrl}
@@ -112,14 +144,17 @@ const VariantMediaPreview = ({
           controls={false}
           playsInline
           loop
+          onLoadedData={() => setImageLoaded(true)}
+          onError={() => setImageError(true)}
         />
       ) : (
-        <Image
+        /* Use native img tag for blob URLs - more reliable on VPS */
+        <img
           src={previewUrl}
           alt="upload preview"
-          fill
-          className="object-cover"
-          unoptimized
+          className="object-cover w-full h-full"
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageError(true)}
         />
       )}
       <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity rounded-lg opacity-0 bg-black/60 group-hover:opacity-100">
@@ -600,13 +635,13 @@ const AddProductPage = () => {
                         </label>
                         {tradingCardPreviewUrl && (
                           <div className="flex items-center gap-2 p-2 rounded-md bg-green-50">
-                            <Image
+                            {/* Use native img for blob URLs - more reliable on VPS */}
+                            <img
                               src={tradingCardPreviewUrl}
                               alt="Trading card preview"
                               width={32}
                               height={40}
                               className="object-cover rounded"
-                              unoptimized
                             />
                             <p className="text-sm text-green-700">{tradingImage?.name} selected</p>
                           </div>

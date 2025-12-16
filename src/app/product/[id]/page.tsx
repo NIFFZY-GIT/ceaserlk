@@ -29,11 +29,21 @@ function sanitizeHtml(html: string): string {
   // Remove style tags and their content
   sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
   
-  // Remove iframe, object, embed, form, input tags
-  sanitized = sanitized.replace(/<\s*\/?\s*(iframe|object|embed|form|input|button|textarea|select|link|meta|base)[^>]*>/gi, '');
+  // Remove svg tags and their content (can contain malicious scripts)
+  sanitized = sanitized.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, '');
+  
+  // Remove math tags (can be used for XSS via xlink:href)
+  sanitized = sanitized.replace(/<math\b[^<]*(?:(?!<\/math>)<[^<]*)*<\/math>/gi, '');
+  
+  // Remove iframe, object, embed, form, input, and other dangerous tags
+  sanitized = sanitized.replace(/<\s*\/?\s*(iframe|object|embed|form|input|button|textarea|select|link|meta|base|video|audio|source|track|applet|marquee|bgsound|blink|xml)[^>]*>/gi, '');
+  
+  // Remove xlink:href and other namespace-based attributes (used in SVG/MathML attacks)
+  sanitized = sanitized.replace(/\s*xlink:href\s*=\s*["'][^"']*["']/gi, '');
+  sanitized = sanitized.replace(/\s*href\s*=\s*["']\s*javascript[^"']*["']/gi, '');
   
   // Remove any remaining dangerous attributes
-  sanitized = sanitized.replace(/\s*(style|srcdoc|formaction|action)\s*=\s*["'][^"']*["']/gi, '');
+  sanitized = sanitized.replace(/\s*(style|srcdoc|formaction|action|xmlns)\s*=\s*["'][^"']*["']/gi, '');
   
   return sanitized;
 }

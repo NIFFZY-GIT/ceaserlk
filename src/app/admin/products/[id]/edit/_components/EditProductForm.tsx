@@ -589,13 +589,13 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                         )}
                         {tradingCardPreviewUrl && !removeTradingCard && (
                           <div className="flex items-center gap-2 p-2 mt-2 rounded-md bg-green-50">
-                            <Image
+                            {/* Use native img for blob URLs - more reliable on VPS */}
+                            <img
                               src={tradingCardPreviewUrl}
                               alt="Trading card preview"
                               width={48}
                               height={64}
                               className="object-cover rounded"
-                              unoptimized
                             />
                             <p className="text-sm text-green-700">{tradingImage?.name || 'New card selected'}</p>
                           </div>
@@ -654,6 +654,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                               const key = mediaItem instanceof File ? `${activeVariant.id}-file-${index}-${mediaItem.name}` : mediaItem.id;
                               const video = isVideoMedia(mediaItem);
                               const thumbnailActive = isActiveThumbnail(activeVariant, mediaItem);
+                              const isFileUpload = mediaItem instanceof File;
 
                               return (
                                 <div key={key} className="relative group aspect-square">
@@ -666,6 +667,13 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                                       playsInline
                                       controls
                                     />
+                                  ) : isFileUpload ? (
+                                    /* Use native img tag for blob URLs - more reliable on VPS */
+                                    <img
+                                      src={previewUrl}
+                                      alt="Variant media preview"
+                                      className="object-cover w-full h-full border rounded-lg border-slate-200"
+                                    />
                                   ) : (
                                     <Image
                                       src={previewUrl}
@@ -673,7 +681,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                                       fill
                                       sizes="(max-width: 640px) 33vw, 100px"
                                       className="object-cover border rounded-lg border-slate-200"
-                                      unoptimized={mediaItem instanceof File}
+                                      unoptimized
                                     />
                                   )}
                                   <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity bg-black bg-opacity-50 rounded-lg opacity-0 group-hover:opacity-100">

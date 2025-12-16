@@ -46,6 +46,17 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    // Allow blob: URLs for image previews before upload
+    dangerouslyAllowSVG: false,
+    contentDispositionType: 'inline',
+    // Increase timeout for slower VPS connections
+    minimumCacheTTL: 60,
+  },
+  // Increase body size limit for file uploads on VPS
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '100mb',
+    },
   },
 };
 
