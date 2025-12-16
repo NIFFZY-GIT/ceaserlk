@@ -255,10 +255,6 @@ const MediaPreviewItem = ({
           onError={() => !isBlobUrl && setLoadError(true)}
         />
       )}
-          onLoad={() => setIsLoading(false)}
-          onError={() => setLoadError(true)}
-        />
-      )}
       
       <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity bg-black bg-opacity-50 rounded-lg opacity-0 group-hover:opacity-100">
         <button
