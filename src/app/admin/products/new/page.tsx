@@ -94,14 +94,13 @@ const VariantMediaPreview = ({
 }) => {
   const previewUrl = useObjectUrl(file);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
   // Reset states when file changes
   useEffect(() => {
     setImageLoaded(false);
-    setImageError(false);
   }, [file]);
 
+  // Show loading state while blob URL is being created
   if (!previewUrl) {
     return (
       <div className="relative flex items-center justify-center overflow-hidden border rounded-lg border-slate-200 bg-slate-100 aspect-square animate-pulse">
@@ -110,29 +109,14 @@ const VariantMediaPreview = ({
     );
   }
 
-  if (imageError) {
-    return (
-      <div className="relative flex flex-col items-center justify-center gap-1 overflow-hidden border rounded-lg border-red-200 bg-red-50 aspect-square">
-        <ImageIcon size={24} className="text-red-400" />
-        <span className="text-xs text-red-500">Failed to load</span>
-        <button
-          type="button"
-          onClick={() => onRemove(variantId, file)}
-          className="mt-1 text-xs text-red-600 underline"
-        >
-          Remove
-        </button>
-      </div>
-    );
-  }
-
+  // Blob URLs are local - they always work, no need for error state
   const isVideo = isVideoFile(file);
 
   return (
     <div className="relative overflow-hidden border rounded-lg group border-slate-200 bg-slate-50 aspect-square">
-      {/* Loading overlay */}
+      {/* Loading overlay - brief flash while image loads from local blob */}
       {!imageLoaded && !isVideo && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100 animate-pulse">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100">
           <ImageIcon size={24} className="text-slate-400" />
         </div>
       )}
@@ -145,16 +129,14 @@ const VariantMediaPreview = ({
           playsInline
           loop
           onLoadedData={() => setImageLoaded(true)}
-          onError={() => setImageError(true)}
         />
       ) : (
-        /* Use native img tag for blob URLs - more reliable on VPS */
+        /* Use native img tag for blob URLs - local file, always works */
         <img
           src={previewUrl}
           alt="upload preview"
           className="object-cover w-full h-full"
           onLoad={() => setImageLoaded(true)}
-          onError={() => setImageError(true)}
         />
       )}
       <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity rounded-lg opacity-0 bg-black/60 group-hover:opacity-100">

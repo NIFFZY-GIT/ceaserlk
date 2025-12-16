@@ -26,6 +26,21 @@ function sanitizePath(segments: string[] = []): string[] {
     .map(segment => segment.replace(/[^a-zA-Z0-9._-]/g, ''));
 }
 
+// Helper to find the uploads directory in standalone mode
+function getUploadsBasePath(): string {
+  // In standalone mode, try multiple paths
+  const possiblePaths = [
+    path.join(process.cwd(), 'public', 'uploads'),           // Standard development
+    path.join(process.cwd(), 'uploads'),                      // Standalone without public
+    path.join(process.cwd(), '..', 'public', 'uploads'),      // One level up
+    '/app/public/uploads',                                     // Docker absolute path
+    path.join(process.cwd(), '.next', 'standalone', 'public', 'uploads'), // Inside .next
+  ];
+  
+  // Return first path or default
+  return possiblePaths[0];
+}
+
 export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path: paramSegments } = await context.params;
   const safeSegments = sanitizePath(paramSegments);
@@ -34,24 +49,49 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
     return NextResponse.json({ error: 'Missing file path' }, { status: 400 });
   }
 
-  const filePath = path.join(process.cwd(), 'public', 'uploads', ...safeSegments);
+  // Try multiple base paths for standalone compatibility
+  const basePaths = [
+    path.join(process.cwd(), 'public', 'uploads'),
+    path.join(process.cwd(), 'uploads'),
+    path.join(process.cwd(), '..', 'public', 'uploads'),
+  ];
 
-  try {
-    const fileBuffer = await fs.readFile(filePath);
-    const extension = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[extension] || 'application/octet-stream';
+  let fileBuffer: Buffer | null = null;
+  let foundPath = '';
 
-    return new Response(new Uint8Array(fileBuffer), {
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=31536000, immutable',
-      },
-    });
-  } catch (error) {
-    console.error('Failed to serve upload:', filePath, error);
-    return NextResponse.json({ error: 'File not found' }, { status: 404 });
+  for (const basePath of basePaths) {
+    const filePath = path.join(basePath, ...safeSegments);
+    try {
+      fileBuffer = await fs.readFile(filePath);
+      foundPath = filePath;
+      break;
+    } catch {
+      // Try next path
+      continue;
+    }
   }
+
+  if (!fileBuffer) {
+    console.error('File not found in any path:', safeSegments.join('/'));
+    console.error('Searched paths:', basePaths.map(p => path.join(p, ...safeSegments)));
+    console.error('Current working directory:', process.cwd());
+    return NextResponse.json({ 
+      error: 'File not found',
+      searched: basePaths.map(p => path.join(p, ...safeSegments)),
+      cwd: process.cwd()
+    }, { status: 404 });
+  }
+
+  const extension = path.extname(foundPath).toLowerCase();
+  const contentType = MIME_TYPES[extension] || 'application/octet-stream';
+
+  return new Response(new Uint8Array(fileBuffer), {
+    status: 200,
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    },
+  });
 }
 
 export const runtime = 'nodejs';

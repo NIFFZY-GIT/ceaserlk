@@ -178,6 +178,121 @@ const RichTextEditor = ({
   );
 };
 
+// Media preview component with error handling for VPS
+const MediaPreviewItem = ({
+  previewUrl,
+  isVideo,
+  isFileUpload,
+  isThumbnail,
+  onSetThumbnail,
+  onRemove,
+}: {
+  previewUrl: string;
+  isVideo: boolean;
+  isFileUpload: boolean;
+  isThumbnail: boolean;
+  onSetThumbnail: () => void;
+  onRemove: () => void;
+}) => {
+  const [loadError, setLoadError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Check if this is a local blob URL (new file not yet uploaded)
+  const isBlobUrl = previewUrl.startsWith('blob:');
+
+  // Reset error state when URL changes
+  useEffect(() => {
+    setLoadError(false);
+    setIsLoading(true);
+  }, [previewUrl]);
+
+  // For blob URLs (local files), they should always work
+  // Only show error for server URLs that fail to load
+  if (loadError && !isBlobUrl) {
+    return (
+      <div className="relative flex flex-col items-center justify-center gap-1 overflow-hidden border rounded-lg border-red-200 bg-red-50 aspect-square">
+        <ImageIcon size={24} className="text-red-400" />
+        <span className="text-xs text-red-500">Failed to load</span>
+        <span className="text-[10px] text-red-400 px-2 text-center truncate w-full">{previewUrl}</span>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="mt-1 text-xs text-red-600 underline"
+        >
+          Remove
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative group aspect-square">
+      {/* Loading overlay - only show for non-blob URLs */}
+      {isLoading && !isVideo && !isBlobUrl && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center border rounded-lg bg-slate-100 border-slate-200 animate-pulse">
+          <ImageIcon size={24} className="text-slate-400" />
+        </div>
+      )}
+      
+      {isVideo ? (
+        <video
+          src={previewUrl}
+          className="object-cover w-full h-full border rounded-lg border-slate-200"
+          muted
+          loop
+          playsInline
+          controls
+          onLoadedData={() => setIsLoading(false)}
+          onError={() => !isBlobUrl && setLoadError(true)}
+        />
+      ) : (
+        /* Use native img tag for all URLs - blob URLs work locally, server URLs need the server */
+        <img
+          src={previewUrl}
+          alt="Variant media preview"
+          className="object-cover w-full h-full border rounded-lg border-slate-200"
+          onLoad={() => setIsLoading(false)}
+          onError={() => !isBlobUrl && setLoadError(true)}
+        />
+      )}
+          onLoad={() => setIsLoading(false)}
+          onError={() => setLoadError(true)}
+        />
+      )}
+      
+      <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity bg-black bg-opacity-50 rounded-lg opacity-0 group-hover:opacity-100">
+        <button
+          type="button"
+          title="Set as thumbnail"
+          onClick={onSetThumbnail}
+          className="p-1.5 text-white rounded-full bg-black/50 hover:bg-blue-600"
+        >
+          <Star size={14} fill={isThumbnail ? 'currentColor' : 'none'} />
+        </button>
+        <button
+          type="button"
+          title="Remove file"
+          onClick={onRemove}
+          className="p-1.5 text-white rounded-full bg-black/50 hover:bg-red-600"
+        >
+          <X size={14} />
+        </button>
+      </div>
+      
+      {isThumbnail && (
+        <div className="absolute flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full top-1 right-1">
+          <Star size={10} className="text-white" fill="currentColor" />
+          Cover
+        </div>
+      )}
+      {isVideo && (
+        <span className="absolute inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white bg-black/70 rounded-full bottom-1 left-1">
+          <VideoIcon size={12} /> Video
+        </span>
+      )}
+    </div>
+  );
+};
 
 // --- MAIN EDIT FORM COMPONENT ---
 export default function EditProductForm({ initialData }: { initialData: FullProduct }) {
@@ -657,63 +772,15 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                               const isFileUpload = mediaItem instanceof File;
 
                               return (
-                                <div key={key} className="relative group aspect-square">
-                                  {video ? (
-                                    <video
-                                      src={previewUrl}
-                                      className="object-cover w-full h-full border rounded-lg border-slate-200"
-                                      muted
-                                      loop
-                                      playsInline
-                                      controls
-                                    />
-                                  ) : isFileUpload ? (
-                                    /* Use native img tag for blob URLs - more reliable on VPS */
-                                    <img
-                                      src={previewUrl}
-                                      alt="Variant media preview"
-                                      className="object-cover w-full h-full border rounded-lg border-slate-200"
-                                    />
-                                  ) : (
-                                    <Image
-                                      src={previewUrl}
-                                      alt="Variant media preview"
-                                      fill
-                                      sizes="(max-width: 640px) 33vw, 100px"
-                                      className="object-cover border rounded-lg border-slate-200"
-                                      unoptimized
-                                    />
-                                  )}
-                                  <div className="absolute inset-0 flex items-center justify-center gap-1 transition-opacity bg-black bg-opacity-50 rounded-lg opacity-0 group-hover:opacity-100">
-                                    <button
-                                      type="button"
-                                      title="Set as thumbnail"
-                                      onClick={() => setThumbnail(activeVariant.id, mediaItem)}
-                                      className="p-1.5 text-white rounded-full bg-black/50 hover:bg-blue-600"
-                                    >
-                                      <Star size={14} fill={thumbnailActive ? 'currentColor' : 'none'} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      title="Remove file"
-                                      onClick={() => removeMedia(activeVariant.id, mediaItem)}
-                                      className="p-1.5 text-white rounded-full bg-black/50 hover:bg-red-600"
-                                    >
-                                      <X size={14} />
-                                    </button>
-                                  </div>
-                                  {thumbnailActive && (
-                                    <div className="absolute flex items-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-blue-600 rounded-full top-1 right-1">
-                                      <Star size={10} className="text-white" fill="currentColor" />
-                                      Cover
-                                    </div>
-                                  )}
-                                  {video && (
-                                    <span className="absolute inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white bg-black/70 rounded-full bottom-1 left-1">
-                                      <VideoIcon size={12} /> Video
-                                    </span>
-                                  )}
-                                </div>
+                                <MediaPreviewItem
+                                  key={key}
+                                  previewUrl={previewUrl}
+                                  isVideo={video}
+                                  isFileUpload={isFileUpload}
+                                  isThumbnail={thumbnailActive}
+                                  onSetThumbnail={() => setThumbnail(activeVariant.id, mediaItem)}
+                                  onRemove={() => removeMedia(activeVariant.id, mediaItem)}
+                                />
                               );
                             })}
 
