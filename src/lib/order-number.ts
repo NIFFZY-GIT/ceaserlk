@@ -1,5 +1,8 @@
 type Queryable = {
-  query: (text: string, params?: unknown[]) => Promise<{ rows: any[] }>;
+  query: <T extends Record<string, unknown> = Record<string, unknown>>(
+    text: string,
+    params?: unknown[]
+  ) => Promise<{ rows: T[] }>;
 };
 
 const ORDER_NUMBER_WIDTH = 5;

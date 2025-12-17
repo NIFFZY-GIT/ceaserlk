@@ -21,7 +21,14 @@ export async function POST(request: NextRequest) {
 
     await ensureOrderNumberSchema(db);
 
-    let rows: any[] = [];
+    type OrderRow = {
+      id: string;
+      order_number: number | null;
+      status: string;
+      created_at: string;
+    };
+
+    let rows: OrderRow[] = [];
     if (isUuid(input)) {
       const query = `
         SELECT id, order_number, status, created_at
@@ -29,7 +36,8 @@ export async function POST(request: NextRequest) {
         WHERE id = $1::uuid
         LIMIT 1;
       `;
-      ({ rows } = await db.query(query, [input]));
+      const result = await db.query<OrderRow>(query, [input]);
+      rows = result.rows;
     } else if (/^\d{1,5}$/.test(input)) {
       const query = `
         SELECT id, order_number, status, created_at
@@ -37,7 +45,8 @@ export async function POST(request: NextRequest) {
         WHERE order_number = $1
         LIMIT 1;
       `;
-      ({ rows } = await db.query(query, [Number.parseInt(input, 10)]));
+      const result = await db.query<OrderRow>(query, [Number.parseInt(input, 10)]);
+      rows = result.rows;
     } else {
       return NextResponse.json({ error: 'Invalid Order ID format' }, { status: 400 });
     }

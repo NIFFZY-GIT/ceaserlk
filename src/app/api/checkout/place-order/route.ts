@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { sendEmail, generateOrderConfirmationEmail, generateAdminOrderNotificationEmail } from '@/lib/email';
+import { generateAdminOrderNotificationEmail, generateOrderConfirmationEmail, sendEmail } from '@/lib/email';
 import { generateInvoicePDF, generateInvoiceFilename, InvoiceData } from '@/lib/pdf-invoice';
+import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
 
 interface IncomingShippingDetails {
   email?: string;
@@ -18,42 +19,27 @@ interface IncomingShippingDetails {
 type NormalizedShippingDetails = Required<{
   [K in keyof IncomingShippingDetails]: string;
 }>;
-import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
 
 export async function POST(request: NextRequest) {
   const user = await verifyAuth(request);
-    await ensureOrderNumberSchema(client);
   if (!user) {
-    return NextResponse.json(
-      { error: 'Authentication required to place an order.' },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: 'Authentication required to place an order.' }, { status: 401 });
   }
 
   let body: { cartId?: unknown; shippingDetails?: IncomingShippingDetails };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: 'Invalid request payload.' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Invalid request payload.' }, { status: 400 });
   }
 
   const { cartId, shippingDetails } = body;
-
   if (typeof cartId !== 'string' || cartId.trim() === '') {
-    return NextResponse.json(
-      { error: 'A valid cart ID is required to place an order.' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'A valid cart ID is required to place an order.' }, { status: 400 });
   }
 
   if (!shippingDetails || typeof shippingDetails !== 'object') {
-    return NextResponse.json(
-      { error: 'Shipping details are required.' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Shipping details are required.' }, { status: 400 });
   }
 
   const normalizedDetails: NormalizedShippingDetails = {
@@ -61,15 +47,15 @@ export async function POST(request: NextRequest) {
     firstName: (shippingDetails.firstName ?? '').trim(),
     lastName: (shippingDetails.lastName ?? '').trim(),
     phone: (shippingDetails.phone ?? '').trim(),
-      RETURNING id, order_number;
+    address: (shippingDetails.address ?? '').trim(),
     city: (shippingDetails.city ?? '').trim(),
     postalCode: (shippingDetails.postalCode ?? '').trim(),
     country: ((shippingDetails.country ?? 'Sri Lanka').trim() || 'Sri Lanka'),
   };
 
-  const missingField = (Object.entries(normalizedDetails) as Array<[keyof NormalizedShippingDetails, string]>)
-    .find(([, value]) => value === '');
-
+  const missingField = (Object.entries(normalizedDetails) as Array<[keyof NormalizedShippingDetails, string]>).find(
+    ([, value]) => value === ''
+  );
   if (missingField) {
     return NextResponse.json(
       { error: 'Please complete all required contact and delivery details before placing your order.' },
@@ -79,28 +65,30 @@ export async function POST(request: NextRequest) {
 
   const client = await db.connect();
   try {
+    await ensureOrderNumberSchema(client);
     await client.query('BEGIN');
-    const orderId = orderResult.rows[0]?.id;
-    const orderNumber = orderResult.rows[0]?.order_number as number | null | undefined;
-    const publicOrderId = formatOrderNumber(orderNumber) || orderId;
-    const cartItemsResult = await client.query(`
-      SELECT 
-        c.id as cart_id,
-        ci.quantity,
-        ci.sku_id,
-        s.size,
-        v.price AS variant_price,
-        v.color_name,
-        p.id AS product_id,
-        p.name AS product_name,
-        p.shipping_cost
-      FROM carts c
-      JOIN cart_items ci ON c.id = ci.cart_id
-      JOIN stock_keeping_units s ON ci.sku_id = s.id
-      JOIN product_variants v ON s.variant_id = v.id
-      JOIN products p ON v.product_id = p.id
-      WHERE c.id = $1
-    `, [cartId]);
+
+    const cartItemsResult = await client.query(
+      `
+        SELECT
+          c.id as cart_id,
+          ci.quantity,
+          ci.sku_id,
+          s.size,
+          v.price AS variant_price,
+          v.color_name,
+          p.id AS product_id,
+          p.name AS product_name,
+          p.shipping_cost
+        FROM carts c
+        JOIN cart_items ci ON c.id = ci.cart_id
+        JOIN stock_keeping_units s ON ci.sku_id = s.id
+        JOIN product_variants v ON s.variant_id = v.id
+        JOIN products p ON v.product_id = p.id
+        WHERE c.id = $1
+      `,
+      [cartId]
+    );
 
     if (cartItemsResult.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -111,11 +99,11 @@ export async function POST(request: NextRequest) {
     }
 
     const subtotal = cartItemsResult.rows.reduce((total, item) => {
-      return total + parseFloat(item.variant_price) * item.quantity;
+      return total + Number.parseFloat(item.variant_price) * item.quantity;
     }, 0);
 
     const shippingCost = cartItemsResult.rows.reduce((total, item) => {
-      const perItemShipping = item.shipping_cost ? parseFloat(item.shipping_cost) : 0;
+      const perItemShipping = item.shipping_cost ? Number.parseFloat(item.shipping_cost) : 0;
       return total + perItemShipping * item.quantity;
     }, 0);
 
@@ -127,7 +115,7 @@ export async function POST(request: NextRequest) {
         user_id,
         customer_email,
         full_name,
-        orderId: publicOrderId,
+        phone_number,
         shipping_address_line1,
         shipping_address_line2,
         shipping_city,
@@ -139,16 +127,16 @@ export async function POST(request: NextRequest) {
         payment_intent_id,
         status
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NULL, $13)
-      RETURNING id;
+      RETURNING id, order_number;
     `;
 
     const orderResult = await client.query(orderInsertQuery, [
       user.userId ? user.userId.toString() : null,
       normalizedDetails.email,
-      const filename = generateInvoiceFilename(publicOrderId);
+      fullName,
       normalizedDetails.phone,
       normalizedDetails.address,
-        orderId: publicOrderId,
+      null,
       normalizedDetails.city,
       normalizedDetails.postalCode,
       normalizedDetails.country,
@@ -158,14 +146,17 @@ export async function POST(request: NextRequest) {
       'PENDING',
     ]);
 
-    const orderId = orderResult.rows[0]?.id;
+    const orderId = orderResult.rows[0]?.id as string | undefined;
+    const orderNumber = orderResult.rows[0]?.order_number as number | null | undefined;
     if (!orderId) {
       throw new Error('Failed to create order record.');
     }
 
+    const publicOrderId = formatOrderNumber(orderNumber) || orderId;
+
     const orderItemInsertQuery = `
       INSERT INTO order_items (
-        subject: `Order Confirmation #${publicOrderId} | Ceaser LK`,
+        order_id,
         product_id,
         product_name,
         variant_color,
@@ -183,14 +174,13 @@ export async function POST(request: NextRequest) {
         item.product_name,
         item.color_name,
         item.size,
-        parseFloat(item.variant_price),
+        Number.parseFloat(item.variant_price),
         item.quantity,
         item.sku_id,
       ]);
     }
 
     await client.query('DELETE FROM carts WHERE id = $1', [cartId]);
-
     await client.query('COMMIT');
 
     const itemsForSummary = cartItemsResult.rows.map((item) => ({
@@ -198,12 +188,12 @@ export async function POST(request: NextRequest) {
       variantColor: item.color_name as string,
       variantSize: item.size as string,
       quantity: item.quantity as number,
-      pricePaid: parseFloat(item.variant_price),
+      pricePaid: Number.parseFloat(item.variant_price),
     }));
 
     try {
       const invoiceData: InvoiceData = {
-            orderId: publicOrderId,
+        orderId: publicOrderId,
         orderDate: new Date(),
         customerName: fullName,
         customerEmail: normalizedDetails.email,
@@ -221,10 +211,10 @@ export async function POST(request: NextRequest) {
       };
 
       const pdfBuffer = generateInvoicePDF(invoiceData);
-            subject: `New Order #${publicOrderId} | Ceaser LK`,
+      const filename = generateInvoiceFilename(publicOrderId);
 
       const emailHtml = generateOrderConfirmationEmail({
-        orderId,
+        orderId: publicOrderId,
         customerName: fullName,
         customerEmail: normalizedDetails.email,
         items: itemsForSummary,
@@ -241,7 +231,7 @@ export async function POST(request: NextRequest) {
 
       await sendEmail({
         to: normalizedDetails.email,
-        subject: `Order Confirmation - ${orderId} | Ceaser LK`,
+        subject: `Order Confirmation #${publicOrderId} | Ceaser LK`,
         html: emailHtml,
         attachments: [
           {
@@ -276,10 +266,9 @@ export async function POST(request: NextRequest) {
         }
 
         const adminEmails = Array.from(adminEmailSet);
-
         if (adminEmails.length > 0) {
           const adminEmailHtml = generateAdminOrderNotificationEmail({
-            orderId,
+            orderId: publicOrderId,
             customerName: fullName,
             customerEmail: normalizedDetails.email,
             phoneNumber: normalizedDetails.phone,
@@ -297,7 +286,7 @@ export async function POST(request: NextRequest) {
 
           await sendEmail({
             to: adminEmails.join(','),
-            subject: `New COD Order Placed - ${orderId}`,
+            subject: `New Order #${publicOrderId} | Ceaser LK`,
             html: adminEmailHtml,
           });
         }
@@ -313,13 +302,11 @@ export async function POST(request: NextRequest) {
     try {
       await client.query('ROLLBACK');
     } catch (rollbackError) {
-      console.error('Rollback failed after pay on delivery error:', rollbackError);
+      console.error('Rollback failed after place-order error:', rollbackError);
     }
-    console.error('Pay on delivery order error:', error);
-    return NextResponse.json(
-      { error: 'Failed to place order. Please try again.' },
-      { status: 500 }
-    );
+
+    console.error('Place order error:', error);
+    return NextResponse.json({ error: 'Failed to place order. Please try again.' }, { status: 500 });
   } finally {
     client.release();
   }
