@@ -7,6 +7,7 @@ import OrderTable from './_components/OrderTable';
 // Define the shape of the order data for the list
 export interface OrderSummary {
   id: string;
+  order_number?: number | null;
   created_at: string;
   full_name: string;
   total_amount: string;

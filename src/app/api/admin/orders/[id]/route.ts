@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sendEmail, generateOrderStatusUpdateEmail } from '@/lib/email';
+import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
 // import { verifyAuth } from '@/lib/auth'; // TEMPORARILY DISABLED FOR TESTING
 
 // --- GET a single order's full details (with corrected signature) ---
@@ -87,6 +88,7 @@ export async function PUT(
   }
 
   try {
+    await ensureOrderNumberSchema(db);
     const { status } = await request.json();
 
     const validStatuses = [ 'PENDING', 'PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED' ];
@@ -103,24 +105,25 @@ export async function PUT(
     }
 
     const updatedOrder = rows[0];
+    const publicOrderId = formatOrderNumber(updatedOrder.order_number) || updatedOrder.id;
 
     // --- 📧 Send Status Update Email ---
-    if (updatedOrder.email) {
+    if (updatedOrder.customer_email) {
       try {
         const profileUrl = `${process.env.NEXT_PUBLIC_APP_URL}/profile`;
         const emailHtml = generateOrderStatusUpdateEmail({
-          customerName: updatedOrder.shipping_address?.firstName || 'Valued Customer',
-          orderId: updatedOrder.id,
+          customerName: updatedOrder.full_name || 'Valued Customer',
+          orderId: publicOrderId,
           newStatus: updatedOrder.status,
           profileUrl: profileUrl,
         });
 
         await sendEmail({
-          to: updatedOrder.email,
-          subject: `Your Ceaser LK Order #${updatedOrder.id} has been updated`,
+          to: updatedOrder.customer_email,
+          subject: `Your Ceaser LK Order #${publicOrderId} has been updated`,
           html: emailHtml,
         });
-        console.log(`Sent status update email to ${updatedOrder.email} for order ${updatedOrder.id}`);
+        console.log(`Sent status update email to ${updatedOrder.customer_email} for order ${publicOrderId}`);
       } catch (emailError) {
         console.error(`Failed to send status update email for order ${updatedOrder.id}:`, emailError);
         // Do not block the API response if email fails

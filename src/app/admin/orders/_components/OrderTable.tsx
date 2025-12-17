@@ -6,12 +6,19 @@ import { Eye, ShoppingCart, Trash2 } from 'lucide-react';
 // Define the shape of the order data for the list
 export interface OrderSummary {
   id: string;
+  order_number?: number | null;
   created_at: string;
   full_name: string;
   total_amount: string;
   status: 'PENDING' | 'PAID' | 'PROCESSING' | 'PACKED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
   item_count: string;
 }
+
+const formatPublicOrderId = (order: Pick<OrderSummary, 'order_number' | 'id'>) => {
+  if (order.order_number === null || order.order_number === undefined) return `...${order.id.slice(-10)}`;
+  const raw = String(order.order_number);
+  return raw.padStart(5, '0');
+};
 
 // --- THIS IS THE OBJECT TO UPDATE ---
 const statusColors: { [key in OrderSummary['status']]: string } = {
@@ -94,9 +101,7 @@ export default function OrderTable({ orders, onOrderDeleted }: {
               <div className="flex-1">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-mono text-xs uppercase tracking-wide text-slate-400">
-                      ...{order.id.slice(-10)}
-                    </p>
+                    <p className="font-mono text-xs uppercase tracking-wide text-slate-400">Order #{formatPublicOrderId(order)}</p>
                     <h3 className="mt-1 text-lg font-semibold text-slate-900">{order.full_name}</h3>
                     <p className="text-xs uppercase tracking-wide text-slate-400">
                       {formatDateTime(order.created_at)}
@@ -146,7 +151,7 @@ export default function OrderTable({ orders, onOrderDeleted }: {
         <table className="w-full text-left">
           <thead>
             <tr className="border-b">
-              <th className="px-4 py-3 font-medium text-gray-500">Order ID</th>
+              <th className="px-4 py-3 font-medium text-gray-500">Order #</th>
               <th className="px-4 py-3 font-medium text-gray-500">Customer</th>
               <th className="px-4 py-3 font-medium text-gray-500">Date</th>
               <th className="px-4 py-3 font-medium text-gray-500">Total</th>
@@ -159,7 +164,7 @@ export default function OrderTable({ orders, onOrderDeleted }: {
             {orders.map((order) => (
               <tr key={order.id} className="border-b hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono text-sm text-gray-500">
-                  ...{order.id.slice(-12)}
+                  {formatPublicOrderId(order)}
                 </td>
                 <td className="px-4 py-3 font-medium text-gray-900">{order.full_name}</td>
                 <td className="px-4 py-3 text-gray-600">{formatDateTime(order.created_at)}</td>

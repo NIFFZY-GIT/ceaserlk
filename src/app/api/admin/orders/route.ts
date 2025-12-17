@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureOrderNumberSchema } from '@/lib/order-number';
 
 // GET all orders for the admin dashboard
 export async function GET() {
   // TODO: Re-enable admin authentication after testing
   // In a real app, you would verify admin authentication here
   try {
+    await ensureOrderNumberSchema(db);
     const query = `
       SELECT
         o.id,
+        o.order_number,
         o.created_at,
         o.full_name,
         o.total_amount,
@@ -16,7 +19,7 @@ export async function GET() {
         COUNT(oi.id) AS item_count
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
-      GROUP BY o.id
+      GROUP BY o.id, o.order_number
       ORDER BY o.created_at DESC;
     `;
     

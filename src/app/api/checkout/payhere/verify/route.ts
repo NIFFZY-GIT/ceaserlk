@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
 
 // This endpoint verifies PayHere payment status after user returns from PayHere
 export async function POST(request: NextRequest) {
@@ -15,9 +16,10 @@ export async function POST(request: NextRequest) {
 
     const client = await db.connect();
     try {
+      await ensureOrderNumberSchema(client);
       // First check if order was already created from webhook
       const orderResult = await client.query(
-        'SELECT id, status FROM orders WHERE payhere_order_id = $1',
+        'SELECT id, status, order_number FROM orders WHERE payhere_order_id = $1',
         [orderId]
       );
 
@@ -25,6 +27,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           orderId: orderResult.rows[0].id,
+          publicOrderId: formatOrderNumber(orderResult.rows[0].order_number) || orderResult.rows[0].id,
           status: orderResult.rows[0].status
         });
       }
@@ -104,7 +107,7 @@ export async function POST(request: NextRequest) {
                 subtotal, shipping_cost, total_amount, payhere_order_id,
                 payment_method, status
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'PAID')
-              RETURNING id
+              RETURNING id, order_number
             `, [
               pendingOrder.user_id,
               pendingOrder.customer_email,
@@ -122,6 +125,7 @@ export async function POST(request: NextRequest) {
             ]);
 
             const newOrderId = orderInsertResult.rows[0].id;
+            const publicOrderId = formatOrderNumber(orderInsertResult.rows[0].order_number) || newOrderId;
 
             // Create order items
             for (const item of cartResult.rows) {
@@ -163,7 +167,8 @@ export async function POST(request: NextRequest) {
 
             return NextResponse.json({
               success: true,
-              orderId: newOrderId
+              orderId: newOrderId,
+              publicOrderId
             });
 
           } catch (dbError) {

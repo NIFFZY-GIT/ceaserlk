@@ -8,7 +8,12 @@ import Link from 'next/link';
 // --- (Type definitions are correct and remain the same) ---
 interface OrderItem { id: string; product_name: string; variant_color: string; variant_size: string; price_paid: string; quantity: number; }
 type OrderStatus = 'PENDING' | 'PAID' | 'PROCESSING' | 'PACKED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
-interface FullOrder { id: string; created_at: string; status: OrderStatus; full_name: string; customer_email: string; phone_number: string; shipping_address_line1: string; shipping_city: string; shipping_postal_code: string; subtotal: string; shipping_cost: string; total_amount: string; items: OrderItem[]; }
+interface FullOrder { id: string; order_number?: number | null; created_at: string; status: OrderStatus; full_name: string; customer_email: string; phone_number: string; shipping_address_line1: string; shipping_city: string; shipping_postal_code: string; subtotal: string; shipping_cost: string; total_amount: string; items: OrderItem[]; }
+
+const formatPublicOrderId = (order: Pick<FullOrder, 'order_number' | 'id'>) => {
+  if (order.order_number === null || order.order_number === undefined) return order.id;
+  return String(order.order_number).padStart(5, '0');
+};
 
 const statusFlow: OrderStatus[] = ['PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED'];
 const statusIcons = { PAID: Package, PROCESSING: Package, PACKED: Package, SHIPPED: Truck, DELIVERED: Home, CANCELLED: XCircle, REFUNDED: RefreshCw, PENDING: Loader2 };
@@ -76,7 +81,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <Link href="/admin/orders" className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"><ArrowLeft size={16}/> Back to All Orders</Link>
       <div className="p-6 bg-white rounded-lg shadow-md">
         <div className="flex flex-wrap items-center justify-between gap-4">
-            <div><h1 className="text-2xl font-bold text-gray-900">Order #{order.id.split('-')[0].toUpperCase()}</h1><p className="text-sm text-gray-500">Placed on {new Date(order.created_at).toLocaleString()}</p></div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Order #{formatPublicOrderId(order)}</h1>
+              <p className="text-sm text-gray-500">Placed on {new Date(order.created_at).toLocaleString()}</p>
+              <p className="mt-1 font-mono text-xs text-gray-400">Internal ID: {order.id}</p>
+            </div>
             <div className="flex items-center gap-2"><span className="font-semibold">Status:</span><span className={`px-3 py-1 text-sm font-semibold rounded-full ${order.status === 'CANCELLED' || order.status === 'REFUNDED' ? 'bg-red-100 text-red-800' : 'bg-black text-white'}`}>{order.status}</span></div>
         </div>
         {isFulfilled && (

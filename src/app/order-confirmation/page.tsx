@@ -17,11 +17,17 @@ interface OrderItem {
 
 interface OrderData {
   id: string;
+  order_number?: number | null;
   customer_email: string;
   items: OrderItem[];
   total: number;
   status: string;
 }
+
+const formatPublicOrderId = (order: Pick<OrderData, 'order_number' | 'id'>) => {
+  if (order.order_number === null || order.order_number === undefined) return order.id;
+  return String(order.order_number).padStart(5, '0');
+};
 
 function OrderConfirmationContent() {
   const router = useRouter();
@@ -199,7 +205,7 @@ function OrderConfirmationContent() {
             <div className="text-right">
               <p className="text-sm text-gray-400">Order ID</p>
               <p className="px-3 py-1 font-mono text-lg font-bold text-gray-100 bg-gray-800 rounded-lg">
-                #{orderId}
+                  #{orderData ? formatPublicOrderId(orderData) : orderId}
               </p>
             </div>
           </div>

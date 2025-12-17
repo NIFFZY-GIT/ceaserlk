@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, FormEvent } from 'react';
-import { Package, Truck, CheckCircle, Search, Loader2 } from 'lucide-react';
+import { Package, Truck, CheckCircle, Search, Loader2, XCircle, RefreshCw } from 'lucide-react';
 
-// Define a type for our mock tracking data for better type safety
+type OrderStatus = 'PENDING' | 'PAID' | 'PROCESSING' | 'PACKED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
+
 type TrackingResult = {
-  orderNumber: string;
-  status: 'Processing' | 'Shipped' | 'Delivered';
-  estimatedDelivery: string;
+  orderId: string;
+  status: OrderStatus;
+  placedAt: string;
   history: {
     date: string;
     status: string;
@@ -15,42 +16,51 @@ type TrackingResult = {
   }[];
 };
 
-// Mock function to simulate an API call to a tracking service
-const fetchTrackingInfo = (orderNumber: string): Promise<TrackingResult> => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Simulate a successful API response for a specific order number
-      if (orderNumber.trim() === '12345') {
-        resolve({
-          orderNumber: '12345',
-          status: 'Shipped',
-          estimatedDelivery: '3 business days',
-          history: [
-            { date: '2023-10-28', status: 'Order Placed', location: 'Website' },
-            { date: '2023-10-28', status: 'Processing', location: 'Warehouse' },
-            { date: '2023-10-29', status: 'Shipped', location: 'Distribution Center' },
-          ],
-        });
-      // Simulate another successful response
-      } else if (orderNumber.trim() === '67890') {
-        resolve({
-          orderNumber: '67890',
-          status: 'Delivered',
-          estimatedDelivery: 'Completed',
-          history: [
-            { date: '2023-10-25', status: 'Order Placed', location: 'Website' },
-            { date: '2023-10-26', status: 'Processing', location: 'Warehouse' },
-            { date: '2023-10-27', status: 'Shipped', location: 'Distribution Center' },
-            { date: '2023-10-29', status: 'Delivered', location: 'Your Address' },
-          ],
-        });
-      }
-      // Simulate an order not found error
-      else {
-        reject(new Error('Order not found. Please check the number and try again.'));
-      }
-    }, 1500); // Simulate network delay
-  });
+const buildHistory = (status: OrderStatus, placedAtIso: string) => {
+  const placedDate = new Date(placedAtIso).toLocaleString();
+  const events: Array<{ key: OrderStatus | 'ORDER_PLACED'; label: string; location: string }> = [
+    { key: 'ORDER_PLACED', label: 'Order Placed', location: 'Website' },
+    { key: 'PAID', label: 'Payment Confirmed', location: 'Ceaser.lk' },
+    { key: 'PROCESSING', label: 'Processing', location: 'Warehouse' },
+    { key: 'PACKED', label: 'Packed', location: 'Warehouse' },
+    { key: 'SHIPPED', label: 'Shipped', location: 'Courier' },
+    { key: 'DELIVERED', label: 'Delivered', location: 'Destination' },
+  ];
+
+  const order: OrderStatus[] = ['PENDING', 'PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'];
+  const currentIndex = order.indexOf(status);
+
+  if (status === 'CANCELLED') {
+    return [
+      { date: placedDate, status: 'Order Placed', location: 'Website' },
+      { date: placedDate, status: 'Cancelled', location: 'Ceaser.lk' },
+    ];
+  }
+  if (status === 'REFUNDED') {
+    return [
+      { date: placedDate, status: 'Order Placed', location: 'Website' },
+      { date: placedDate, status: 'Refunded', location: 'Ceaser.lk' },
+    ];
+  }
+
+  // For normal fulfillment flow, include everything up to current status (or at least Order Placed)
+  const flowStatuses: OrderStatus[] = ['PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED'];
+  const included = new Set<OrderStatus>();
+  for (const s of flowStatuses) {
+    included.add(s);
+    if (s === status) break;
+  }
+
+  const history = events
+    .filter((e) => e.key === 'ORDER_PLACED' || included.has(e.key as OrderStatus))
+    .map((e) => ({ date: placedDate, status: e.label, location: e.location }));
+
+  // If status is PENDING, only show placed
+  if (currentIndex === 0) {
+    return [{ date: placedDate, status: 'Order Placed', location: 'Website' }];
+  }
+
+  return history;
 };
 
 const TrackOrderPage = () => {
@@ -68,8 +78,25 @@ const TrackOrderPage = () => {
     setTrackingResult(null);
 
     try {
-      const result = await fetchTrackingInfo(orderNumber);
-      setTrackingResult(result);
+      const res = await fetch('/api/orders/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: orderNumber.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Order not found. Please check the Order ID and try again.');
+      }
+
+      const order = data.order as { id: string; status: OrderStatus; created_at: string };
+      setTrackingResult({
+        orderId: (data.order?.publicOrderId as string) || order.id,
+        status: order.status,
+        placedAt: order.created_at,
+        history: buildHistory(order.status, order.created_at),
+      });
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -83,14 +110,20 @@ const TrackOrderPage = () => {
 
   const getStatusIcon = (status: TrackingResult['status']) => {
     switch (status) {
-      case 'Processing':
-        return <Package className="w-8 h-8 text-primary" />;
-      case 'Shipped':
+      case 'SHIPPED':
         return <Truck className="w-8 h-8 text-primary" />;
-      case 'Delivered':
+      case 'DELIVERED':
         return <CheckCircle className="w-8 h-8 text-accent" />;
+      case 'CANCELLED':
+        return <XCircle className="w-8 h-8 text-accent" />;
+      case 'REFUNDED':
+        return <RefreshCw className="w-8 h-8 text-accent" />;
+      case 'PENDING':
+      case 'PAID':
+      case 'PROCESSING':
+      case 'PACKED':
       default:
-        return null;
+        return <Package className="w-8 h-8 text-primary" />;
     }
   };
 
@@ -104,7 +137,7 @@ const TrackOrderPage = () => {
             Track Your Order
           </h1>
           <p className="mt-4 text-lg text-gray-300">
-            Enter the order number you received in your confirmation email to see its current status.
+            Enter the Order ID you received in your confirmation email to see its current status.
           </p>
         </div>
 
@@ -158,9 +191,11 @@ const TrackOrderPage = () => {
             <div className="p-6 border-2 border-gray-700 rounded-lg shadow-xl md:p-8 bg-gray-900/50">
               <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
                 <div>
-                  <h2 className="text-2xl font-bold tracking-wider uppercase">Order #{trackingResult.orderNumber}</h2>
-                  {/* THEME: Status text uses the 'primary' green color */}
-                  <p className="mt-1 text-lg font-semibold text-primary">{trackingResult.status}</p>
+                  <h2 className="text-2xl font-bold tracking-wider uppercase">Order #{trackingResult.orderId}</h2>
+                  <p className={`mt-1 text-lg font-semibold ${trackingResult.status === 'CANCELLED' || trackingResult.status === 'REFUNDED' ? 'text-accent' : 'text-primary'}`}>
+                    {trackingResult.status}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-400">Placed on {new Date(trackingResult.placedAt).toLocaleString()}</p>
                 </div>
                 <div className="p-4 bg-gray-800 rounded-full">
                   {getStatusIcon(trackingResult.status)}

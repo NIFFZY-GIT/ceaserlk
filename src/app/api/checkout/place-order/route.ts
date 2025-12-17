@@ -18,9 +18,11 @@ interface IncomingShippingDetails {
 type NormalizedShippingDetails = Required<{
   [K in keyof IncomingShippingDetails]: string;
 }>;
+import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
 
 export async function POST(request: NextRequest) {
   const user = await verifyAuth(request);
+    await ensureOrderNumberSchema(client);
   if (!user) {
     return NextResponse.json(
       { error: 'Authentication required to place an order.' },
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest) {
     firstName: (shippingDetails.firstName ?? '').trim(),
     lastName: (shippingDetails.lastName ?? '').trim(),
     phone: (shippingDetails.phone ?? '').trim(),
-    address: (shippingDetails.address ?? '').trim(),
+      RETURNING id, order_number;
     city: (shippingDetails.city ?? '').trim(),
     postalCode: (shippingDetails.postalCode ?? '').trim(),
     country: ((shippingDetails.country ?? 'Sri Lanka').trim() || 'Sri Lanka'),
@@ -78,7 +80,9 @@ export async function POST(request: NextRequest) {
   const client = await db.connect();
   try {
     await client.query('BEGIN');
-
+    const orderId = orderResult.rows[0]?.id;
+    const orderNumber = orderResult.rows[0]?.order_number as number | null | undefined;
+    const publicOrderId = formatOrderNumber(orderNumber) || orderId;
     const cartItemsResult = await client.query(`
       SELECT 
         c.id as cart_id,
@@ -123,7 +127,7 @@ export async function POST(request: NextRequest) {
         user_id,
         customer_email,
         full_name,
-        phone_number,
+        orderId: publicOrderId,
         shipping_address_line1,
         shipping_address_line2,
         shipping_city,
@@ -141,10 +145,10 @@ export async function POST(request: NextRequest) {
     const orderResult = await client.query(orderInsertQuery, [
       user.userId ? user.userId.toString() : null,
       normalizedDetails.email,
-      fullName,
+      const filename = generateInvoiceFilename(publicOrderId);
       normalizedDetails.phone,
       normalizedDetails.address,
-      null,
+        orderId: publicOrderId,
       normalizedDetails.city,
       normalizedDetails.postalCode,
       normalizedDetails.country,
@@ -161,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     const orderItemInsertQuery = `
       INSERT INTO order_items (
-        order_id,
+        subject: `Order Confirmation #${publicOrderId} | Ceaser LK`,
         product_id,
         product_name,
         variant_color,
@@ -199,7 +203,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const invoiceData: InvoiceData = {
-        orderId,
+            orderId: publicOrderId,
         orderDate: new Date(),
         customerName: fullName,
         customerEmail: normalizedDetails.email,
@@ -217,7 +221,7 @@ export async function POST(request: NextRequest) {
       };
 
       const pdfBuffer = generateInvoicePDF(invoiceData);
-      const filename = generateInvoiceFilename(orderId);
+            subject: `New Order #${publicOrderId} | Ceaser LK`,
 
       const emailHtml = generateOrderConfirmationEmail({
         orderId,

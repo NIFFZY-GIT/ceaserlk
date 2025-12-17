@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { sendEmail, generateOrderConfirmationEmail, generateAdminOrderNotificationEmail } from '@/lib/email';
 import { generateInvoicePDF, generateInvoiceFilename, InvoiceData } from '@/lib/pdf-invoice';
+import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
 import crypto from 'crypto';
 
 // PayHere configuration
@@ -71,6 +72,7 @@ export async function POST(request: NextRequest) {
 
     const client = await db.connect();
     try {
+      await ensureOrderNumberSchema(client);
       // Get pending order details
       const pendingOrderResult = await client.query(
         'SELECT * FROM pending_payhere_orders WHERE order_id = $1',
@@ -138,7 +140,7 @@ export async function POST(request: NextRequest) {
           subtotal, shipping_cost, total_amount, payhere_order_id, payhere_payment_id,
           payment_method, status
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'PAID')
-        RETURNING id
+        RETURNING id, order_number
       `;
 
       const orderResult = await client.query(orderQuery, [
@@ -159,6 +161,8 @@ export async function POST(request: NextRequest) {
       ]);
 
       const newOrderId = orderResult.rows[0].id;
+      const orderNumber = orderResult.rows[0].order_number as number | null | undefined;
+      const publicOrderId = formatOrderNumber(orderNumber) || newOrderId;
 
       // Create order items and update stock
       for (const item of cartResult.rows) {
@@ -196,7 +200,7 @@ export async function POST(request: NextRequest) {
 
       await client.query('COMMIT');
 
-      console.log(`PayHere notify: Order created successfully: ${newOrderId}`);
+      console.log(`PayHere notify: Order created successfully: ${newOrderId} (public #${publicOrderId})`);
 
       // Send confirmation emails (async, don't block response)
       setImmediate(async () => {
@@ -217,7 +221,7 @@ export async function POST(request: NextRequest) {
           };
 
           const invoiceData: InvoiceData = {
-            orderId: newOrderId,
+            orderId: publicOrderId,
             orderDate: new Date(),
             customerName: pendingOrder.customer_name,
             customerEmail: pendingOrder.customer_email,
@@ -230,11 +234,11 @@ export async function POST(request: NextRequest) {
           };
 
           const pdfBuffer = await generateInvoicePDF(invoiceData);
-          const pdfFilename = generateInvoiceFilename(newOrderId);
+          const pdfFilename = generateInvoiceFilename(publicOrderId);
 
           // Customer email
           const customerEmailContent = generateOrderConfirmationEmail({
-            orderId: newOrderId,
+            orderId: publicOrderId,
             customerName: pendingOrder.customer_name,
             customerEmail: pendingOrder.customer_email,
             items,
@@ -246,7 +250,7 @@ export async function POST(request: NextRequest) {
 
           await sendEmail({
             to: pendingOrder.customer_email,
-            subject: `Order Confirmation #${newOrderId} - CEASER`,
+            subject: `Order Confirmation #${publicOrderId} - CEASER`,
             html: customerEmailContent,
             attachments: [{
               filename: pdfFilename,
@@ -257,7 +261,7 @@ export async function POST(request: NextRequest) {
 
           // Admin notification
           const adminEmailContent = generateAdminOrderNotificationEmail({
-            orderId: newOrderId,
+            orderId: publicOrderId,
             customerName: pendingOrder.customer_name,
             customerEmail: pendingOrder.customer_email,
             items,
@@ -269,7 +273,7 @@ export async function POST(request: NextRequest) {
 
           await sendEmail({
             to: process.env.ADMIN_EMAIL || 'admin@ceaserbrand.com',
-            subject: `New Order #${newOrderId} - PayHere Payment`,
+            subject: `New Order #${publicOrderId} - PayHere Payment`,
             html: adminEmailContent
           });
 
