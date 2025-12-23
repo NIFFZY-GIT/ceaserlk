@@ -81,8 +81,9 @@ function createSecureTransporter(): nodemailer.Transporter {
     socketTimeout: 10000, // 10 seconds
     // Enable secure connection options
     tls: {
-      ciphers: 'SSLv3',
-      rejectUnauthorized: env.NODE_ENV === 'production'
+      // Use modern TLS cipher suites (compatible with Zoho, Gmail, etc.)
+      minVersion: 'TLSv1.2',
+      rejectUnauthorized: true
     }
   });
 

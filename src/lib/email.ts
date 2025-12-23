@@ -34,7 +34,14 @@ export function createEmailTransporter(): nodemailer.Transporter {
     },
   };
 
-  return nodemailer.createTransport(config);
+  return nodemailer.createTransport({
+    ...config,
+    // TLS settings for modern SMTP servers (Zoho, Gmail, etc.)
+    tls: {
+      minVersion: 'TLSv1.2',
+      rejectUnauthorized: true
+    }
+  });
 }
 
 // Send email function
