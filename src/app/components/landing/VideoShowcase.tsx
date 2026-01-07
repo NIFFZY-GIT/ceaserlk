@@ -22,12 +22,12 @@ type NetworkInformation = {
 
 const showcaseData = [
   {
-    title: "Engineered for Performance",
-    description: "Every stitch, seam, and fabric is chosen with one goal: to help you push your limits. Our apparel moves with you, not against you.",
+    title: " Brand Essence (Luxury × motivation) WHERE LUXURY MEETS MOTIVATION",
+    description: "Crafted for those who demand excellence. Every detail reflects power, precision, and purpose",
     cta: { text: "Discover The Tech", href: "/about" }
   },
   {
-    title: "The Mindset is Everything",
+    title: "Motivation & Identity\n WEAR THE MINDSET OF SUCCESS",
     description: "Ceaser isn't just what you wear; it's a statement. It's for those who show up, do the work, and refuse to be outworked.",
     cta: { text: "Our Mission", href: "/about" }
   },
