@@ -116,10 +116,10 @@ export const ProductCard = ({ product }: { product: Product }) => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative flex flex-col h-full p-4 transition-all duration-300 bg-white border border-gray-100 rounded-xl ">
+      <div className="relative flex flex-col h-full p-3 sm:p-4 transition-all duration-300 bg-white rounded-xl">
         <Link 
           href={`/product/${product.id}?variant=${activeVariant.variantId}`} 
-          className="relative block w-full overflow-hidden rounded-md aspect-square"
+          className="relative block w-full overflow-hidden rounded-md aspect-[4/5]"
         >
           {currentMedia.type === 'video' ? (
             <video
