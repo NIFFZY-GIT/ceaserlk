@@ -244,7 +244,7 @@ const MediaPreviewItem = ({
           onError={() => !isBlobUrl && setLoadError(true)}
         />
       ) : (
-        /* Use native img tag for all URLs - blob URLs work locally, server URLs need the server */
+        /* eslint-disable-next-line @next/next/no-img-element -- Use native img for blob URLs and dynamic server URLs */
         <img
           src={previewUrl}
           alt="Variant media preview"
@@ -742,7 +742,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                         )}
                         {tradingCardPreviewUrl && !removeTradingCard && (
                           <div className="flex items-center gap-2 p-2 mt-2 rounded-md bg-green-50">
-                            {/* Use native img for blob URLs - more reliable on VPS */}
+                            {/* eslint-disable-next-line @next/next/no-img-element -- Use native img for blob URLs */}
                             <img
                               src={tradingCardPreviewUrl}
                               alt="Trading card preview"

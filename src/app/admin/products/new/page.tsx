@@ -130,7 +130,7 @@ const VariantMediaPreview = ({
           onLoadedData={() => setImageLoaded(true)}
         />
       ) : (
-        /* Use native img tag for blob URLs - local file, always works */
+        /* eslint-disable-next-line @next/next/no-img-element -- Use native img for blob URLs */
         <img
           src={previewUrl}
           alt="upload preview"
@@ -616,7 +616,7 @@ const AddProductPage = () => {
                         </label>
                         {tradingCardPreviewUrl && (
                           <div className="flex items-center gap-2 p-2 rounded-md bg-green-50">
-                            {/* Use native img for blob URLs - more reliable on VPS */}
+                            {/* eslint-disable-next-line @next/next/no-img-element -- Use native img for blob URLs */}
                             <img
                               src={tradingCardPreviewUrl}
                               alt="Trading card preview"

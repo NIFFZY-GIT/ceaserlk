@@ -36,6 +36,7 @@ export default function ProductGallery({ media, productName }: ProductGalleryPro
                 className="w-full h-full object-cover"
               />
             ) : (
+              // eslint-disable-next-line @next/next/no-img-element -- Dynamic external URLs from server
               <img
                 src={current.url}
                 alt={productName}
@@ -72,6 +73,7 @@ export default function ProductGallery({ media, productName }: ProductGalleryPro
         sections.push(
           <div key={`pair-${i}`} className="flex w-screen flex-row">
             <div className="flex-1 aspect-[3/4] md:h-screen">
+              {/* eslint-disable-next-line @next/next/no-img-element -- Dynamic external URLs from server */}
               <img
                 src={current.url}
                 alt={productName}
@@ -79,6 +81,7 @@ export default function ProductGallery({ media, productName }: ProductGalleryPro
               />
             </div>
             <div className="flex-1 aspect-[3/4] md:h-screen">
+              {/* eslint-disable-next-line @next/next/no-img-element -- Dynamic external URLs from server */}
               <img
                 src={next.url}
                 alt={productName}
@@ -95,6 +98,7 @@ export default function ProductGallery({ media, productName }: ProductGalleryPro
         sections.push(
           <div key={`single-${i}`} className="w-screen flex items-center justify-center bg-white py-20 px-6">
             <div className="max-w-5xl w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element -- Dynamic external URLs from server */}
               <img
                 src={current.url}
                 alt={productName}
