@@ -205,7 +205,7 @@ const VideoShowcase = () => {
           />
         </div>
       )}
-      {!videoEligible && !manualOverride && (
+      {/* {!videoEligible && !manualOverride && (
         <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
           <div className="rounded-full bg-black/60 px-6 py-3 text-sm font-semibold text-white uppercase tracking-widest shadow-lg">
             Video paused for slow connection
@@ -222,7 +222,7 @@ const VideoShowcase = () => {
             Play background video
           </button>
         </div>
-      )}
+      )} */}
       {!videoReady && videoEligible && (
         <div className="absolute top-0 left-0 w-full h-full z-0">
           <Image
