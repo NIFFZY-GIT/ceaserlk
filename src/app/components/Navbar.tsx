@@ -23,10 +23,32 @@ const Navbar = () => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Check if we're on a product page
+  const isProductPage = pathname?.startsWith('/product/');
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  // Handle scroll detection for transparent navbar on product pages
+  useEffect(() => {
+    if (!isProductPage) {
+      setIsScrolled(false);
+      return;
+    }
+
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    // Check initial scroll position
+    handleScroll();
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isProductPage]);
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : 'auto';
@@ -77,8 +99,16 @@ const Navbar = () => {
 
   const hasItems = cartCount > 0;
 
+  // Determine navbar background classes
+  const navbarBgClass = isProductPage && !isScrolled
+    ? 'bg-transparent border-transparent shadow-none backdrop-blur-none'
+    : 'border-white/10 bg-[rgba(0,0,0,0.9)] shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-[rgba(0,0,0,0.85)]';
+
+  // Use fixed positioning on product pages so content shows behind navbar
+  const positionClass = isProductPage ? 'fixed' : 'sticky';
+
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[rgba(0,0,0,0.9)] text-brand-white shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-[rgba(0,0,0,0.85)]">
+    <header className={`${positionClass} top-0 left-0 right-0 z-50 border-b text-brand-white transition-all duration-300 ${navbarBgClass}`}>
       <nav className="container mx-auto flex w-full max-w-6xl items-center justify-between px-3 py-3 sm:px-5 md:px-6 md:py-5">
         <Link href="/" onClick={handleLinkClick} className="flex items-center gap-2 rounded-md transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent hover:opacity-90">
           <Image src="/images/logo1.png" alt="Ceaser Brand Logo" width={150} height={63} priority className="h-9 w-auto sm:h-10 md:h-12" />

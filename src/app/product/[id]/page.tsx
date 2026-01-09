@@ -391,8 +391,8 @@ function TrainMediaShowcase({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Breadcrumb Navigation - Hidden on mobile when navbar menu could overlap */}
-      <div className="absolute top-4 sm:top-6 left-1/2 -translate-x-1/2 z-40">
+      {/* Breadcrumb Navigation - Positioned below the fixed navbar */}
+      {/* <div className="absolute top-20 sm:top-24 left-1/2 -translate-x-1/2 z-40">
         <nav className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-black/30 backdrop-blur-md rounded-full text-[10px] sm:text-xs">
           <Link
             href="/shop"
@@ -405,7 +405,7 @@ function TrainMediaShowcase({
             {productName}
           </span>
         </nav>
-      </div>
+      </div> */}
 
       {/* Audio Toggle Button (replaces Try it on) */}
       {hasAudio && onToggleAudio && (

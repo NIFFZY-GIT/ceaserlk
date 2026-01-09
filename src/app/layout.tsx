@@ -25,7 +25,7 @@ export default function RootLayout({
       <body className={`bg-brand-black`}>
         <AuthProvider>
           <CartProvider>
-            <MarqueeBar /> {/* <-- 2. ADD IT HERE */}
+            {/* <MarqueeBar /> */}
             <Navbar />
             <CartDrawer />
             <main>{children}</main>
