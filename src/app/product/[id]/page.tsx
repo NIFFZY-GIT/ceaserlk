@@ -411,7 +411,7 @@ function TrainMediaShowcase({
       {hasAudio && onToggleAudio && (
         <button
           onClick={onToggleAudio}
-          className="absolute bottom-20 sm:bottom-6 left-4 sm:left-6 z-50 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white rounded-full shadow-sm text-xs sm:text-sm text-neutral-700 hover:shadow-md transition-shadow"
+          className="absolute bottom-20 sm:bottom-6 left-4 sm:left-6 z-30 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white rounded-full shadow-sm text-xs sm:text-sm text-neutral-700 hover:shadow-md transition-shadow"
           aria-label={isAudioPlaying ? "Pause audio" : "Play audio"}
         >
           {isAudioPlaying ? (
@@ -465,7 +465,7 @@ function TrainMediaShowcase({
 
       {/* Thumbnail Navigation Bar - Bottom Center on mobile, Bottom Right on desktop */}
       {hasMultipleImages && (
-        <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-6 z-50 max-w-[calc(100%-2rem)] sm:max-w-none">
+        <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-6 z-30 max-w-[calc(100%-2rem)] sm:max-w-none">
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide pb-1">
             {media.map((item, index) => {
               const isActive = index === currentIndex;
