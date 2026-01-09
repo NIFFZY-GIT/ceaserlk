@@ -102,7 +102,7 @@ const Navbar = () => {
   // Determine navbar background classes
   const navbarBgClass = isProductPage && !isScrolled
     ? 'bg-transparent border-transparent shadow-none backdrop-blur-none'
-    : 'border-white/10 bg-[rgba(0,0,0,0.9)] shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-[rgba(0,0,0,0.85)]';
+    : 'border-white/10 bg-black shadow-xl';
 
   // Use fixed positioning on product pages so content shows behind navbar
   const positionClass = isProductPage ? 'fixed' : 'sticky';
