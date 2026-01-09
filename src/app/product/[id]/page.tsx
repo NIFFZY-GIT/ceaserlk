@@ -190,7 +190,7 @@ function TrainMediaShowcase({
         });
       }
     },
-    [currentIndex, isAnimating, media.length, firstImageIndex, media]
+    [currentIndex, isAnimating, firstImageIndex, media]
   );
 
   // Navigation handlers
@@ -235,7 +235,8 @@ function TrainMediaShowcase({
   };
 
   // Toggle mute for videos
-  const toggleMute = useCallback(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _toggleMute = useCallback(() => {
     setIsMuted((prev) => {
       const newMuted = !prev;
       videoRefs.current.forEach((video) => {
@@ -817,7 +818,7 @@ export default function ProductPage() {
         try {
           await audio.play();
           setIsAudioPlaying(true);
-        } catch (err) {
+        } catch {
           // Auto-play blocked, user needs to interact first
           console.log("Auto-play blocked, waiting for user interaction");
           setIsAudioPlaying(false);

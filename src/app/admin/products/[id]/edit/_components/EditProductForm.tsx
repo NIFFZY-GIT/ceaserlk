@@ -182,14 +182,12 @@ const RichTextEditor = ({
 const MediaPreviewItem = ({
   previewUrl,
   isVideo,
-  isFileUpload,
   isThumbnail,
   onSetThumbnail,
   onRemove,
 }: {
   previewUrl: string;
   isVideo: boolean;
-  isFileUpload: boolean;
   isThumbnail: boolean;
   onSetThumbnail: () => void;
   onRemove: () => void;
@@ -809,14 +807,11 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                               const key = mediaItem instanceof File ? `${activeVariant.id}-file-${index}-${mediaItem.name}` : mediaItem.id;
                               const video = isVideoMedia(mediaItem);
                               const thumbnailActive = isActiveThumbnail(activeVariant, mediaItem);
-                              const isFileUpload = mediaItem instanceof File;
-
                               return (
                                 <MediaPreviewItem
                                   key={key}
                                   previewUrl={previewUrl}
                                   isVideo={video}
-                                  isFileUpload={isFileUpload}
                                   isThumbnail={thumbnailActive}
                                   onSetThumbnail={() => setThumbnail(activeVariant.id, mediaItem)}
                                   onRemove={() => removeMedia(activeVariant.id, mediaItem)}

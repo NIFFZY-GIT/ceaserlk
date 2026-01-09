@@ -16,7 +16,6 @@ import {
   Video
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { useObjectUrl } from '@/lib/hooks/useObjectUrl';
 
 // --- TYPE DEFINITIONS ---

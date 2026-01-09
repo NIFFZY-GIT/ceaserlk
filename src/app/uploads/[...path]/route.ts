@@ -27,7 +27,8 @@ function sanitizePath(segments: string[] = []): string[] {
 }
 
 // Helper to find the uploads directory in standalone mode
-function getUploadsBasePath(): string {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _getUploadsBasePath(): string {
   // In standalone mode, try multiple paths
   const possiblePaths = [
     path.join(process.cwd(), 'public', 'uploads'),           // Standard development

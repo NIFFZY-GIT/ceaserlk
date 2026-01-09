@@ -67,7 +67,8 @@ export default function SendEmailPage() {
     },
   });
 
-  const modules = {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _modules = {
     toolbar: [
       [{ header: [1, 2, 3, 4, 5, 6, false] }],
       [{ font: [] }],
@@ -84,7 +85,8 @@ export default function SendEmailPage() {
     ],
   };
 
-  const formats = [
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _formats = [
     'header',
     'font',
     'size',

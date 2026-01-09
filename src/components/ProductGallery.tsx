@@ -75,7 +75,7 @@ export default function ProductGallery({
   // Sort media: videos first, then images
   const mediaItems = useMemo(() => {
     if (!media?.length) return [];
-    return [...media].sort((a, b) => (isVideoUrl(a.url) ? -1 : 1));
+    return [...media].sort((a) => (isVideoUrl(a.url) ? -1 : 1));
   }, [media]);
 
   // Check if image is square-ish (aspect ratio between 0.8 and 1.2)
@@ -90,7 +90,8 @@ export default function ProductGallery({
   }, [mediaItems]);
 
   // Check if first image is square (needs centering for hero view)
-  const firstImageIsSquare = useMemo(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _firstImageIsSquare = useMemo(() => {
     if (firstImageIdx === -1) return false;
     return isSquare(mediaItems[firstImageIdx].id);
   }, [firstImageIdx, mediaItems, isSquare]);
@@ -324,7 +325,6 @@ export default function ProductGallery({
             {views.map((view, idx) => {
               const isActive = currentViewIndex === idx;
               const isPair = view.type === 'pair';
-              const isHero = view.type === 'hero';
               const isVideo = view.type === 'video';
               
               return (
