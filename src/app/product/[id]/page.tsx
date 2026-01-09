@@ -478,18 +478,33 @@ function TrainMediaShowcase({
                   onClick={() => slideTo(index)}
                   disabled={isAnimating}
                   className="group relative overflow-hidden transition-all duration-300 flex-shrink-0"
-                  aria-label={`View image ${index + 1}`}
+                  aria-label={`View ${item.type === "video" ? "video" : "image"} ${index + 1}`}
                 >
                   <div
-                    className={`w-8 h-11 sm:w-10 sm:h-14 md:w-12 md:h-16 relative transition-all duration-300 border ${
+                    className={`w-8 h-11 sm:w-10 sm:h-14 md:w-12 md:h-16 relative transition-all duration-300 border overflow-hidden ${
                       isActive || isPaired
                         ? "border-neutral-900 border-2"
                         : "border-neutral-300 hover:border-neutral-500"
                     }`}
                   >
                     {item.type === "video" ? (
-                      <div className="w-full h-full bg-neutral-200 flex items-center justify-center">
-                        <div className="w-0 h-0 border-l-[5px] sm:border-l-[6px] border-l-neutral-600 border-y-[3px] sm:border-y-[4px] border-y-transparent ml-0.5" />
+                      <div className="relative w-full h-full bg-neutral-800">
+                        <video
+                          src={item.url}
+                          muted
+                          playsInline
+                          preload="metadata"
+                          className="w-full h-full object-cover"
+                          onLoadedMetadata={(e) => {
+                            // Seek to 1 second for thumbnail preview
+                            const video = e.currentTarget;
+                            video.currentTime = 1;
+                          }}
+                        />
+                        {/* Play icon overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <div className="w-0 h-0 border-l-[6px] sm:border-l-[8px] border-l-white border-y-[4px] sm:border-y-[5px] border-y-transparent ml-0.5 drop-shadow-md" />
+                        </div>
                       </div>
                     ) : (
                       <Image
