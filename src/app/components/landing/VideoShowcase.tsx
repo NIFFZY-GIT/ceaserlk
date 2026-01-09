@@ -22,18 +22,21 @@ type NetworkInformation = {
 
 const showcaseData = [
   {
-    title: " Brand Essence (Luxury × motivation) WHERE LUXURY MEETS MOTIVATION",
-    description: "Crafted for those who demand excellence. Every detail reflects power, precision, and purpose",
+    title: "WHERE LUXURY MEETS MOTIVATION",
+    description:
+      "Crafted for those who demand excellence.\nEvery detail reflects power, precision, and purpose.",
     cta: { text: "Discover The Tech", href: "/about" }
   },
   {
-    title: "Motivation & Identity\n WEAR THE MINDSET OF SUCCESS",
-    description: "Ceaser isn't just what you wear; it's a statement. It's for those who show up, do the work, and refuse to be outworked.",
+    title: "WEAR THE MINDSET OF SUCCESS",
+    description:
+      "CEASAR is more than clothing —\nit’s a statement of discipline, focus, and elevation.",
     cta: { text: "Our Mission", href: "/about" }
   },
   {
-    title: "Join The Movement",
-    description: "Become part of a community dedicated to relentless self-improvement. Your journey is our inspiration.",
+    title: "DESIGNED FOR THOSE WHO RISE",
+    description:
+      "Luxury fabrics. Timeless design.\nBuilt for individuals who never settle.",
     cta: { text: "Explore The Collection", href: "/shop" }
   }
 ];
@@ -183,21 +186,21 @@ const VideoShowcase = () => {
           loop
           muted
           playsInline
-          poster="/images/image.jpg"
+          poster="/images/h1.jpeg"
           preload={shouldLoadVideo ? 'metadata' : 'none'}
           onLoadedData={() => setVideoReady(true)}
         >
           {shouldLoadVideo && (
-            <source src="/assets/v1.mp4" type="video/mp4" />
+            <source src="/assets/v1sd.mp4" type="video/mp4" />
           )}
         </video>
       ) : (
         <div className="absolute top-0 left-0 w-full h-full z-0">
           <Image
-            src="/images/image.jpg"
+            src="/images/h1.jpeg"
             alt="Athletic apparel background"
             fill
-            className="object-cover"
+            className="object-cover object-[center_30%]"
             priority
           />
         </div>
@@ -223,21 +226,21 @@ const VideoShowcase = () => {
       {!videoReady && videoEligible && (
         <div className="absolute top-0 left-0 w-full h-full z-0">
           <Image
-            src="/images/image.jpg"
+            src="/images/h1.jpeg"
             alt="Athletic apparel background placeholder"
             fill
-            className="object-cover"
+            className="object-cover object-[center_30%]"
             priority
           />
         </div>
       )}
-      <div className="absolute inset-0 bg-black/70 z-10" />
+      <div className="absolute inset-0 bg-black/30 z-10" />
 
       {/* Content */}
       <div className="relative z-20 container mx-auto px-6 h-full flex flex-col justify-center lg:justify-end lg:pb-32">
         <div className="max-w-2xl">
-          <h2 className="text-5xl md:text-7xl font-bold uppercase tracking-tighter slide-title">{activeSlide.title}</h2>
-          <p className="mt-6 text-lg text-gray-300 leading-relaxed slide-description">{activeSlide.description}</p>
+          <h2 className="text-5xl md:text-7xl font-bold uppercase tracking-tighter whitespace-pre-line slide-title">{activeSlide.title}</h2>
+          <p className="mt-6 text-lg text-gray-300 leading-relaxed whitespace-pre-line slide-description">{activeSlide.description}</p>
           <Link href={activeSlide.cta.href} className="group inline-flex items-center gap-3 mt-8 text-white font-bold text-lg slide-cta">
             <span>{activeSlide.cta.text}</span>
             <ArrowRight className="w-6 h-6 transition-transform duration-300 group-hover:translate-x-2" />

@@ -13,21 +13,21 @@ gsap.registerPlugin(ScrollTrigger);
 const ethosData = [
   { 
     icon: ShieldCheck, 
-    title: "Uncompromising Quality", 
-    description: "We obsess over every stitch and fiber to create apparel that performs under pressure and is built to last.", 
-    imageUrl: "/images/image.jpg" // Use distinct, high-quality images
+    title: "CUSTOM FABRICS. ONLY FOR CEASAR", 
+    description: "Exclusively developed fabrics for CEASAR, delivering comfort, durability, and effortless movement.", 
+    imageUrl: "/images/e1.jpg" // Use distinct, high-quality images
   },
   { 
     icon: Zap, 
-    title: "Performance Driven", 
-    description: "Our designs are born from the needs of athletes, engineered to enhance movement and unlock your full potential.", 
-    imageUrl:"/images/image1.jpg"
+    title: "QUALITY OVER QUANTITY", 
+    description: "Every CEASAR piece is produced through carefully controlled manufacturing, prioritizing precision, durability, and finish.", 
+    imageUrl:"/images/e2.jpg"
   },
   { 
     icon: Users, 
-    title: "Community Forged", 
-    description: "We are a brand built by and for a community of go-getters. Your ambition is our inspiration.", 
-    imageUrl: "/images/image.jpg"
+    title: "FINISHED WITH CARE", 
+    description: "Every CEASAR garment is finalized through a meticulous inspection process before packaging. Each piece is first protected in a premium garment cover, then placed inside our signature CEASAR bag, and finally sealed with an outer protective wrap to ensure it arrives in perfect condition.", 
+    imageUrl: "/images/e3.jpg"
   }
 ];
 
@@ -124,7 +124,7 @@ const BrandEthos = () => {
           {/* Top Section: Title */}
           <div>
             <h2 className="text-4xl font-bold tracking-wider uppercase lg:text-5xl">
-              The Ceaser Ethos
+              THE CEASAR STANDARD
             </h2>
           </div>
 

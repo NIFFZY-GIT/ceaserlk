@@ -29,8 +29,11 @@ export async function GET(
               pv.color_name AS "colorName",
               pv.color_hex_code AS "colorHex",
               (
-                SELECT json_agg(json_build_object('id', vi.id, 'url', vi.image_url))
-                FROM variant_images vi WHERE vi.variant_id = pv.id
+                SELECT json_agg(img_ordered ORDER BY img_ordered."displayOrder" ASC)
+                FROM (
+                  SELECT vi.id, vi.image_url AS url, COALESCE(vi.display_order, 0) AS "displayOrder"
+                  FROM variant_images vi WHERE vi.variant_id = pv.id
+                ) AS img_ordered
               ) AS images,
               (
                 SELECT json_agg(json_build_object('id', sku.id, 'size', sku.size, 'stock', sku.stock_quantity))

@@ -21,7 +21,7 @@ export default function SendEmailPage() {
   const [subject, setSubject] = useState('');
   const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<{ total: number; successful: number; failed: number; results?: { status: string; email: string; error?: string }[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
@@ -411,8 +411,8 @@ export default function SendEmailPage() {
                 </summary>
                 <div className="mt-2 space-y-1">
                   {result.results
-                    ?.filter((r: any) => r.status === 'failed')
-                    .map((r: any, i: number) => (
+                    ?.filter((r) => r.status === 'failed')
+                    .map((r, i: number) => (
                       <p key={i} className="text-xs text-red-600">
                         {r.email}: {r.error}
                       </p>

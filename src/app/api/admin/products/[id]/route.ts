@@ -264,6 +264,8 @@ export async function PUT(
     }
 
     // --- 4. Reconcile Variants, Images, and Sizes ---
+    const allFailedUploads: Array<{ fileName: string; reason: string; variant: string }> = [];
+    
     for (const variant of variants) {
       let variantId = variant.id;
 
@@ -291,14 +293,40 @@ export async function PUT(
 
       for (const descriptor of variant.newMediaDescriptors || []) {
         const mediaFile = formData.get(descriptor.formKey) as File | null;
-        if (!mediaFile || mediaFile.size === 0) continue;
+        
+        // Debug: Log what we're receiving
+        console.log('DEBUG - Media file upload:', {
+          formKey: descriptor.formKey,
+          originalName: descriptor.originalName,
+          hasFile: !!mediaFile,
+          fileSize: mediaFile?.size,
+          fileType: mediaFile?.type,
+          fileName: mediaFile?.name
+        });
+        
+        if (!mediaFile) {
+          console.log('DEBUG - File missing:', descriptor.formKey);
+          allFailedUploads.push({ fileName: descriptor.originalName, reason: 'File not received by server', variant: variant.colorName });
+          continue;
+        }
+        
+        if (mediaFile.size === 0) {
+          console.log('DEBUG - File is empty:', descriptor.formKey);
+          allFailedUploads.push({ fileName: descriptor.originalName, reason: 'File is empty (0 bytes)', variant: variant.colorName });
+          continue;
+        }
 
         const buffer = Buffer.from(await mediaFile.arrayBuffer());
         const filename = `${Date.now()}-${mediaFile.name.replace(/\s+/g, '-')}`;
         const productsDir = path.join(process.cwd(), 'public/uploads/products');
         await fs.mkdir(productsDir, { recursive: true });
         const uploadPath = path.join(productsDir, filename);
+        
+        console.log('DEBUG - Writing file to:', uploadPath, 'Size:', buffer.length);
+        
         await fs.writeFile(uploadPath, buffer);
+        
+        console.log('DEBUG - File written successfully:', filename);
 
         const mediaUrl = `/uploads/products/${filename}`;
         const insertResult = await client.query(
@@ -346,6 +374,17 @@ export async function PUT(
           await client.query('UPDATE stock_keeping_units SET size = $1, stock_quantity = $2 WHERE id = $3', [size.size, size.stock, size.id]);
         }
       }
+    }
+
+    // Check for failed uploads before committing
+    if (allFailedUploads.length > 0) {
+      await client.query('ROLLBACK');
+      const failedFileNames = allFailedUploads.map(f => `${f.fileName} (${f.reason})`).join(', ');
+      console.error('Upload failed for files:', allFailedUploads);
+      return NextResponse.json(
+        { error: `Failed to upload files: ${failedFileNames}. Please try again.` },
+        { status: 400 }
+      );
     }
 
     await client.query('COMMIT');

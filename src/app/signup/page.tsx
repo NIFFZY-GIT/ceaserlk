@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
   Chrome,
@@ -15,6 +16,8 @@ import {
   Sparkles,
   Tag,
   User,
+  Loader2,
+  ArrowRight
 } from 'lucide-react';
 
 import AuthLayout from '@/app/components/auth/AuthLayout';
@@ -23,7 +26,6 @@ const SignUpPage = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   
-  // State for form data, loading, and errors
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -35,7 +37,6 @@ const SignUpPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Generic handler for text inputs
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prevState => ({
@@ -44,7 +45,6 @@ const SignUpPage = () => {
     }));
   };
 
-  // Form submission handler
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -57,42 +57,15 @@ const SignUpPage = () => {
         body: JSON.stringify(formData),
       });
 
+      const errorData = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-
-        let message = 'An unknown error occurred.';
-
-        if (errorData) {
-          if (Array.isArray(errorData.details)) {
-            const issues = errorData.details
-              .map((issue: { message?: string }) => issue?.message)
-              .filter(Boolean);
-            if (issues.length > 0) {
-              message = issues.join(', ');
-            }
-          } else if (typeof errorData.details === 'string' && errorData.details.trim().length > 0) {
-            message = errorData.details;
-          }
-
-          if (typeof errorData.error === 'string' && errorData.error.trim().length > 0) {
-            message = errorData.details && message !== errorData.error
-              ? `${errorData.error}: ${message}`
-              : errorData.error;
-          }
-        }
-
-        throw new Error(message);
+        throw new Error(errorData.error || errorData.details || 'An unknown error occurred.');
       }
 
-      // On success, redirect to the login page
-      router.push('/login');
-
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred.');
-      }
+      router.push('/login?signup=success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -100,31 +73,31 @@ const SignUpPage = () => {
 
   const heroHighlights = [
     {
-      icon: <Sparkles className="h-4 w-4" />,
-      title: 'Motivational drops',
+      icon: <Sparkles className="h-5 w-5 text-amber-500" />,
+      title: 'Motivational Drops',
       description: 'Snag limited-release creative tees before they sell out.',
     },
     {
-      icon: <Tag className="h-4 w-4" />,
-      title: 'Member bundles',
+      icon: <Tag className="h-5 w-5 text-indigo-500" />,
+      title: 'Member Bundles',
       description: 'Unlock curated pack pricing on confidence-boosting fits.',
     },
     {
-      icon: <Palette className="h-4 w-4" />,
-      title: 'Creative styling tips',
+      icon: <Palette className="h-5 w-5 text-emerald-500" />,
+      title: 'Creative Styling',
       description: 'Get weekly outfit inspo built around bold Ceaser artwork.',
     },
     {
-      icon: <Mail className="h-4 w-4" />,
-      title: 'Behind-the-print stories',
+      icon: <Mail className="h-5 w-5 text-rose-500" />,
+      title: 'The Blueprint',
       description: 'Hear the inspiration behind every motivational graphic.',
     },
   ];
 
   return (
     <AuthLayout
-      formTitle="Create your Ceaser Designs account"
-      formSubtitle="Be first in line for limited-run motivational tees, surprise restocks, and styling notes."
+      formTitle="Join the Club"
+      formSubtitle=""
       hero={{
         eyebrow: 'Ceaser Designs Studio',
         title: 'Fuel your wardrobe with creative energy',
@@ -133,28 +106,43 @@ const SignUpPage = () => {
         highlights: heroHighlights,
       }}
       footer={
-        <button
-          type="button"
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
-        >
-          <Chrome className="h-5 w-5" /> Continue with Google
-        </button>
+        <div className="space-y-4 w-full">
+            <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink mx-4 text-xs font-semibold uppercase tracking-widest text-slate-400">Or join with</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+            </div>
+            <button
+            type="button"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98]"
+            >
+            <Chrome className="h-5 w-5" /> Google
+            </button>
+        </div>
       }
       bottomSlot={
-        <span>
-          Already have an account?{' '}
-          <Link href="/login" className="font-semibold text-white underline-offset-4 hover:underline">
-            Sign in to keep inspiring
+        <p className="text-slate-500 text-sm">
+          Already a member?{' '}
+          <Link href="/login" className="font-bold text-white hover:text-indigo-200 transition-colors underline-offset-4 hover:underline">
+            Sign in to your account
           </Link>
-        </span>
+        </p>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="grid gap-5 sm:grid-cols-2">
-          <label htmlFor="firstName" className="text-sm font-medium text-slate-500">
-            First name
-            <div className="relative mt-2">
-              <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      <motion.form 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        onSubmit={handleSubmit} 
+        className="space-y-4"
+      >
+        {/* Name Grid */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="group">
+            <label htmlFor="firstName" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 transition-colors group-focus-within:text-slate-900">
+              First name
+            </label>
+            <div className="relative">
+              <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-slate-900" />
               <input
                 id="firstName"
                 name="firstName"
@@ -162,15 +150,17 @@ const SignUpPage = () => {
                 required
                 value={formData.firstName}
                 onChange={handleChange}
-                className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-11 py-2.5 text-sm font-medium text-slate-900 outline-none transition-all focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 placeholder:text-slate-400"
                 placeholder="Jordan"
               />
             </div>
-          </label>
-          <label htmlFor="lastName" className="text-sm font-medium text-slate-500">
-            Last name
-            <div className="relative mt-2">
-              <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          </div>
+          <div className="group">
+            <label htmlFor="lastName" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 transition-colors group-focus-within:text-slate-900">
+              Last name
+            </label>
+            <div className="relative">
+              <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-slate-900" />
               <input
                 id="lastName"
                 name="lastName"
@@ -178,51 +168,59 @@ const SignUpPage = () => {
                 required
                 value={formData.lastName}
                 onChange={handleChange}
-                className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-11 py-2.5 text-sm font-medium text-slate-900 outline-none transition-all focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 placeholder:text-slate-400"
                 placeholder="Taylor"
               />
             </div>
-          </label>
+          </div>
         </div>
 
-        <label htmlFor="email" className="text-sm font-medium text-slate-500">
-          Email address
-          <div className="relative mt-2">
-            <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        {/* Email Field */}
+        <div className="group">
+          <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 transition-colors group-focus-within:text-slate-900">
+            Email address
+          </label>
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-slate-900" />
             <input
               id="email"
               name="email"
               type="email"
-              autoComplete="email"
               required
               value={formData.email}
               onChange={handleChange}
-              className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-              placeholder="you@ceaserfan.com"
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-11 py-2.5 text-sm font-medium text-slate-900 outline-none transition-all focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 placeholder:text-slate-400"
+              placeholder="you@example.com"
             />
           </div>
-        </label>
+        </div>
 
-        <label htmlFor="phone" className="text-sm font-medium text-slate-500">
-          Phone number <span className="font-normal text-slate-400">(optional)</span>
-          <div className="relative mt-2">
-            <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        {/* Phone Field */}
+        <div className="group">
+          <label htmlFor="phone" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 transition-colors group-focus-within:text-slate-900">
+            Phone <span className="text-slate-300 font-normal">(Optional)</span>
+          </label>
+          <div className="relative">
+            <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-slate-900" />
             <input
               id="phone"
               name="phone"
               type="tel"
               value={formData.phone}
               onChange={handleChange}
-              className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-              placeholder="(+94) 77 555 2210"
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-11 py-2.5 text-sm font-medium text-slate-900 outline-none transition-all focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 placeholder:text-slate-400"
+              placeholder="+94 77 000 0000"
             />
           </div>
-        </label>
+        </div>
 
-        <label htmlFor="password" className="text-sm font-medium text-slate-500">
-          Password
-          <div className="relative mt-2">
-            <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        {/* Password Field */}
+        <div className="group">
+          <label htmlFor="password" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 transition-colors group-focus-within:text-slate-900">
+            Password
+          </label>
+          <div className="relative">
+            <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-slate-900" />
             <input
               id="password"
               name="password"
@@ -230,21 +228,21 @@ const SignUpPage = () => {
               required
               value={formData.password}
               onChange={handleChange}
-              className="block w-full rounded-xl border border-slate-200 bg-white px-12 py-3 text-sm font-medium text-slate-900 shadow-sm outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-              placeholder="Create a strong password"
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-11 py-2.5 text-sm font-medium text-slate-900 outline-none transition-all focus:bg-white focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900 placeholder:text-slate-400"
+              placeholder="••••••••"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-3 flex items-center rounded-lg px-3 text-slate-500 transition hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute inset-y-0 right-3 flex items-center rounded-lg px-3 text-slate-400 transition hover:text-slate-900"
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-        </label>
+        </div>
 
-        <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600 shadow-sm transition hover:border-slate-300 focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-900/10">
+        {/* Terms Checkbox */}
+        <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/30 cursor-pointer transition-all hover:bg-slate-50 focus-within:ring-2 focus-within:ring-slate-900/5">
           <input
             id="terms"
             name="terms"
@@ -254,38 +252,47 @@ const SignUpPage = () => {
             onChange={handleChange}
             className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
           />
-          <span>
+          <span className="text-xs font-medium text-slate-500 leading-relaxed">
             I agree to the{' '}
-            <Link href="/terms-conditions" className="font-semibold text-slate-900 underline-offset-4 hover:underline">
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link href="/privacy-policy" className="font-semibold text-slate-900 underline-offset-4 hover:underline">
-              Privacy Policy
-            </Link>
+            <Link href="/terms-conditions" className="text-slate-900 font-bold hover:underline">Terms</Link> and{' '}
+            <Link href="/privacy-policy" className="text-slate-900 font-bold hover:underline">Privacy Policy</Link>.
           </span>
         </label>
 
-        {error && (
-          <div
-            className="flex items-start gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-            role="alert"
-          >
-            <AlertCircle className="mt-0.5 h-4 w-4" />
-            <span className="font-medium">{error}</span>
-          </div>
-        )}
+        {/* Error Messaging */}
+        <AnimatePresence mode="wait">
+            {error && (
+            <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex items-start gap-3 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+                role="alert"
+            >
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span className="font-medium">{error}</span>
+            </motion.div>
+            )}
+        </AnimatePresence>
 
-        <div className="pt-1">
+        {/* Submit Button */}
+        <div className="pt-2">
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:translate-y-0 disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+            className="group relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white shadow-xl transition-all hover:bg-slate-800 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
           >
-            {loading ? 'Creating account…' : 'Create account'}
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                Create Account
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </>
+            )}
           </button>
         </div>
-      </form>
+      </motion.form>
     </AuthLayout>
   );
 };

@@ -1,55 +1,87 @@
-const shimmerBlock = 'relative overflow-hidden rounded-2xl bg-white/10 animate-pulse';
-
-export default function ShopLoading() {
+﻿export default function ShopLoading() {
   return (
-    <div className="min-h-[80vh] w-full bg-gradient-to-b from-black via-slate-950 to-black py-16 text-white">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6">
-        <div className="space-y-4">
-          <div className="h-4 w-40 rounded-full bg-white/20" />
-          <div className="h-10 w-3/4 rounded-2xl bg-white/10" />
-          <div className="h-4 w-2/4 rounded-full bg-white/10" />
+    <main className="min-h-screen bg-[#fafafa]">
+      {/* Header Skeleton */}
+      <div className="bg-[#1a1a1a]">
+        <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+          {/* Breadcrumb skeleton */}
+          <div className="flex items-center gap-2 mb-6">
+            <div className="h-4 w-12 bg-white/20 rounded animate-pulse" />
+            <div className="h-4 w-4 bg-white/10 rounded animate-pulse" />
+            <div className="h-4 w-16 bg-white/20 rounded animate-pulse" />
+          </div>
+          
+          {/* Title skeleton */}
+          <div className="h-10 w-64 bg-white/20 rounded animate-pulse mb-4" />
+          <div className="h-5 w-80 bg-white/10 rounded animate-pulse" />
+          
+          {/* Signature stripe */}
+          <div className="flex h-1.5 w-32 mt-6">
+            <div className="flex-1 bg-[#006633]" />
+            <div className="flex-1 bg-white" />
+            <div className="flex-1 bg-[#cc0000]" />
+          </div>
         </div>
+      </div>
 
-        <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
-          <aside className="space-y-6 rounded-3xl border border-white/10 bg-white/[0.04] p-6">
-            <div className="h-5 w-24 rounded-full bg-white/20" />
-            <div className="space-y-6">
-              {Array.from({ length: 4 }).map((_, sectionIndex) => (
-                <div key={sectionIndex} className="space-y-3">
-                  <div className="h-4 w-28 rounded-full bg-white/20" />
-                  <div className="space-y-2">
-                    {Array.from({ length: 3 }).map((__, optionIndex) => (
-                      <div key={optionIndex} className="h-3 w-32 rounded-full bg-white/20" />
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        <div className="flex gap-8 lg:gap-12">
+          {/* Filter Sidebar Skeleton - Desktop only */}
+          <aside className="hidden lg:block w-64 flex-shrink-0">
+            <div className="bg-white border border-[#e5e5e5] p-6 sticky top-24">
+              <div className="h-6 w-20 bg-[#e5e5e5] rounded animate-pulse mb-6" />
+              
+              {/* Filter sections */}
+              {[1, 2, 3].map((section) => (
+                <div key={section} className="mb-6 pb-6 border-b border-[#e5e5e5] last:border-0">
+                  <div className="h-4 w-24 bg-[#e5e5e5] rounded animate-pulse mb-4" />
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4].map((item) => (
+                      <div key={item} className="flex items-center gap-3">
+                        <div className="h-4 w-4 bg-[#f0f0f0] rounded animate-pulse" />
+                        <div className="h-3 w-16 bg-[#f0f0f0] rounded animate-pulse" />
+                      </div>
                     ))}
                   </div>
                 </div>
               ))}
+              
+              <div className="h-10 w-full bg-[#f0f0f0] rounded animate-pulse mt-4" />
             </div>
-            <div className="h-9 w-full rounded-full bg-white/20" />
           </aside>
 
-          <section className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="h-4 w-32 rounded-full bg-white/20" />
-              <div className="flex gap-3">
-                <div className="h-9 w-20 rounded-full bg-white/10" />
-                <div className="h-9 w-28 rounded-full bg-white/10" />
+          {/* Product Grid Skeleton */}
+          <section className="flex-1">
+            {/* Toolbar skeleton */}
+            <div className="flex items-center justify-between pb-6 border-b border-[#e5e5e5] mb-8">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-24 bg-[#e5e5e5] rounded animate-pulse lg:hidden" />
+                <div className="hidden lg:block h-10 w-24 bg-[#e5e5e5] rounded animate-pulse" />
               </div>
+              <div className="h-4 w-32 bg-[#e5e5e5] rounded animate-pulse" />
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {/* Products grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
               {Array.from({ length: 9 }).map((_, index) => (
                 <div
                   key={index}
-                  className="group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] p-5"
+                  className="group bg-white border border-[#e5e5e5] overflow-hidden"
                 >
-                  <div className={`${shimmerBlock} aspect-[4/5]`} />
-                  <div className="mt-6 space-y-4">
-                    <div className="h-5 w-3/4 rounded-full bg-white/20" />
-                    <div className="h-4 w-1/2 rounded-full bg-white/20" />
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="h-5 w-16 rounded-full bg-white/10" />
-                      <div className="h-9 w-24 rounded-full bg-white/10" />
+                  {/* Image skeleton with pulse */}
+                  <div className="aspect-[3/4] bg-[#f0f0f0] animate-pulse" />
+                  
+                  {/* Content skeleton */}
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 w-3/4 bg-[#e5e5e5] rounded animate-pulse" />
+                    <div className="h-3 w-1/2 bg-[#f0f0f0] rounded animate-pulse" />
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="h-5 w-20 bg-[#e5e5e5] rounded animate-pulse" />
+                      <div className="flex gap-1">
+                        {[1, 2, 3].map((dot) => (
+                          <div key={dot} className="h-4 w-4 bg-[#f0f0f0] rounded-full animate-pulse" />
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -58,6 +90,6 @@ export default function ShopLoading() {
           </section>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

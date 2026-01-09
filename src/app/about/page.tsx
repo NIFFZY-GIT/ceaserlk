@@ -99,7 +99,7 @@ const AboutPage = () => {
       {/* Section 1: Dynamic Hero */}
       <section className="relative h-screen flex flex-col items-center justify-center text-center p-6">
         <Image
-          src="/images/image.jpg"
+           src="/images/a2.jpg"
           alt="An abstract, modern background texture"
           fill
           className="object-cover opacity-20"
@@ -121,23 +121,41 @@ const AboutPage = () => {
       {/* Section 2: Our Philosophy */}
       <section className="container mx-auto px-6 py-24 md:py-32">
         <div className="grid md:grid-cols-2 gap-12 lg:gap-20 items-center">
+          {/* Content Card */}
           <div className="gsap-fade-in">
-            <h2 className="text-4xl md:text-5xl font-bold text-primary mb-6">
-              The Philosophy of the Grind
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-wider uppercase mb-4">
+              Philosophy
+            </div>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tighter text-primary">
+              THE CEASAR MINDSET
             </h2>
-            <p className="text-gray-300 leading-relaxed text-lg mb-4">
-              We believe greatness isn&apos;t a gift; it&apos;s earned. Every day is an opportunity to be better than you were yesterday. That&apos;s the mindset we embed into every fiber of our apparel.
+            <div className="mt-4 h-1 w-16 bg-primary rounded" />
+
+            <p className="mt-8 text-gray-300 leading-relaxed text-lg mb-4">
+              CEASAR is built for those who choose more — more discipline, more ambition, more purpose. We believe success is intentional, and luxury is earned. It’s not about excess or price; it’s about value, presence, and confidence.
             </p>
-            <p className="text-gray-300 leading-relaxed text-lg">
-              Our products are designed for the critical moments—the final rep, the extra mile, the breakthrough idea. They are engineered to perform under pressure, just like you.
+            <p className="text-gray-300 leading-relaxed text-lg mb-6">
+              Our designs are created for individuals who move with clarity and aim higher every day. Clean lines, refined materials, and uncompromising quality come together to reflect a life driven by progress.
             </p>
+
+            <div className="mt-2 pl-4 border-l-4 border-primary text-gray-200 italic space-y-2">
+              <p className="leading-relaxed text-lg">CEASAR isn’t about showing off.</p>
+              <p className="leading-relaxed text-lg">It’s about showing up — focused, prepared, and ready to rise.</p>
+            </div>
+
+            <div className="mt-6 text-gray-100 font-semibold">
+              <p className="leading-relaxed">This is luxury with meaning.</p>
+              <p className="leading-relaxed">This is motivation you can wear.</p>
+            </div>
           </div>
+
+          {/* Image Side */}
           <div className="relative w-full h-96 gsap-fade-in">
             <Image
-              src="/images/image.jpg"
+              src="/images/a2.jpg"
               alt="Athlete in deep focus"
               fill
-              className="rounded-lg object-cover shadow-2xl shadow-primary/20"
+              className="rounded-xl object-cover shadow-2xl shadow-primary/20 ring-1 ring-white/10"
             />
           </div>
         </div>
@@ -195,7 +213,7 @@ const AboutPage = () => {
       <section className="py-24 md:py-32 bg-primary">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-4 text-brand-black gsap-fade-in">
-            Your Ambition. Your Armor.
+            I CAME. I SAW. I CONQUERED
           </h2>
           <p className="max-w-xl mx-auto mb-8 text-gray-800 gsap-fade-in">
             Step into apparel that&apos;s as committed to your goals as you are.

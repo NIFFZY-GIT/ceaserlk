@@ -85,12 +85,12 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       </div> */}
 
       {/* Price Filter */}
-      <div className="mb-8">
-        <h3 className="mb-4 font-semibold text-gray-800">Price Range</h3>
-        <div className="flex items-center justify-between mb-3 text-sm text-gray-600">
-          <span>LKR {minPrice}</span>
-          <span className="px-2 py-1 font-bold text-black bg-gray-100 rounded">Up to LKR {filters.maxPrice}</span>
-          <span className="text-gray-400">LKR {maxPrice}</span>
+      <div className="mb-8 pb-6 border-b border-[#e5e5e5]">
+        <h3 className="mb-4 text-xs font-semibold tracking-widest uppercase text-[#1a1a1a]">Price Range</h3>
+        <div className="flex items-center justify-between mb-4 text-sm">
+          <span className="text-[#666]">LKR {minPrice}</span>
+          <span className="px-3 py-1.5 text-xs font-medium text-[#1a1a1a] bg-[#f5f5f5]">Up to LKR {filters.maxPrice}</span>
+          <span className="text-[#999]">LKR {maxPrice}</span>
         </div>
         <input
           type="range"
@@ -98,85 +98,70 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
           max={maxPrice}
           value={filters.maxPrice}
           onChange={(e) => onFilterChange('maxPrice', Number(e.target.value))}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary slider"
+          className="w-full h-1 bg-[#e5e5e5] appearance-none cursor-pointer accent-[#1a1a1a]"
         />
-        <div className="mt-2 text-xs text-gray-500">
-          Drag to set maximum price
-        </div>
       </div>
 
       {/* Size Filter */}
-      <div className="mb-8">
-        <h3 className="mb-4 font-semibold text-gray-800">
-          Size 
+      <div className="mb-8 pb-6 border-b border-[#e5e5e5]">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-semibold tracking-widest uppercase text-[#1a1a1a]">Size</h3>
           {filters.sizes.length > 0 && (
-            <span className="px-2 py-1 ml-2 text-xs bg-green-100 rounded-full text-primary">
-              {filters.sizes.length} selected
+            <span className="text-[10px] font-medium text-white bg-[#1a1a1a] px-2 py-0.5">
+              {filters.sizes.length}
             </span>
           )}
-        </h3>
+        </div>
         <div className="flex flex-wrap gap-2">
           {availableSizes.map(size => (
             <button
               key={size}
               onClick={() => handleToggle('sizes', size)}
-              className={`w-12 h-12 border rounded-md flex items-center justify-center text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+              className={`w-10 h-10 border flex items-center justify-center text-xs font-medium transition-all duration-200 ${
                 filters.sizes.includes(size)
-                  ? 'bg-brand-black text-brand-white border-brand-black shadow-lg'
-                  : 'border-gray-300 hover:border-brand-black hover:bg-gray-50'
+                  ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                  : 'border-[#e5e5e5] text-[#1a1a1a] hover:border-[#1a1a1a]'
               }`}
             >
               {size}
             </button>
           ))}
         </div>
-        {filters.sizes.length > 0 && (
-          <div className="mt-3 text-xs text-gray-500">
-            Selected: {filters.sizes.join(', ')}
-          </div>
-        )}
       </div>
 
       {/* Color Filter */}
       <div>
-        <h3 className="mb-4 font-semibold text-gray-800">
-          Color
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-semibold tracking-widest uppercase text-[#1a1a1a]">Color</h3>
           {filters.colors.length > 0 && (
-            <span className="px-2 py-1 ml-2 text-xs bg-green-100 rounded-full text-primary">
-              {filters.colors.length} selected
+            <span className="text-[10px] font-medium text-white bg-[#1a1a1a] px-2 py-0.5">
+              {filters.colors.length}
             </span>
           )}
-        </h3>
-        <div className="flex flex-wrap gap-3">
+        </div>
+        <div className="grid grid-cols-5 gap-4">
           {uniqueColors.map(color => (
-            <div key={color.name} className="flex flex-col items-center">
-              <button
-                title={color.name}
-                onClick={() => handleToggle('colors', color.name)}
-                className={`w-10 h-10 rounded-full border transition-all duration-200 transform hover:scale-110 ${
-                  filters.colors.includes(color.name)
-                    ? 'ring-2 ring-offset-2 ring-primary shadow-lg'
-                    : 'border-gray-300 hover:border-gray-500'
-                }`}
-                style={{ backgroundColor: color.hex }}
-              >
-                {filters.colors.includes(color.name) && (
-                  <div className="flex items-center justify-center w-full h-full rounded-full">
-                    <svg className="w-4 h-4 text-brand-white drop-shadow" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-              </button>
-              <span className="mt-1 text-xs text-gray-600 capitalize">{color.name}</span>
-            </div>
+            <button
+              key={color.name}
+              title={color.name}
+              onClick={() => handleToggle('colors', color.name)}
+              className={`relative w-8 h-8 border-2 transition-all duration-200 ${
+                filters.colors.includes(color.name)
+                  ? 'border-[#1a1a1a] shadow-md'
+                  : 'border-transparent hover:border-[#ccc]'
+              }`}
+              style={{ backgroundColor: color.hex }}
+            >
+              {filters.colors.includes(color.name) && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </button>
           ))}
         </div>
-        {filters.colors.length > 0 && (
-          <div className="mt-3 text-xs text-gray-500">
-            Selected: {filters.colors.join(', ')}
-          </div>
-        )}
       </div>
     </>
   );
@@ -186,77 +171,79 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       {/* Desktop Sidebar */}
       <aside className={`${showDesktop ? 'hidden lg:block lg:col-span-1' : 'hidden'}`}>
         <div className="sticky top-28">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="flex items-center gap-2 text-xl font-bold text-black">
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="px-2 py-1 text-xs text-white rounded-full bg-primary">
-                  {activeFilterCount}
-                </span>
-              )}
-            </h2>
-            <button 
-              onClick={clearFilters} 
-              className={`text-sm transition-colors hover:underline ${
-                activeFilterCount > 0 
-                  ? 'text-red-600 hover:text-red-700' 
-                  : 'text-gray-500 hover:text-primary'
-              }`}
-              disabled={activeFilterCount === 0}
-            >
-              Clear All
-            </button>
-          </div>
-          <div className="max-h-[calc(100vh-12rem)] overflow-y-auto modern-scrollbar pr-2 scroll-smooth">
-            <FilterContent />
+          <div className="bg-white border border-[#e5e5e5] p-6">
+            <div className="flex items-center justify-between pb-4 mb-6 border-b border-[#e5e5e5]">
+              <h2 className="flex items-center gap-3 text-xs font-semibold tracking-widest uppercase text-[#1a1a1a]">
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="px-2 py-0.5 text-[10px] font-medium text-white bg-[#1a1a1a]">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </h2>
+              <button 
+                onClick={clearFilters} 
+                className={`text-xs transition-colors ${
+                  activeFilterCount > 0 
+                    ? 'text-[#cc0000] hover:underline' 
+                    : 'text-[#999]'
+                }`}
+                disabled={activeFilterCount === 0}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="max-h-[calc(100vh-18rem)] overflow-y-auto modern-scrollbar scroll-smooth">
+              <FilterContent />
+            </div>
           </div>
         </div>
       </aside>
 
       {/* Mobile Filter Overlay */}
-      <div className={`fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose} />
+      <div className={`fixed inset-0 bg-black/60 z-40 lg:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose} />
       <div
         id="shop-mobile-filters"
         role="dialog"
         aria-modal="true"
         aria-labelledby="shop-mobile-filters-title"
-        className={`fixed top-0 left-0 h-full w-full max-w-sm bg-white shadow-2xl z-50 transform transition-transform duration-300 lg:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full'} sm:max-w-md`}
+        className={`fixed top-0 left-0 h-full w-full max-w-sm bg-white z-50 transform transition-transform duration-300 lg:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full'} sm:max-w-md`}
       >
         <div className="flex h-full flex-col bg-white">
-          <div className="flex items-center justify-between px-6 pb-4 pt-6">
-            <h2 id="shop-mobile-filters-title" className="flex items-center gap-2 text-xl font-bold">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-[#e5e5e5]">
+            <h2 id="shop-mobile-filters-title" className="flex items-center gap-3 text-xs font-semibold tracking-widest uppercase text-[#1a1a1a]">
               Filters
               {activeFilterCount > 0 && (
-                <span className="rounded-full bg-primary px-2 py-1 text-xs text-white">
+                <span className="px-2 py-0.5 text-[10px] font-medium text-white bg-[#1a1a1a]">
                   {activeFilterCount}
                 </span>
               )}
             </h2>
-            <button onClick={onClose} className="rounded-full p-1.5 text-gray-600 transition hover:bg-gray-100 hover:text-gray-900" aria-label="Close filters">
-              <X size={22} />
+            <button onClick={onClose} className="p-1 text-[#1a1a1a] transition hover:opacity-60" aria-label="Close filters">
+              <X size={20} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-6 pb-6 modern-scrollbar">
+          <div className="flex-1 overflow-y-auto px-6 py-6 modern-scrollbar">
             <FilterContent />
           </div>
-          <div className="border-t border-gray-200 bg-white px-6 py-6">
-            <div className="flex flex-col gap-3">
+          <div className="border-t border-[#e5e5e5] bg-white px-6 py-5">
+            <div className="flex gap-3">
               <button
                 onClick={clearFilters}
-                className={`w-full rounded-md border py-3 text-sm font-semibold transition-colors ${
+                className={`flex-1 border py-3 text-xs font-medium tracking-wider uppercase transition-colors ${
                   activeFilterCount > 0
-                    ? 'border-red-300 text-red-600 hover:bg-red-50'
-                    : 'border-gray-300 text-gray-400'
+                    ? 'border-[#cc0000] text-[#cc0000] hover:bg-red-50'
+                    : 'border-[#e5e5e5] text-[#999]'
                 }`}
                 disabled={activeFilterCount === 0}
               >
-                Clear All Filters
+                Clear
               </button>
               <button
                 onClick={onClose}
-                className="w-full rounded-md bg-primary py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+                className="flex-1 bg-[#1a1a1a] py-3 text-xs font-medium tracking-wider uppercase text-white transition-colors hover:bg-black"
               >
-                Apply Filters ({activeFilterCount})
+                Apply ({activeFilterCount})
               </button>
             </div>
           </div>

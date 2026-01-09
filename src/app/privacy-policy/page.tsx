@@ -6,7 +6,11 @@ export default function PrivacyPolicyPage() {
     <div className="bg-black min-h-screen text-gray-200">
       {/* Header Section */}
       <div className="relative bg-zinc-900 text-white border-b-4 border-b-green-600">
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#009246] via-white to-[#CE2B37]"></div>
+            <div className="absolute top-0 left-0 w-full h-1.5 flex">
+                    <div className="w-1/3 bg-[#009246]"></div> {/* Green */}
+                    <div className="w-1/3 bg-white"></div>     {/* White */}
+                    <div className="w-1/3 bg-[#CE2B37]"></div> {/* Red */}
+                </div>
         <div className="container mx-auto px-4 py-16 sm:py-24 text-center max-w-4xl">
           <h1 className="text-3xl font-extrabold uppercase tracking-[0.2em] text-white sm:text-5xl mb-6">
             Privacy Policy

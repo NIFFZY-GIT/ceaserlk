@@ -97,7 +97,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
       <div className="relative flex flex-col h-full p-4 transition-all duration-300 bg-white border border-gray-100 rounded-xl hover:shadow-xl hover:-translate-y-1">
         <Link 
           href={`/product/${product.id}?variant=${activeVariant.variantId}`} 
-          className="relative block w-full overflow-hidden rounded-md aspect-square"
+          className="relative block w-full overflow-hidden rounded-md aspect-[3/4]"
         >
           <Image key={currentImageUrl} src={currentImageUrl} alt={`${product.name} - ${activeVariant.colorName}`} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" style={{ objectFit: 'cover' }} className="transition-all duration-500 group-hover:scale-105" />
           {isOnSale && (<div className="absolute top-0 left-0"><div className="absolute px-12 py-1.5 text-sm font-bold text-white uppercase transform -rotate-45 bg-black top-2 -left-10">SALE</div></div>)}

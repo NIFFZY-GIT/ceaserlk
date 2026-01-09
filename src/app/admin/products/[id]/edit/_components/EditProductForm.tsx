@@ -294,6 +294,8 @@ const MediaPreviewItem = ({
 export default function EditProductForm({ initialData }: { initialData: FullProduct }) {
   const router = useRouter();
   const filePreviewCache = useRef(new Map<File, string>());
+  // Store actual File objects by unique ID to prevent stale references
+  const fileRegistry = useRef(new Map<string, File>());
 
   // --- FORM STATE ---
   const [productName, setProductName] = useState('');
@@ -328,6 +330,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
   useEffect(() => () => {
     filePreviewCache.current.forEach(url => URL.revokeObjectURL(url));
     filePreviewCache.current.clear();
+    fileRegistry.current.clear();
   }, []);
 
   // Initialize form with existing data
@@ -466,9 +469,25 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
   const handleMediaChange = useCallback((id: string, files: FileList | null) => {
     if (!files || files.length === 0) return;
     const incoming = Array.from(files);
+    
+    // Debug: Log what files are being added
+    console.log('DEBUG - handleMediaChange:', {
+      variantId: id,
+      filesCount: incoming.length,
+      files: incoming.map(f => ({ name: f.name, size: f.size, type: f.type }))
+    });
+    
+    // Store each file in the registry with a unique ID to prevent stale references
+    const filesWithIds = incoming.map(file => {
+      const fileId = `file_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${file.name}`;
+      fileRegistry.current.set(fileId, file);
+      // Create a wrapper object that includes the file ID
+      return Object.assign(file, { __fileId: fileId });
+    });
+    
     setVariants(prev => prev.map(variant => {
       if (variant.id !== id) return variant;
-      const updatedMedia = [...variant.media, ...incoming];
+      const updatedMedia = [...variant.media, ...filesWithIds];
       const nextThumbnail = variant.thumbnailSelection || { kind: 'file', fileName: incoming[0].name };
       return { ...variant, media: updatedMedia, thumbnailSelection: nextThumbnail };
     }));
@@ -495,10 +514,16 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
     if (!(mediaToRemove instanceof File)) {
       setMediaToDelete(prev => [...prev, mediaToRemove.id]);
     } else {
+      // Clean up preview cache
       const preview = filePreviewCache.current.get(mediaToRemove);
       if (preview) {
         URL.revokeObjectURL(preview);
         filePreviewCache.current.delete(mediaToRemove);
+      }
+      // Clean up file registry
+      const fileId = (mediaToRemove as File & { __fileId?: string }).__fileId;
+      if (fileId) {
+        fileRegistry.current.delete(fileId);
       }
     }
   }, []);
@@ -561,11 +586,30 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
         variant.media.forEach((mediaItem, index) => {
           if (mediaItem instanceof File) {
             const formKey = `variantMedia_${variant.id}_${index}`;
-            formData.append(formKey, mediaItem);
-            newMediaDescriptors.push({ formKey, originalName: mediaItem.name });
+            // Get fresh file from registry using the stored file ID
+            const fileId = (mediaItem as File & { __fileId?: string }).__fileId;
+            const freshFile = fileId ? fileRegistry.current.get(fileId) : null;
+            const fileToAppend = freshFile || mediaItem;
+            
+            console.log('DEBUG - Appending file to FormData:', {
+              formKey,
+              name: fileToAppend.name,
+              size: fileToAppend.size,
+              type: fileToAppend.type,
+              usedFreshFile: !!freshFile
+            });
+            formData.append(formKey, fileToAppend);
+            newMediaDescriptors.push({ formKey, originalName: fileToAppend.name });
           } else {
             existingMediaIds.push(mediaItem.id);
           }
+        });
+
+        console.log('DEBUG - Variant media summary:', {
+          variantId: variant.id,
+          existingMediaCount: existingMediaIds.length,
+          newMediaCount: newMediaDescriptors.length,
+          newMediaDescriptors
         });
 
         return {

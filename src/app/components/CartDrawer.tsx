@@ -237,7 +237,7 @@ export const CartDrawer = () => {
 
   return (
     <>
-      <div ref={drawerRef} className={`fixed top-0 right-0 h-full w-full sm:max-w-md md:max-w-lg bg-black shadow-2xl z-50 transform transition-transform duration-500 ease-in-out ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div ref={drawerRef} className={`fixed top-0 right-0 h-full w-full sm:max-w-md md:max-w-lg bg-black shadow-2xl z-[60] transform transition-transform duration-500 ease-in-out ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="relative flex flex-col h-full text-white">
           <div className="flex items-center justify-between p-4 sm:p-6 md:p-8 border-b border-gray-800 cart-header-gsap">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -311,7 +311,7 @@ export const CartDrawer = () => {
           )}
         </div>
       </div>
-      <div onClick={closeCart} className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-40 transition-opacity duration-500 ${isCartOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
+      <div onClick={closeCart} className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-[55] transition-opacity duration-500 ${isCartOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
     </>
   );
 };
