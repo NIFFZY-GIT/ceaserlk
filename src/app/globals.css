@@ -314,3 +314,18 @@ html, body {
     display: inline;
   }
 }
+
+/* Contact Hero Background */
+.contact-hero-bg {
+  background-image: url('/images/cont1.jpeg');
+  background-repeat: no-repeat;
+  background-position: 35% center;
+  background-size: 120%;
+}
+
+@media (min-width: 640px) {
+  .contact-hero-bg {
+    background-size: 100%;
+    background-position: center 41%;
+  }
+}

@@ -22,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`bg-gray-50`}>
+      <body className={`bg-brand-black`}>
         <AuthProvider>
           <CartProvider>
             <MarqueeBar /> {/* <-- 2. ADD IT HERE */}
