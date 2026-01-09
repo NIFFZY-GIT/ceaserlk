@@ -99,7 +99,7 @@ const AboutPage = () => {
       {/* Section 1: Dynamic Hero */}
       <section className="relative h-screen flex flex-col items-center justify-center text-center p-6">
         <Image
-           src="/images/a2.jpg"
+           src="/images/a2.JPG"
           alt="An abstract, modern background texture"
           fill
           className="object-cover opacity-20"
@@ -152,7 +152,7 @@ const AboutPage = () => {
           {/* Image Side */}
           <div className="relative w-full h-96 gsap-fade-in">
             <Image
-              src="/images/a2.jpg"
+              src="/images/a2.JPG"
               alt="Athlete in deep focus"
               fill
               className="rounded-xl object-cover shadow-2xl shadow-primary/20 ring-1 ring-white/10"

@@ -27,7 +27,7 @@ const ethosData = [
     icon: Users, 
     title: "FINISHED WITH CARE", 
     description: "Every CEASAR garment is finalized through a meticulous inspection process before packaging. Each piece is first protected in a premium garment cover, then placed inside our signature CEASAR bag, and finally sealed with an outer protective wrap to ensure it arrives in perfect condition.", 
-    imageUrl: "/images/e3.jpg"
+    imageUrl: "/images/e3.JPG"
   }
 ];
 
