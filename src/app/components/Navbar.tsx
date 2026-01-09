@@ -99,16 +99,22 @@ const Navbar = () => {
 
   const hasItems = cartCount > 0;
 
+  // Check if navbar should use dark text (transparent on product page)
+  const usesDarkText = isProductPage && !isScrolled;
+
   // Determine navbar background classes
-  const navbarBgClass = isProductPage && !isScrolled
+  const navbarBgClass = usesDarkText
     ? 'bg-transparent border-transparent shadow-none backdrop-blur-none'
     : 'border-white/10 bg-black shadow-xl';
+
+  // Text color classes based on background
+  const textColorClass = usesDarkText ? 'text-neutral-900' : 'text-brand-white';
 
   // Use fixed positioning on product pages so content shows behind navbar
   const positionClass = isProductPage ? 'fixed' : 'sticky';
 
   return (
-    <header className={`${positionClass} top-0 left-0 right-0 z-50 border-b text-brand-white transition-all duration-300 ${navbarBgClass}`}>
+    <header className={`${positionClass} top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${navbarBgClass} ${textColorClass}`}>
       <nav className="container mx-auto flex w-full max-w-6xl items-center justify-between px-3 py-3 sm:px-5 md:px-6 md:py-5">
         <Link href="/" onClick={handleLinkClick} className="flex items-center gap-2 rounded-md transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent hover:opacity-90">
           <Image src="/images/logo1.png" alt="Ceaser Brand Logo" width={150} height={63} priority className="h-9 w-auto sm:h-10 md:h-12" />
@@ -119,7 +125,7 @@ const Navbar = () => {
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
-              <Link key={link.label} href={link.href} className={`group relative flex flex-col items-center gap-1 uppercase text-[13px] tracking-[0.25em] transition-all duration-200 ${isActive ? 'text-white font-semibold' : 'text-white/50 font-medium hover:text-white hover:font-semibold'}`}>
+              <Link key={link.label} href={link.href} className={`group relative flex flex-col items-center gap-1 uppercase text-[13px] tracking-[0.25em] transition-all duration-200 ${isActive ? (usesDarkText ? 'text-neutral-900 font-semibold' : 'text-white font-semibold') : (usesDarkText ? 'text-neutral-900/60 font-medium hover:text-neutral-900 hover:font-semibold' : 'text-white/50 font-medium hover:text-white hover:font-semibold')}`}>
                 <span>{link.label}</span>
                 <span className={`absolute -bottom-5 left-1/2 flex h-[3px] w-14 -translate-x-1/2 transform overflow-hidden rounded-full transition-all duration-200 ${isActive ? 'scale-100 opacity-100' : 'scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100'}`}>
                   <span className="flex-1 bg-[#009246]"></span>
@@ -145,8 +151,10 @@ const Navbar = () => {
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)} 
                   className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 border ${
                     isProfileDropdownOpen 
-                      ? 'bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-105' 
-                      : 'bg-white/10 text-white border-transparent hover:bg-white hover:text-black hover:border-white'
+                      ? 'bg-neutral-900 text-white border-neutral-900 shadow-lg scale-105' 
+                      : usesDarkText 
+                        ? 'bg-neutral-900/10 text-neutral-900 border-transparent hover:bg-neutral-900 hover:text-white hover:border-neutral-900'
+                        : 'bg-white/10 text-white border-transparent hover:bg-white hover:text-black hover:border-white'
                   }`}
                 >
                   <span className="text-sm font-bold">
@@ -215,7 +223,11 @@ const Navbar = () => {
             ) : (
               <Link 
                 href="/login" 
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 text-white border border-white/10 transition-all duration-300 hover:bg-white hover:text-black hover:border-white hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] group"
+                className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 border group ${
+                  usesDarkText 
+                    ? 'bg-neutral-900/5 text-neutral-900 border-neutral-900/10 hover:bg-neutral-900 hover:text-white hover:border-neutral-900'
+                    : 'bg-white/5 text-white border-white/10 hover:bg-white hover:text-black hover:border-white hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]'
+                }`}
                 aria-label="Sign in"
               >
                 <User size={20} className="transition-transform duration-300 group-hover:scale-110" />
@@ -223,7 +235,7 @@ const Navbar = () => {
             )}
           </div>
           
-          <button onClick={handleCartClick} className="relative hidden p-2 transition-colors rounded-full md:block hover:bg-white/10 hover:text-white" aria-label="Open shopping cart">
+          <button onClick={handleCartClick} className={`relative hidden p-2 transition-colors rounded-full md:block ${usesDarkText ? 'hover:bg-neutral-900/10 text-neutral-900' : 'hover:bg-white/10 text-white hover:text-white'}`} aria-label="Open shopping cart">
               <ShoppingCart size={26} />
               {hasItems && (
                 <span className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white rounded-full -top-2 -right-2 bg-accent">{cartCount}</span>
@@ -231,7 +243,7 @@ const Navbar = () => {
           </button>
 
           {/* Mobile Menu Toggle */}
-          <button className="p-2 transition-colors rounded-full hover:bg-white/10 md:hidden" onClick={toggleMobileMenu} aria-label="Toggle menu">
+          <button className={`p-2 transition-colors rounded-full md:hidden ${usesDarkText ? 'hover:bg-neutral-900/10 text-neutral-900' : 'hover:bg-white/10 text-white'}`} onClick={toggleMobileMenu} aria-label="Toggle menu">
             {isMobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
         </div>
