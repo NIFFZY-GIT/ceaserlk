@@ -135,7 +135,8 @@ const VideoShowcase = () => {
     }
   }, [shouldLoadVideo, videoEligible]);
 
-  const handleManualStart = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleManualStart = () => {
     setManualOverride(true);
     setVideoEligible(true);
     setShouldLoadVideo(true);

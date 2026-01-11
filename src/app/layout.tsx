@@ -7,7 +7,6 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { CartDrawer } from '@/app/components/CartDrawer';
-import MarqueeBar from '@/app/components/MarqueeBar'; // <-- 1. IMPORT THE NEW COMPONENT
 import Navbar from '@/app/components/Navbar';
 import Footer from '@/app/components/Footer';
 
