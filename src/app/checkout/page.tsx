@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
-import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote, Wallet } from 'lucide-react';
+import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote, Wallet, Gift } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import PayHerePaymentHandler from './PayHerePaymentHandler';
@@ -25,6 +25,30 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<'payhere' | 'cod'>('payhere');
   const [codSubmitting, setCodSubmitting] = useState(false);
   const [codError, setCodError] = useState<string | null>(null);
+
+  // Free delivery promo state (lifetime if earned)
+  const [hasFreeDeliveryForLife, setHasFreeDeliveryForLife] = useState(false);
+
+  // Check for free delivery promo on mount
+  const checkFreeDelivery = useCallback(async () => {
+    try {
+      const response = await fetch('/api/promo/free-delivery');
+      if (response.ok) {
+        const data = await response.json();
+        setHasFreeDeliveryForLife(data.hasFreeDelivery && data.isLifetime);
+      }
+    } catch (error) {
+      console.error('Error checking free delivery:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkFreeDelivery();
+  }, [checkFreeDelivery]);
+
+  // Calculate actual shipping with free delivery applied (automatic if lifetime)
+  const actualShipping = hasFreeDeliveryForLife ? 0 : (cart?.totalShipping || 0);
+  const actualTotal = (cart?.subtotal || 0) + actualShipping;
 
   const validateShippingDetails = () => {
     return Object.entries(shippingDetails)
@@ -55,6 +79,7 @@ export default function CheckoutPage() {
           cartId: cart.id,
           shippingDetails,
           paymentMethod: 'PAY_ON_DELIVERY',
+          useFreeDelivery: hasFreeDeliveryForLife,
         }),
       });
 
@@ -488,7 +513,7 @@ export default function CheckoutPage() {
 
                   {paymentMethod === 'payhere' ? (
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-blue-500/30 bg-blue-500/5">
-                      <PayHerePaymentHandler cart={cart} shippingDetails={shippingDetails} />
+                      <PayHerePaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} />
                     </div>
                   ) : (
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-primary/40 bg-primary/5">
@@ -584,7 +609,11 @@ export default function CheckoutPage() {
                     <div className="flex justify-between items-center text-gray-300">
                       <span>Shipping</span>
                       <span className="font-semibold text-brand-white">
-                        {cart.totalShipping > 0 ? (
+                        {hasFreeDeliveryForLife ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] sm:text-xs font-semibold uppercase text-emerald-400">
+                            <Gift className="w-2.5 h-2.5" /> Unlocked
+                          </span>
+                        ) : cart.totalShipping > 0 ? (
                           `LKR ${cart.totalShipping.toLocaleString()}`
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] sm:text-xs font-semibold uppercase text-primary">
@@ -593,6 +622,26 @@ export default function CheckoutPage() {
                         )}
                       </span>
                     </div>
+                    
+                    {/* Free Delivery For Life Banner */}
+                    {hasFreeDeliveryForLife && cart.totalShipping > 0 && (
+                      <div className="mt-2 p-2.5 sm:p-3 rounded-lg sm:rounded-xl border border-emerald-500/30 bg-emerald-500/5">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="flex-shrink-0 p-1.5 rounded-lg bg-emerald-500/20">
+                            <Gift className="w-4 h-4 text-emerald-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs sm:text-sm font-bold text-emerald-400">✨ FREE DELIVERY UNLOCKED!</span>
+                            <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400">
+                              Thank you for referring a friend!
+                            </p>
+                          </div>
+                          <span className="text-xs font-bold text-emerald-400">
+                            -LKR {cart.totalShipping.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-3 sm:p-4 mt-3 sm:mt-5 border rounded-lg sm:rounded-xl border-primary/30 bg-primary/5">
@@ -602,7 +651,7 @@ export default function CheckoutPage() {
                       </span>
                       <div className="text-right">
                         <p className="text-lg sm:text-xl font-bold text-white">
-                          LKR {cart.totalAmount.toLocaleString()}
+                          LKR {actualTotal.toLocaleString()}
                         </p>
                         <p className="text-[10px] sm:text-xs text-gray-400">All taxes included</p>
                       </div>

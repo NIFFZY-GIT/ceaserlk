@@ -17,6 +17,7 @@ const userSignUpSchema = z.object({
   terms: z.boolean().refine(val => val === true, {
     message: 'You must accept the terms and conditions.',
   }),
+  promoCode: z.string().max(10).optional().or(z.literal('')), // Optional promo code
 });
 
 
@@ -35,11 +36,12 @@ export async function POST(request: Request) {
     }
 
     // Destructure and sanitize validated data
-    const { firstName, lastName, email, phone, password } = validation.data;
+    const { firstName, lastName, email, phone, password, promoCode } = validation.data;
     const sanitizedFirstName = firstName.trim();
     const sanitizedLastName = lastName.trim();
     const sanitizedEmail = email.trim().toLowerCase();
     const sanitizedPhone = typeof phone === 'string' && phone.trim() !== '' ? phone.trim() : null;
+    const sanitizedPromoCode = typeof promoCode === 'string' && promoCode.trim() !== '' ? promoCode.trim().toUpperCase() : null;
 
     // 2. Check if a user with that email or phone already exists
     try {
@@ -90,10 +92,43 @@ export async function POST(request: Request) {
 
     const newUser = newUserResult.rows[0];
 
-    // 5. Return a success response
+    // 5. Apply promo code if provided
+    let promoResult = null;
+    if (sanitizedPromoCode) {
+      try {
+        const promoApplyResult = await db.query(
+          `SELECT apply_promo_code($1, $2) as result`,
+          [newUser.id, sanitizedPromoCode]
+        );
+        promoResult = promoApplyResult.rows[0]?.result;
+        
+        if (promoResult && !promoResult.success) {
+          console.log('Promo code application note:', promoResult.error);
+          // Don't fail signup if promo code application fails, just log it
+        }
+      } catch (promoErr) {
+        console.error('PROMO_APPLY_ERROR:', promoErr);
+        // Don't fail signup if promo code application fails
+      }
+    }
+
+    // 6. Generate a promo code for the new user
+    try {
+      await db.query(
+        `SELECT generate_promo_code($1)`,
+        [newUser.id]
+      );
+    } catch (genPromoErr) {
+      console.error('PROMO_GENERATE_ERROR:', genPromoErr);
+      // Don't fail signup if promo code generation fails
+    }
+
+    // 7. Return a success response
     return NextResponse.json({
       message: 'User created successfully.',
-      user: newUser
+      user: newUser,
+      promoApplied: promoResult?.success || false,
+      freeDeliveryGranted: promoResult?.success || false,
     }, { status: 201 }); // 201 Created
 
   } catch (error) {

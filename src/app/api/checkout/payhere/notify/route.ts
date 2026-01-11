@@ -198,6 +198,19 @@ export async function POST(request: NextRequest) {
         ['completed', newOrderId, orderId]
       );
 
+      // Mark free delivery promo as used if it was applied
+      if (pendingOrder.free_delivery_applied) {
+        try {
+          await client.query(
+            `SELECT use_free_delivery($1, $2)`,
+            [pendingOrder.user_id.toString(), newOrderId]
+          );
+        } catch (promoErr) {
+          console.error('Error marking free delivery as used:', promoErr);
+          // Don't fail the order if promo marking fails
+        }
+      }
+
       await client.query('COMMIT');
 
       console.log(`PayHere notify: Order created successfully: ${newOrderId} (public #${publicOrderId})`);

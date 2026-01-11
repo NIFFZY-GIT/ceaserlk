@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import OrderHistory from './OrderHistory';
 import AccountDetails from './AccountDetails';
+import PromoSection from './PromoSection';
 import type { User, Order } from '@/lib/types';
-import { UserCircle, ClipboardList } from 'lucide-react'; // Switched to Lucide
+import { UserCircle, ClipboardList, Gift } from 'lucide-react';
 
 interface ProfileClientProps {
   user: User;
@@ -42,6 +43,15 @@ export default function ProfileClient({ user: initialUser, orders }: ProfileClie
               <span className="font-semibold">Order History</span>
             </button>
             <button
+              onClick={() => setActiveTab('promo')}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-md text-left transition-colors duration-200 group ${
+                activeTab === 'promo' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+              }`}
+            >
+              <Gift className="w-5 h-5" />
+              <span className="font-semibold">Unlock Free Delivery</span>
+            </button>
+            <button
               onClick={() => setActiveTab('account')}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-md text-left transition-colors duration-200 group ${
                 activeTab === 'account' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
@@ -58,6 +68,7 @@ export default function ProfileClient({ user: initialUser, orders }: ProfileClie
       <main className="md:w-3/4">
         <div className="p-6 border border-gray-800 rounded-lg bg-gray-900/50 sm:p-8">
           {activeTab === 'orders' && <OrderHistory orders={orders} />}
+          {activeTab === 'promo' && <PromoSection />}
           {activeTab === 'account' && <AccountDetails user={user} onSaveSuccess={handleUserUpdate} />}
         </div>
       </main>

@@ -16,6 +16,12 @@ interface IncomingShippingDetails {
   country?: string;
 }
 
+interface RequestBody {
+  cartId?: unknown;
+  shippingDetails?: IncomingShippingDetails;
+  useFreeDelivery?: boolean;
+}
+
 type NormalizedShippingDetails = Required<{
   [K in keyof IncomingShippingDetails]: string;
 }>;
@@ -26,14 +32,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Authentication required to place an order.' }, { status: 401 });
   }
 
-  let body: { cartId?: unknown; shippingDetails?: IncomingShippingDetails };
+  let body: RequestBody;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request payload.' }, { status: 400 });
   }
 
-  const { cartId, shippingDetails } = body;
+  const { cartId, shippingDetails, useFreeDelivery } = body;
   if (typeof cartId !== 'string' || cartId.trim() === '') {
     return NextResponse.json({ error: 'A valid cart ID is required to place an order.' }, { status: 400 });
   }
@@ -102,10 +108,25 @@ export async function POST(request: NextRequest) {
       return total + Number.parseFloat(item.variant_price) * item.quantity;
     }, 0);
 
-    const shippingCost = cartItemsResult.rows.reduce((total, item) => {
+    let shippingCost = cartItemsResult.rows.reduce((total, item) => {
       const perItemShipping = item.shipping_cost ? Number.parseFloat(item.shipping_cost) : 0;
       return total + perItemShipping * item.quantity;
     }, 0);
+
+    // Check if user wants to use free delivery promo
+    let freeDeliveryApplied = false;
+    if (useFreeDelivery && shippingCost > 0) {
+      // Check if user has free delivery available
+      const freeDeliveryCheck = await client.query(
+        `SELECT has_free_delivery($1) as has_promo`,
+        [user.userId.toString()]
+      );
+      
+      if (freeDeliveryCheck.rows[0]?.has_promo) {
+        freeDeliveryApplied = true;
+        shippingCost = 0;
+      }
+    }
 
     const totalAmount = subtotal + shippingCost;
     const fullName = `${normalizedDetails.firstName} ${normalizedDetails.lastName}`.trim();
@@ -150,6 +171,19 @@ export async function POST(request: NextRequest) {
     const orderNumber = orderResult.rows[0]?.order_number as number | null | undefined;
     if (!orderId) {
       throw new Error('Failed to create order record.');
+    }
+
+    // Mark free delivery promo as used if applied
+    if (freeDeliveryApplied) {
+      try {
+        await client.query(
+          `SELECT use_free_delivery($1, $2)`,
+          [user.userId.toString(), orderId]
+        );
+      } catch (promoErr) {
+        console.error('Error marking free delivery as used:', promoErr);
+        // Don't fail the order if promo marking fails
+      }
     }
 
     const publicOrderId = formatOrderNumber(orderNumber) || orderId;

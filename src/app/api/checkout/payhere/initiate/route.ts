@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { cart, shippingDetails } = body;
+    const { cart, shippingDetails, useFreeDelivery } = body;
 
     // Validate required fields
     if (!cart || !cart.id || !shippingDetails) {
@@ -58,8 +58,33 @@ export async function POST(request: NextRequest) {
     // Generate unique order ID for PayHere
     const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     
+    // Check if user wants to use free delivery promo
+    let actualShipping = parseFloat(cart.totalShipping || 0);
+    let freeDeliveryApplied = false;
+    
+    if (useFreeDelivery && actualShipping > 0) {
+      // Check if user has free delivery available
+      const client = await db.connect();
+      try {
+        const freeDeliveryCheck = await client.query(
+          `SELECT has_free_delivery($1) as has_promo`,
+          [user.userId.toString()]
+        );
+        
+        if (freeDeliveryCheck.rows[0]?.has_promo) {
+          freeDeliveryApplied = true;
+          actualShipping = 0;
+        }
+      } finally {
+        client.release();
+      }
+    }
+    
+    // Calculate actual total with promo
+    const actualTotal = parseFloat(cart.subtotal || 0) + actualShipping;
+    
     // Format amount to 2 decimal places
-    const amount = parseFloat(cart.totalAmount).toFixed(2);
+    const amount = actualTotal.toFixed(2);
     const currency = 'LKR';
 
     // Generate hash for PayHere
@@ -72,18 +97,19 @@ export async function POST(request: NextRequest) {
     );
 
     // Store pending order in database for verification later
-    const client = await db.connect();
+    const client2 = await db.connect();
     try {
-      await client.query(`
+      await client2.query(`
         INSERT INTO pending_payhere_orders (
           order_id, user_id, cart_id, amount, currency,
           customer_email, customer_name, phone,
           shipping_address, shipping_city, shipping_postal_code,
-          subtotal, shipping_cost, hash, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+          subtotal, shipping_cost, hash, created_at, free_delivery_applied
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), $15)
         ON CONFLICT (order_id) DO UPDATE SET
           amount = EXCLUDED.amount,
           hash = EXCLUDED.hash,
+          free_delivery_applied = EXCLUDED.free_delivery_applied,
           created_at = NOW()
       `, [
         orderId,
@@ -98,14 +124,15 @@ export async function POST(request: NextRequest) {
         shippingDetails.city,
         shippingDetails.postalCode || '',
         parseFloat(cart.subtotal || 0).toFixed(2),
-        parseFloat(cart.totalShipping || 0).toFixed(2),
-        hash
+        actualShipping.toFixed(2),
+        hash,
+        freeDeliveryApplied
       ]);
     } catch (dbError) {
       console.error('PayHere DB insert error:', dbError);
       throw dbError;
     } finally {
-      client.release();
+      client2.release();
     }
 
     // Build PayHere checkout URL
