@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { gsap } from "gsap";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -16,6 +15,18 @@ import {
   VolumeX,
   Loader2,
 } from "lucide-react";
+
+// GSAP is loaded dynamically
+type GsapType = typeof import("gsap").gsap;
+let gsapInstance: GsapType | null = null;
+
+const loadGsap = async (): Promise<GsapType> => {
+  if (!gsapInstance) {
+    const module = await import("gsap");
+    gsapInstance = module.gsap;
+  }
+  return gsapInstance;
+};
 
 // Types
 interface StockItem {
@@ -58,6 +69,189 @@ interface MediaItem {
 // Utility function to check if URL is a video
 const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov|m4v)$/i.test(url);
 
+// Sri Lankan cities for fake purchase notifications
+const SRI_LANKAN_CITIES = [
+  // Colombo District
+  "Colombo", "Dehiwala", "Mount Lavinia", "Moratuwa", "Maharagama", "Kottawa",
+  "Homagama", "Kaduwela", "Battaramulla", "Nugegoda", "Malabe", "Kolonnawa",
+  "Wellampitiya", "Piliyandala", "Kesbewa",
+  // Gampaha District
+  "Gampaha", "Negombo", "Wattala", "Ja-Ela", "Ragama", "Kelaniya", "Kiribathgoda",
+  "Kadawatha", "Minuwangoda", "Divulapitiya", "Mirigama", "Nittambuwa", "Veyangoda",
+  "Seeduwa", "Katunayake",
+  // Kalutara District
+  "Kalutara", "Panadura", "Bandaragama", "Horana", "Beruwala", "Aluthgama",
+  "Mathugama", "Wadduwa", "Payagala", "Ingiriya"
+];
+
+// Fake names for purchase notifications
+const FAKE_NAMES = [
+  "Someone", "A customer", "A shopper", "Someone", "A buyer"
+];
+
+// Generate random time ago text
+const getRandomTimeAgo = () => {
+  const minutes = Math.floor(Math.random() * 30) + 1;
+  return minutes === 1 ? "1 minute ago" : `${minutes} minutes ago`;
+};
+
+// Fake stock reductions per size (key: size, value: number of fake reductions)
+type FakeStockReductions = Record<string, number>;
+
+// Fake Purchase Notification Component
+function FakePurchaseNotification({
+  productName,
+  availableSizes,
+  totalDisplayStock,
+  onFakePurchase,
+}: {
+  productName: string;
+  availableSizes: string[];
+  totalDisplayStock: number;
+  onFakePurchase: (size: string) => void;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [notification, setNotification] = useState<{
+    city: string;
+    name: string;
+    timeAgo: string;
+    size: string;
+  } | null>(null);
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Use refs to always have access to latest values without re-triggering effects
+  const availableSizesRef = useRef(availableSizes);
+  const onFakePurchaseRef = useRef(onFakePurchase);
+  
+  // Keep refs updated
+  useEffect(() => {
+    availableSizesRef.current = availableSizes;
+  }, [availableSizes]);
+  
+  useEffect(() => {
+    onFakePurchaseRef.current = onFakePurchase;
+  }, [onFakePurchase]);
+
+  // Generate and show a notification (stable function that uses refs)
+  const showNotification = useCallback(() => {
+    const sizes = availableSizesRef.current;
+    // Pick a random available size for the fake purchase
+    const size = sizes.length > 0 
+      ? sizes[Math.floor(Math.random() * sizes.length)]
+      : "M";
+    
+    const city = SRI_LANKAN_CITIES[Math.floor(Math.random() * SRI_LANKAN_CITIES.length)];
+    const name = FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)];
+    const timeAgo = getRandomTimeAgo();
+
+    setNotification({ city, name, timeAgo, size });
+    setIsVisible(true);
+
+    // Trigger fake stock reduction for this size
+    onFakePurchaseRef.current(size);
+
+    // Hide notification after 5 seconds
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
+    notificationTimeoutRef.current = setTimeout(() => {
+      setIsVisible(false);
+    }, 5000);
+  }, []); // No dependencies - uses refs
+
+  // Set up interval for showing notifications in a loop
+  useEffect(() => {
+    // Show first notification after 15-25 seconds
+    const initialDelay = Math.floor(Math.random() * 10000) + 15000;
+    
+    // Random interval between 30-60 seconds for testing
+    // Change to 300000-600000 (5-10 min) for production
+    const getNextInterval = () => Math.floor(Math.random() * 30000) + 30000;
+
+    let isActive = true;
+    
+    // Recursive function to keep showing notifications
+    const scheduleNextNotification = (delay: number) => {
+      intervalRef.current = setTimeout(() => {
+        if (!isActive) return;
+        
+        showNotification();
+        
+        // Schedule the next one with a new random delay
+        scheduleNextNotification(getNextInterval());
+      }, delay);
+    };
+
+    // Start the loop with initial delay
+    scheduleNextNotification(initialDelay);
+
+    return () => {
+      isActive = false;
+      if (intervalRef.current) clearTimeout(intervalRef.current);
+      if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
+    };
+  }, [showNotification]);
+
+  if (!notification) return null;
+
+  return (
+    <>
+      {/* Toast Notification */}
+      <div
+        className={`fixed bottom-4 left-4 z-50 transition-all duration-500 ease-out transform ${
+          isVisible
+            ? "translate-x-0 opacity-100"
+            : "-translate-x-full opacity-0"
+        }`}
+      >
+        <div className="bg-white rounded-lg shadow-xl border border-[#e5e5e5] p-4 max-w-xs sm:max-w-sm">
+          <div className="flex items-start gap-3">
+            {/* Icon */}
+            <div className="flex-shrink-0 w-8 h-8 bg-[#1a1a1a] rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-[#1a1a1a]">
+                <span className="font-medium">{notification.name}</span> from {notification.city}
+              </p>
+              <p className="text-xs text-[#666] mt-0.5">
+                purchased {productName} · Size {notification.size}
+              </p>
+              <p className="text-[10px] text-[#999] mt-1">{notification.timeAgo}</p>
+            </div>
+
+            {/* Close button */}
+            <button
+              onClick={() => setIsVisible(false)}
+              className="flex-shrink-0 text-[#999] hover:text-[#1a1a1a] transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating stock urgency badge (always visible when stock is low) */}
+      {totalDisplayStock <= 15 && !isVisible && (
+        <div className="fixed bottom-4 left-4 z-40">
+          <div className="bg-white border border-[#e5e5e5] rounded-full px-3 py-1.5 shadow-md">
+            <p className="text-xs text-[#1a1a1a]">
+              ⚡ Only {totalDisplayStock} left
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // Train-style Media Showcase Component (Gucci-style)
 function TrainMediaShowcase({
   media,
@@ -76,11 +270,38 @@ function TrainMediaShowcase({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const gsapRef = useRef<GsapType | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [videoLoadingStates, setVideoLoadingStates] = useState<Map<string, boolean>>(new Map());
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+
+  // Load GSAP on mount
+  useEffect(() => {
+    loadGsap().then(g => { gsapRef.current = g; });
+  }, []);
+
+  // Initialize video loading states - all videos start in loading state
+  useEffect(() => {
+    const loadingMap = new Map<string, boolean>();
+    media.forEach((item) => {
+      if (item.type === "video") {
+        loadingMap.set(item.id, true); // All videos start as loading
+      }
+    });
+    setVideoLoadingStates(loadingMap);
+  }, [media]);
+
+  // Handle video load complete
+  const handleVideoCanPlay = useCallback((id: string) => {
+    setVideoLoadingStates(prev => {
+      const next = new Map(prev);
+      next.set(id, false);
+      return next;
+    });
+  }, []);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -96,6 +317,8 @@ function TrainMediaShowcase({
   // Slide to a specific index with GSAP animation
   const slideTo = useCallback(
     (targetIndex: number) => {
+      const gsap = gsapRef.current;
+      if (!gsap) return; // GSAP not loaded yet
       if (isAnimating || targetIndex < 0 || targetIndex >= media.length) return;
       if (targetIndex === currentIndex) return;
 
@@ -279,7 +502,8 @@ function TrainMediaShowcase({
     
     // Calculate the drag offset and apply it in real-time
     const track = trackRef.current;
-    if (track) {
+    const gsap = gsapRef.current;
+    if (track && gsap) {
       const baseOffset = currentIndex * 100;
       const dragOffset = (diffX / window.innerWidth) * 100;
       
@@ -325,7 +549,8 @@ function TrainMediaShowcase({
   // Snap back to current position with spring-like feel
   const snapBack = useCallback(() => {
     const track = trackRef.current;
-    if (track && isMobile) {
+    const gsap = gsapRef.current;
+    if (track && isMobile && gsap) {
       gsap.to(track, {
         x: `${-currentIndex * 100}vw`,
         duration: 0.4,
@@ -429,24 +654,43 @@ function TrainMediaShowcase({
         className="flex h-full will-change-transform"
         style={{ transform: "translateX(0)" }}
       >
-        {media.map((item, index) => (
+        {media.map((item, index) => {
+          // Only preload/autoplay videos that are current or adjacent
+          const isVisible = index >= currentIndex - 1 && index <= currentIndex + 1;
+          const isCurrent = index === currentIndex;
+          
+          return (
           <div
             key={item.id}
             className="relative flex-shrink-0 h-full flex items-center justify-center"
             style={{ width: getItemWidth(index) }}
           >
             {item.type === "video" ? (
-              <video
-                ref={(el) => {
-                  if (el) videoRefs.current.set(item.id, el);
-                }}
-                src={item.url}
-                autoPlay
-                loop
-                muted={isMuted}
-                playsInline
-                className="w-full h-full object-cover"
-              />
+              <div className="relative w-full h-full">
+                {/* Video loading indicator */}
+                {videoLoadingStates.get(item.id) && isVisible && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#f5f5f5] z-10">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-10 h-10 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
+                      <span className="text-sm text-neutral-500">Loading video...</span>
+                    </div>
+                  </div>
+                )}
+                <video
+                  ref={(el) => {
+                    if (el) videoRefs.current.set(item.id, el);
+                  }}
+                  src={isVisible ? item.url : undefined}
+                  autoPlay={isCurrent}
+                  loop
+                  muted={isMuted}
+                  playsInline
+                  preload={isVisible ? "auto" : "none"}
+                  onCanPlay={() => handleVideoCanPlay(item.id)}
+                  onLoadedData={() => handleVideoCanPlay(item.id)}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             ) : (
               <div className="relative w-full h-full">
                 <Image
@@ -455,12 +699,14 @@ function TrainMediaShowcase({
                   fill
                   className="object-contain"
                   sizes={index === firstImageIndex && currentIndex === firstImageIndex ? "100vw" : "50vw"}
-                  priority={index < 3}
+                  priority={index === 0}
+                  loading={index <= 1 ? "eager" : "lazy"}
                 />
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
 
       {/* Thumbnail Navigation Bar - Bottom Center on mobile, Bottom Right on desktop */}
@@ -489,20 +735,8 @@ function TrainMediaShowcase({
                   >
                     {item.type === "video" ? (
                       <div className="relative w-full h-full bg-neutral-800">
-                        <video
-                          src={item.url}
-                          muted
-                          playsInline
-                          preload="metadata"
-                          className="w-full h-full object-cover"
-                          onLoadedMetadata={(e) => {
-                            // Seek to 1 second for thumbnail preview
-                            const video = e.currentTarget;
-                            video.currentTime = 1;
-                          }}
-                        />
-                        {/* Play icon overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        {/* Use a simple play icon instead of loading video for thumbnails */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-neutral-700">
                           <div className="w-0 h-0 border-l-[6px] sm:border-l-[8px] border-l-white border-y-[4px] sm:border-y-[5px] border-y-transparent ml-0.5 drop-shadow-md" />
                         </div>
                       </div>
@@ -575,6 +809,7 @@ function ProductDetailsPanel({
   selectedSize,
   quantity,
   isAddingToCart,
+  fakeStockReductions,
   onVariantChange,
   onSizeChange,
   onQuantityChange,
@@ -585,6 +820,7 @@ function ProductDetailsPanel({
   selectedSize: string | null;
   quantity: number;
   isAddingToCart: boolean;
+  fakeStockReductions: FakeStockReductions;
   onVariantChange: (variant: ProductVariant) => void;
   onSizeChange: (size: string) => void;
   onQuantityChange: (qty: number) => void;
@@ -604,9 +840,26 @@ function ProductDetailsPanel({
   const selectedStock = selectedVariant.stock?.find(
     (s) => s.size === selectedSize
   );
-  const isOutOfStock = selectedStock ? selectedStock.stock === 0 : true;
-  const lowStock = selectedStock && selectedStock.stock <= 5 && selectedStock.stock > 0;
-  const totalStock = selectedVariant.stock?.reduce((acc, s) => acc + s.stock, 0) || 0;
+  // Use real stock for actual availability check
+  const realStock = selectedStock?.stock || 0;
+  const isOutOfStock = realStock === 0;
+  
+  // Function to get display stock for a specific size (reduces based on fake purchases)
+  const getDisplayStockForSize = (size: string, realSizeStock: number): number => {
+    const reductions = fakeStockReductions[size] || 0;
+    // Apply reductions but never go below 2 if there's real stock
+    const reduced = realSizeStock - reductions;
+    return realSizeStock > 0 ? Math.max(reduced, 2) : 0;
+  };
+  
+  // Use fake stock for display purposes (creates urgency)
+  const displayStock = selectedSize ? getDisplayStockForSize(selectedSize, realStock) : realStock;
+  const lowStock = displayStock <= 5 && displayStock > 0;
+  
+  // Calculate total fake stock for urgency display
+  const totalFakeStock = selectedVariant.stock?.reduce((acc, s) => {
+    return acc + getDisplayStockForSize(s.size, s.stock);
+  }, 0) || 0;
 
   return (
     <div className="bg-[#fafafa]">
@@ -690,28 +943,55 @@ function ProductDetailsPanel({
                     {selectedVariant.stock.map((stockItem) => {
                       const isAvailable = stockItem.stock > 0;
                       const isSelected = selectedSize === stockItem.size;
+                      const sizeDisplayStock = getDisplayStockForSize(stockItem.size, stockItem.stock);
+                      const sizeLowStock = sizeDisplayStock <= 5 && sizeDisplayStock > 0;
 
                       return (
                         <button
                           key={stockItem.id}
                           onClick={() => isAvailable && onSizeChange(stockItem.size)}
                           disabled={!isAvailable}
-                          className={`py-2.5 sm:py-3 text-xs sm:text-sm font-medium border transition-colors ${
+                          className={`relative py-2 sm:py-2.5 text-xs sm:text-sm font-medium border transition-colors flex flex-col items-center justify-center gap-0.5 ${
                             isSelected
                               ? "bg-[#1a1a1a] text-white border-[#1a1a1a]"
                               : isAvailable
                               ? "bg-white text-[#1a1a1a] border-[#ddd] hover:border-[#1a1a1a]"
-                              : "bg-[#f5f5f5] text-[#ccc] border-[#eee] cursor-not-allowed line-through"
+                              : "bg-[#f5f5f5] text-[#ccc] border-[#eee] cursor-not-allowed"
                           }`}
                         >
-                          {stockItem.size}
+                          <span className={!isAvailable ? "line-through" : ""}>{stockItem.size}</span>
+                          {isAvailable && (
+                            <span className={`text-[9px] sm:text-[10px] font-normal ${
+                              isSelected 
+                                ? sizeLowStock ? "text-orange-300" : "text-white/70"
+                                : sizeLowStock ? "text-orange-500" : "text-[#888]"
+                            }`}>
+                              {sizeDisplayStock} left
+                            </span>
+                          )}
+                          {!isAvailable && (
+                            <span className="text-[9px] sm:text-[10px] font-normal text-[#bbb]">
+                              Sold out
+                            </span>
+                          )}
+                          {/* Low stock indicator dot */}
+                          {sizeLowStock && isAvailable && !isSelected && (
+                            <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                            </span>
+                          )}
                         </button>
                       );
                     })}
                   </div>
                   {lowStock && selectedSize && (
-                    <p className="text-[10px] sm:text-xs text-[#c85000] mt-2">
-                      Only {selectedStock?.stock} left in stock
+                    <p className="text-[10px] sm:text-xs text-[#c85000] mt-2 flex items-center gap-1.5">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-orange-500"></span>
+                      </span>
+                      🔥 Only {displayStock} left in stock – selling fast!
                     </p>
                   )}
                 </div>
@@ -774,11 +1054,19 @@ function ProductDetailsPanel({
                 Add to Wishlist
               </button> */}
 
-              {/* Stock Alert */}
-              {totalStock > 0 && totalStock <= 10 && (
-                <p className="text-[10px] sm:text-xs text-center text-[#c85000]">
-                  ⚡ Low stock – only {totalStock} items left
-                </p>
+              {/* Stock Alert - Uses fake stock for urgency */}
+              {totalFakeStock > 0 && totalFakeStock <= 15 && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                    </span>
+                    <p className="text-xs sm:text-sm font-medium text-orange-700">
+                      ⚡ Hurry! Only {totalFakeStock} items left in stock
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -887,7 +1175,39 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [fakeStockReductions, setFakeStockReductions] = useState<FakeStockReductions>({}); // Track fake reductions per size
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Reset fake stock reductions when variant changes
+  useEffect(() => {
+    setFakeStockReductions({});
+  }, [selectedVariant]);
+
+  // Handle fake purchase - reduce stock for a specific size
+  const handleFakePurchase = useCallback((size: string) => {
+    setFakeStockReductions(prev => ({
+      ...prev,
+      [size]: (prev[size] || 0) + 1
+    }));
+  }, []);
+
+  // Get available sizes for fake purchase notifications
+  const availableSizes = useMemo(() => {
+    return selectedVariant?.stock
+      ?.filter(s => s.stock > 0)
+      .map(s => s.size) || [];
+  }, [selectedVariant]);
+
+  // Calculate total display stock (real stock minus fake reductions)
+  const totalDisplayStock = useMemo(() => {
+    if (!selectedVariant?.stock) return 0;
+    
+    return selectedVariant.stock.reduce((acc, s) => {
+      const reductions = fakeStockReductions[s.size] || 0;
+      const displayStock = Math.max(s.stock - reductions, s.stock > 0 ? 2 : 0);
+      return acc + displayStock;
+    }, 0);
+  }, [selectedVariant, fakeStockReductions]);
 
   // Fetch product data
   useEffect(() => {
@@ -1099,6 +1419,16 @@ export default function ProductPage() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
+      {/* Fake Purchase Notifications */}
+      {selectedVariant && (
+        <FakePurchaseNotification
+          productName={product.name}
+          availableSizes={availableSizes}
+          totalDisplayStock={totalDisplayStock}
+          onFakePurchase={handleFakePurchase}
+        />
+      )}
+
       {/* Train-style Media Showcase */}
       {mediaItems.length > 0 ? (
         <TrainMediaShowcase
@@ -1122,6 +1452,7 @@ export default function ProductPage() {
           selectedSize={selectedSize}
           quantity={quantity}
           isAddingToCart={isAddingToCart}
+          fakeStockReductions={fakeStockReductions}
           onVariantChange={handleVariantChange}
           onSizeChange={setSelectedSize}
           onQuantityChange={setQuantity}

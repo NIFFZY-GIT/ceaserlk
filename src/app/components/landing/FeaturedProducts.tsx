@@ -8,6 +8,7 @@ import { ArrowRight } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ProductCard } from '@/app/components/ProductCardLanding';
+import { preloadProductVideos } from '@/lib/video-preloader';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -47,7 +48,13 @@ const FeaturedProducts = () => {
         const response = await fetch('/api/featured-products');
         if (response.ok) {
           const data = await response.json();
-          setProducts(data.products || []);
+          const fetchedProducts = data.products || [];
+          setProducts(fetchedProducts);
+          
+          // Preload videos in the background for faster loading on product pages
+          if (fetchedProducts.length > 0) {
+            preloadProductVideos(fetchedProducts);
+          }
         } else {
           console.error('Failed to fetch featured products');
         }

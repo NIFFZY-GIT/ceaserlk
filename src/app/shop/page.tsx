@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ProductCard } from '@/app/components/ProductCard';
 import FilterSidebar, { Filters, AvailableColors } from '@/app/components/FilterSidebar';
 import { SlidersHorizontal, Loader2, ChevronRight } from 'lucide-react';
+import { preloadProductVideos } from '@/lib/video-preloader';
 
 // Simplified Product type, as the backend now structures the data perfectly for the card
 type ProductVariant = {
@@ -75,6 +76,11 @@ const ShopPage = () => {
           const res = await fetch('/api/products');
           const productsData = await res.json();
           setProducts(productsData);
+          
+          // Preload videos in the background for faster loading on product pages
+          if (productsData.length > 0) {
+            preloadProductVideos(productsData);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch shop data:", error);
