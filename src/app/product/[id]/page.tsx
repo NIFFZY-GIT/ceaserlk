@@ -283,15 +283,17 @@ function TrainMediaShowcase({
     loadGsap().then(g => { gsapRef.current = g; });
   }, []);
 
-  // Initialize video loading states - all videos start in loading state
+  // Initialize video loading states - only set loading for NEW videos, preserve existing states
   useEffect(() => {
-    const loadingMap = new Map<string, boolean>();
-    media.forEach((item) => {
-      if (item.type === "video") {
-        loadingMap.set(item.id, true); // All videos start as loading
-      }
+    setVideoLoadingStates(prev => {
+      const next = new Map(prev);
+      media.forEach((item) => {
+        if (item.type === "video" && !next.has(item.id)) {
+          next.set(item.id, true); // Only set loading for videos not already tracked
+        }
+      });
+      return next;
     });
-    setVideoLoadingStates(loadingMap);
   }, [media]);
 
   // Handle video load complete
