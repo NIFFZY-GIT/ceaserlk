@@ -22,8 +22,8 @@ let gsapInstance: GsapType | null = null;
 
 const loadGsap = async (): Promise<GsapType> => {
   if (!gsapInstance) {
-    const module = await import("gsap");
-    gsapInstance = module.gsap;
+    const gsapModule = await import("gsap");
+    gsapInstance = gsapModule.gsap;
   }
   return gsapInstance;
 };
