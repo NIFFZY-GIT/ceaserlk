@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -63,7 +62,7 @@ const getSessionId = (): string => {
   if (typeof window === 'undefined') return '';
   let sessionId = localStorage.getItem('cart_session_id');
   if (!sessionId) {
-    sessionId = uuidv4();
+    sessionId = crypto.randomUUID();
     localStorage.setItem('cart_session_id', sessionId);
   }
   return sessionId;
