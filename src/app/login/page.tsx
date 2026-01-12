@@ -29,9 +29,18 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const redirectUrl = searchParams.get('redirect');
+  const isNewSignup = searchParams.get('signup') === 'success';
+
+  const handleGoogleLogin = () => {
+    setGoogleLoading(true);
+    setError(null);
+    const googleAuthUrl = `/api/auth/google?mode=login${redirectUrl ? `&redirect=${encodeURIComponent(redirectUrl)}` : ''}`;
+    window.location.href = googleAuthUrl;
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prevState => ({ ...prevState, [e.target.name]: e.target.value }));
@@ -62,6 +71,11 @@ const LoginPage = () => {
         firstName: userData.firstName,
         role: userData.role,
       });
+
+      // If this is a new signup, set flag to show free delivery popup
+      if (isNewSignup && userData.role !== 'ADMIN') {
+        sessionStorage.setItem('newUserRegistration', 'true');
+      }
 
       if (redirectUrl) {
         router.push(redirectUrl);
@@ -104,7 +118,7 @@ const LoginPage = () => {
 
   return (
     <AuthLayout
-      formTitle="Welcome Back to Ceasar"
+      formTitle="Welcome Back to CEASAR"
       formSubtitle=""
       hero={{
         eyebrow: 'Member Access',
@@ -121,10 +135,16 @@ const LoginPage = () => {
                 <div className="flex-grow border-t border-slate-200"></div>
             </div>
             <button
-            type="button"
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98]"
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={googleLoading || loading}
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-            <Chrome className="h-5 w-5" /> Google
+              {googleLoading ? (
+                <><Loader2 className="h-5 w-5 animate-spin" /> Connecting...</>
+              ) : (
+                <><Chrome className="h-5 w-5" /> Continue with Google</>
+              )}
             </button>
         </div>
       }

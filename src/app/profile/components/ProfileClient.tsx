@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import OrderHistory from './OrderHistory';
 import AccountDetails from './AccountDetails';
 import PromoSection from './PromoSection';
@@ -13,8 +14,17 @@ interface ProfileClientProps {
 }
 
 export default function ProfileClient({ user: initialUser, orders }: ProfileClientProps) {
-  const [activeTab, setActiveTab] = useState('orders');
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'orders');
   const [user, setUser] = useState<User>(initialUser);
+
+  // Update active tab when URL changes
+  useEffect(() => {
+    if (tabFromUrl && ['orders', 'promo', 'account'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   const handleUserUpdate = (updatedUser: User) => {
     setUser(updatedUser);

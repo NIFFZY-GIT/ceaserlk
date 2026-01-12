@@ -39,6 +39,7 @@ const SignUpPage = () => {
     promoCode: '',
   });
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Promo code validation state
@@ -57,6 +58,12 @@ const SignUpPage = () => {
       setFormData(prev => ({ ...prev, promoCode: promoFromUrl }));
     }
   }, [searchParams]);
+
+  const handleGoogleSignup = () => {
+    setGoogleLoading(true);
+    setError(null);
+    window.location.href = '/api/auth/google?mode=signup';
+  };
 
   // Validate promo code with debounce
   const validatePromoCode = useCallback(async (code: string) => {
@@ -153,11 +160,11 @@ const SignUpPage = () => {
 
   return (
     <AuthLayout
-      formTitle="Join the Club"
+      formTitle="Join the Empire"
       formSubtitle=""
       hero={{
         eyebrow: 'Ceaser Designs Studio',
-        title: 'Fuel your wardrobe with creative energy',
+        title: 'Those Who Aim Higher, Choose CEASAR',
         description:
           'Creators, athletes, and visionaries wear Ceaser when they want a shirt that speaks as loudly as they do.',
         highlights: heroHighlights,
@@ -170,10 +177,16 @@ const SignUpPage = () => {
                 <div className="flex-grow border-t border-slate-200"></div>
             </div>
             <button
-            type="button"
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98]"
+              type="button"
+              onClick={handleGoogleSignup}
+              disabled={googleLoading || loading}
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-            <Chrome className="h-5 w-5" /> Google
+              {googleLoading ? (
+                <><Loader2 className="h-5 w-5 animate-spin" /> Connecting...</>
+              ) : (
+                <><Chrome className="h-5 w-5" /> Continue with Google</>
+              )}
             </button>
         </div>
       }
