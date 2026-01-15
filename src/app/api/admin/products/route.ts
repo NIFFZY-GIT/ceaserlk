@@ -4,8 +4,9 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { verifyAdminAuth } from '@/lib/auth';
 
-const MAX_UPLOAD_BYTES = 200 * 1024 * 1024; // 200MB cap per submission
-const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100MB cap for a single file
+// Reduced limits to work with common VPS/Nginx defaults
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB cap per submission
+const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB cap for a single file
 
 class UploadLimitError extends Error {
     status: number;
