@@ -13,7 +13,6 @@ import {
   X, 
   Star, 
   CheckCircle, 
-  AlertCircle,
   UploadCloud,
   ArrowLeft,
   Music,
