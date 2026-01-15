@@ -3,6 +3,29 @@ import { db } from '@/lib/db';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+// Sanitize filename to remove special characters that break URLs
+const sanitizeFilename = (filename: string): string => {
+    // Get the file extension
+    const ext = path.extname(filename);
+    const nameWithoutExt = path.basename(filename, ext);
+    
+    // Remove or replace problematic characters:
+    // - Replace spaces with hyphens
+    // - Remove # (URL fragments), emoji, and other special chars
+    // - Keep only alphanumeric, hyphens, underscores, and dots
+    const sanitized = nameWithoutExt
+        .replace(/\s+/g, '-')           // Replace spaces with hyphens
+        .replace(/[#?&=%]/g, '')        // Remove URL-breaking characters
+        .replace(/[^a-zA-Z0-9_.-]/g, '') // Remove all other non-alphanumeric chars
+        .replace(/-+/g, '-')            // Replace multiple hyphens with single
+        .replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
+    
+    // If the sanitized name is empty, use a default
+    const finalName = sanitized || 'file';
+    
+    return `${finalName}${ext}`;
+};
+
 // Type definitions for the data sent from frontend
 type ThumbnailSelectionPayload =
   | { kind: 'existing'; mediaId: string }
@@ -190,7 +213,7 @@ export async function PUT(
       }
       
       const buffer = Buffer.from(await audioFile.arrayBuffer());
-      const filename = `${Date.now()}-${audioFile.name.replace(/\s+/g, '-')}`;
+      const filename = `${Date.now()}-${sanitizeFilename(audioFile.name)}`;
       const uploadPath = path.join(process.cwd(), 'public/uploads/audio', filename);
       
       // Ensure the audio directory exists
@@ -228,7 +251,7 @@ export async function PUT(
       }
       
       const buffer = Buffer.from(await tradingCardFile.arrayBuffer());
-      const filename = `${Date.now()}-${tradingCardFile.name.replace(/\s+/g, '-')}`;
+      const filename = `${Date.now()}-${sanitizeFilename(tradingCardFile.name)}`;
       const uploadPath = path.join(process.cwd(), 'public/uploads/trading-cards', filename);
       
       // Ensure the trading card directory exists
@@ -317,7 +340,7 @@ export async function PUT(
         }
 
         const buffer = Buffer.from(await mediaFile.arrayBuffer());
-        const filename = `${Date.now()}-${mediaFile.name.replace(/\s+/g, '-')}`;
+        const filename = `${Date.now()}-${sanitizeFilename(mediaFile.name)}`;
         const productsDir = path.join(process.cwd(), 'public/uploads/products');
         await fs.mkdir(productsDir, { recursive: true });
         const uploadPath = path.join(productsDir, filename);

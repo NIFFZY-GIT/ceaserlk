@@ -8,6 +8,29 @@ import { verifyAdminAuth } from '@/lib/auth';
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB cap per submission
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB cap for a single file
 
+// Sanitize filename to remove special characters that break URLs
+const sanitizeFilename = (filename: string): string => {
+    // Get the file extension
+    const ext = path.extname(filename);
+    const nameWithoutExt = path.basename(filename, ext);
+    
+    // Remove or replace problematic characters:
+    // - Replace spaces with hyphens
+    // - Remove # (URL fragments), emoji, and other special chars
+    // - Keep only alphanumeric, hyphens, underscores, and dots
+    const sanitized = nameWithoutExt
+        .replace(/\s+/g, '-')           // Replace spaces with hyphens
+        .replace(/[#?&=%]/g, '')        // Remove URL-breaking characters
+        .replace(/[^a-zA-Z0-9_.-]/g, '') // Remove all other non-alphanumeric chars
+        .replace(/-+/g, '-')            // Replace multiple hyphens with single
+        .replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
+    
+    // If the sanitized name is empty, use a default
+    const finalName = sanitized || 'file';
+    
+    return `${finalName}${ext}`;
+};
+
 class UploadLimitError extends Error {
     status: number;
     payload: { error: string; message: string };
@@ -107,7 +130,7 @@ export async function POST(request: NextRequest) {
         // --- NEW: Handle audio file upload ---
         if (audioFile) {
             const buffer = Buffer.from(await audioFile.arrayBuffer());
-            const filename = `${Date.now()}-${audioFile.name.replace(/\s+/g, '-')}`;
+            const filename = `${Date.now()}-${sanitizeFilename(audioFile.name)}`;
             const uploadDir = path.join(process.cwd(), 'public/uploads/audio');
             
             await fs.mkdir(uploadDir, { recursive: true }); // Ensure directory exists
@@ -119,7 +142,7 @@ export async function POST(request: NextRequest) {
         // --- NEW: Handle trading image upload ---
         if (tradingImage) {
             const buffer = Buffer.from(await tradingImage.arrayBuffer());
-            const filename = `${Date.now()}-${tradingImage.name.replace(/\s+/g, '-')}`;
+            const filename = `${Date.now()}-${sanitizeFilename(tradingImage.name)}`;
             const uploadDir = path.join(process.cwd(), 'public/uploads/trading-cards');
             
             await fs.mkdir(uploadDir, { recursive: true }); // Ensure directory exists
@@ -190,7 +213,7 @@ export async function POST(request: NextRequest) {
                     }
                     try {
                         const buffer = Buffer.from(await mediaFile.arrayBuffer());
-                        const sanitizedName = mediaFile.name.replace(/\s+/g, '-');
+                        const sanitizedName = sanitizeFilename(mediaFile.name);
                         const filename = `${Date.now()}-variant-${index}-${sanitizedName}`;
                         const uploadDir = path.join(process.cwd(), 'public/uploads/products');
                         const fullPath = path.join(uploadDir, filename);
