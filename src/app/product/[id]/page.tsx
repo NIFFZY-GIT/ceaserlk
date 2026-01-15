@@ -1265,6 +1265,9 @@ export default function ProductPage() {
       audio.volume = 0.5;
       audioRef.current = audio;
 
+      // Store handler reference for cleanup
+      let startAudioOnInteraction: (() => void) | null = null;
+
       // Try to auto-play (may be blocked by browser)
       const playAudio = async () => {
         try {
@@ -1274,6 +1277,25 @@ export default function ProductPage() {
           // Auto-play blocked, user needs to interact first
           console.log("Auto-play blocked, waiting for user interaction");
           setIsAudioPlaying(false);
+          
+          // Add one-time click listener to start audio on first user interaction
+          startAudioOnInteraction = () => {
+            if (audioRef.current) {
+              audioRef.current.play().then(() => {
+                setIsAudioPlaying(true);
+              }).catch(console.error);
+            }
+            // Remove listeners after first interaction
+            if (startAudioOnInteraction) {
+              document.removeEventListener('click', startAudioOnInteraction);
+              document.removeEventListener('touchstart', startAudioOnInteraction);
+              document.removeEventListener('scroll', startAudioOnInteraction);
+            }
+          };
+          
+          document.addEventListener('click', startAudioOnInteraction, { once: true });
+          document.addEventListener('touchstart', startAudioOnInteraction, { once: true });
+          document.addEventListener('scroll', startAudioOnInteraction, { once: true });
         }
       };
 
@@ -1284,6 +1306,12 @@ export default function ProductPage() {
         audio.pause();
         audio.src = "";
         audioRef.current = null;
+        // Clean up any remaining listeners
+        if (startAudioOnInteraction) {
+          document.removeEventListener('click', startAudioOnInteraction);
+          document.removeEventListener('touchstart', startAudioOnInteraction);
+          document.removeEventListener('scroll', startAudioOnInteraction);
+        }
       };
     }
   }, [product?.audio_url, isLoading]);
