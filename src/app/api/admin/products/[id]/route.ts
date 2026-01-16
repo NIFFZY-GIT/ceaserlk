@@ -3,14 +3,6 @@ import { db } from '@/lib/db';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-// Route segment config to allow large file uploads (up to 100MB)
-export const config = {
-  api: {
-    bodyParser: false,
-    responseLimit: false,
-  },
-};
-
 // Enable dynamic rendering and set max duration for long uploads
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 60 seconds timeout for large uploads
