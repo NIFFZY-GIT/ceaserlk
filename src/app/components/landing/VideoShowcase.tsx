@@ -192,13 +192,13 @@ const VideoShowcase = () => {
           onLoadedData={() => setVideoReady(true)}
         >
           {shouldLoadVideo && (
-            <source src="/assets/v1sd.mp4" type="video/mp4" />
+            <source src="/assets/v1wq.mp4" type="video/mp4" />
           )}
         </video>
       ) : (
         <div className="absolute top-0 left-0 w-full h-full z-0">
           <Image
-            src="/images/ELS08954.jpg"
+           src="/images/h123.jpg"
             alt="Athletic apparel background"
             fill
             className="object-cover object-[center_30%]"
@@ -227,7 +227,7 @@ const VideoShowcase = () => {
       {!videoReady && videoEligible && (
         <div className="absolute top-0 left-0 w-full h-full z-0">
           <Image
-            src="/images/H123.jpg"
+            src="/images/h123.jpg"
             alt="Athletic apparel background placeholder"
             fill
             className="object-cover object-[center_30%]"
