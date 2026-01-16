@@ -180,7 +180,7 @@ const VideoShowcase = () => {
       <div className="absolute top-0 left-0 w-full h-full z-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/images/h123.JPG"
+          src="/images/H123.JPG"
           alt="Athletic apparel background"
           className="w-full h-full object-cover object-[center_30%]"
         />
