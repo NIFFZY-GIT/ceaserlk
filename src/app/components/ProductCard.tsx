@@ -8,6 +8,9 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
+// Helper function to detect video URLs
+const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov|m4v|MOV|MP4)$/i.test(url);
+
 // --- Type Definitions ---
 type StockInfo = { id: string; size: string; stock: number };
 type ProductVariant = {
@@ -58,10 +61,14 @@ export const ProductCard = ({ product }: { product: Product }) => {
   const price = parseFloat(activeVariant.price);
   const compareAtPrice = activeVariant.compareAtPrice ? parseFloat(activeVariant.compareAtPrice) : null;
   const isOnSale = compareAtPrice && compareAtPrice > price;
-  // --- Improved image logic ---
-  const imagesArr = Array.isArray(activeVariant.images) && activeVariant.images.length > 0 ? activeVariant.images : [];
-  const mainImage = imagesArr[0]?.url || activeVariant.thumbnailUrl || '/images/image.jpg';
-  const hoverImage = imagesArr[1]?.url || mainImage;
+  // --- Only use first 2 images, no videos ---
+  const imagesOnly = Array.isArray(activeVariant.images) && activeVariant.images.length > 0 
+    ? activeVariant.images.filter(img => !isVideoUrl(img.url)).slice(0, 2)
+    : [];
+  // Also check if thumbnail is a video
+  const thumbnailIsImage = activeVariant.thumbnailUrl && !isVideoUrl(activeVariant.thumbnailUrl);
+  const mainImage = imagesOnly[0]?.url || (thumbnailIsImage ? activeVariant.thumbnailUrl : null) || '/images/image.jpg';
+  const hoverImage = imagesOnly[1]?.url || mainImage;
   const currentImageUrl = isHovered ? hoverImage : mainImage;
   const totalStock = activeVariant.stock.reduce((sum, s) => sum + s.stock, 0);
 
