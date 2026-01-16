@@ -125,15 +125,17 @@ export const securityHeaders = {
   // SECURITY: Removed 'unsafe-eval' to prevent code injection attacks (CVE-2025-55182)
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://js.stripe.com https://checkout.stripe.com",
+    "script-src 'self' 'unsafe-inline' blob: https://js.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com",
-    "frame-src https://checkout.stripe.com https://js.stripe.com",
+    "media-src 'self' blob: data: https:",
+    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk",
+    "worker-src 'self' blob:",
+    "frame-src https://checkout.stripe.com https://js.stripe.com https://www.payhere.lk https://sandbox.payhere.lk",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self' https://www.payhere.lk https://sandbox.payhere.lk"
   ].join('; ')
 };
 

@@ -187,7 +187,7 @@ const VideoShowcase = () => {
           loop
           muted
           playsInline
-          poster="/images/h1.jpeg"
+  
           preload={shouldLoadVideo ? 'metadata' : 'none'}
           onLoadedData={() => setVideoReady(true)}
         >
@@ -198,7 +198,7 @@ const VideoShowcase = () => {
       ) : (
         <div className="absolute top-0 left-0 w-full h-full z-0">
           <Image
-            src="/images/h1.jpeg"
+            src="/images/ELS08954.jpg"
             alt="Athletic apparel background"
             fill
             className="object-cover object-[center_30%]"
@@ -227,7 +227,7 @@ const VideoShowcase = () => {
       {!videoReady && videoEligible && (
         <div className="absolute top-0 left-0 w-full h-full z-0">
           <Image
-            src="/images/h1.jpeg"
+            src="/images/H123.jpg"
             alt="Athletic apparel background placeholder"
             fill
             className="object-cover object-[center_30%]"
