@@ -178,34 +178,16 @@ const VideoShowcase = () => {
 
   return (
     <section ref={sectionRef} className="relative h-[90vh] min-h-[700px] w-full bg-brand-black text-white flex items-center">
-      {/* Background Video */}
-      {videoEligible ? (
-        <video
-          ref={videoRef}
-          className="absolute top-0 left-0 w-full h-full object-cover z-0"
-          autoPlay
-          loop
-          muted
-          playsInline
-  
-          preload={shouldLoadVideo ? 'metadata' : 'none'}
-          onLoadedData={() => setVideoReady(true)}
-        >
-          {shouldLoadVideo && (
-            <source src="/assets/v1wq.mp4" type="video/mp4" />
-          )}
-        </video>
-      ) : (
-        <div className="absolute top-0 left-0 w-full h-full z-0">
-          <Image
-           src="/images/h123.jpg"
-            alt="Athletic apparel background"
-            fill
-            className="object-cover object-[center_30%]"
-            priority
-          />
-        </div>
-      )}
+      {/* Background Image */}
+      <div className="absolute top-0 left-0 w-full h-full z-0">
+        <Image
+          src="/images/h123.JPG"
+          alt="Athletic apparel background"
+          fill
+          className="object-cover object-[center_30%]"
+          priority
+        />
+      </div>
       {/* {!videoEligible && !manualOverride && (
         <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
           <div className="rounded-full bg-black/60 px-6 py-3 text-sm font-semibold text-white uppercase tracking-widest shadow-lg">
