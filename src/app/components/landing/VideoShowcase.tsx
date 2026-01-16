@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import Image from 'next/image';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -49,7 +48,6 @@ const VideoShowcase = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [videoEligible, setVideoEligible] = useState(true);
   const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
   const [manualOverride, setManualOverride] = useState(false);
 
   // Animation for the entire section entering the viewport
@@ -180,12 +178,11 @@ const VideoShowcase = () => {
     <section ref={sectionRef} className="relative h-[90vh] min-h-[700px] w-full bg-brand-black text-white flex items-center">
       {/* Background Image */}
       <div className="absolute top-0 left-0 w-full h-full z-0">
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="/images/h123.JPG"
           alt="Athletic apparel background"
-          fill
-          className="object-cover object-[center_30%]"
-          priority
+          className="w-full h-full object-cover object-[center_30%]"
         />
       </div>
       {/* {!videoEligible && !manualOverride && (
@@ -206,17 +203,6 @@ const VideoShowcase = () => {
           </button>
         </div>
       )} */}
-      {!videoReady && videoEligible && (
-        <div className="absolute top-0 left-0 w-full h-full z-0">
-          <Image
-            src="/images/h123.jpg"
-            alt="Athletic apparel background placeholder"
-            fill
-            className="object-cover object-[center_30%]"
-            priority
-          />
-        </div>
-      )}
       <div className="absolute inset-0 bg-black/30 z-10" />
 
       {/* Content */}

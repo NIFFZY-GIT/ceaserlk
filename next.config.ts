@@ -57,8 +57,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '100mb',
     },
-    // Allow larger body sizes in middleware for file uploads
-    middlewareClientMaxBodySize: '100mb',
   },
 };
 
