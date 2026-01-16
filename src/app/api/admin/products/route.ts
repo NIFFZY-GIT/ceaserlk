@@ -4,6 +4,18 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { verifyAdminAuth } from '@/lib/auth';
 
+// Route segment config to allow large file uploads
+export const config = {
+  api: {
+    bodyParser: false,
+    responseLimit: false,
+  },
+};
+
+// Enable dynamic rendering and set max duration for long uploads
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // 60 seconds timeout for large uploads
+
 // Reduced limits to work with common VPS/Nginx defaults
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB cap per submission
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB cap for a single file
