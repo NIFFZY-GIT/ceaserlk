@@ -271,6 +271,7 @@ function TrainMediaShowcase({
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const gsapRef = useRef<GsapType | null>(null);
+  const xQuickSetterRef = useRef<((value: number) => void) | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
@@ -280,8 +281,15 @@ function TrainMediaShowcase({
 
   // Load GSAP on mount
   useEffect(() => {
-    loadGsap().then(g => { gsapRef.current = g; });
+    loadGsap().then(g => {
+      gsapRef.current = g;
+      const track = trackRef.current;
+      if (track) {
+        xQuickSetterRef.current = g.quickSetter(track, 'x', 'vw') as (value: number) => void;
+      }
+    });
   }, []);
+
 
   // Initialize video loading states - only set loading for NEW videos, preserve existing states
   useEffect(() => {
@@ -372,68 +380,57 @@ function TrainMediaShowcase({
       };
 
       if (isMobile) {
-        // On mobile, simple slide animation - each item is 100vw
-        const newOffset = targetIndex * 100;
+        // Mobile: straightforward smooth slide
         tl.to(track, {
-          x: `-${newOffset}vw`,
-          duration: 0.35,
-          ease: "power2.out",
+          x: `-${targetIndex * 100}vw`,
+          duration: 0.8,
+          ease: "power3.out",
+          force3D: true,
         });
       } else if (movingFromFirstImage && !movingToFirstImage && firstImageElement) {
-        // Moving FROM first image - shrink it to 50vw
-        tl.to(
-          firstImageElement,
-          {
-            width: "50vw",
-            duration: 0.7,
-            ease: "power3.inOut",
-          },
-          0
-        );
-        
-        // Calculate offset with first image as 50vw
+        // First (100vw) → Paired: width AND position animate together smoothly
         const newOffset = calculateOffset(targetIndex, 50);
         
-        tl.to(
-          track,
-          {
-            x: `-${newOffset}vw`,
-            duration: 0.7,
-            ease: "power3.inOut",
-          },
-          0
-        );
+        // Shrink first image AND slide track in sync
+        tl.to(firstImageElement, {
+          width: "50vw",
+          duration: 1.4,
+          ease: "power2.inOut",
+        }, 0);
+        
+        tl.to(track, {
+          x: `-${newOffset}vw`,
+          duration: 1.4,
+          ease: "power2.inOut",
+          force3D: true,
+        }, 0);
       } else if (movingToFirstImage && !movingFromFirstImage && firstImageElement) {
-        // Moving TO first image - expand it to 100vw
+        // Paired → First: width AND position animate together smoothly
         const newOffset = calculateOffset(firstImageIndex, 100);
         
-        tl.to(
-          track,
-          {
-            x: `-${newOffset}vw`,
-            duration: 0.7,
-            ease: "power3.inOut",
-          },
-          0
-        );
-        tl.to(
-          firstImageElement,
-          {
-            width: "100vw",
-            duration: 0.7,
-            ease: "power3.inOut",
-          },
-          0
-        );
+        // Expand first image AND slide track in sync
+        tl.to(firstImageElement, {
+          width: "100vw",
+          duration: 1.4,
+          ease: "power2.inOut",
+        }, 0);
+        
+        tl.to(track, {
+          x: `-${newOffset}vw`,
+          duration: 1.4,
+          ease: "power2.inOut",
+          force3D: true,
+        }, 0);
       } else {
-        // Moving between videos or between paired image views
+        // Paired → Paired or video transitions: just slide
         const firstImgWidth = currentIndex === firstImageIndex ? 100 : 50;
         const newOffset = calculateOffset(targetIndex, firstImgWidth);
         
         tl.to(track, {
           x: `-${newOffset}vw`,
-          duration: 0.6,
-          ease: "power3.inOut",
+          duration: 0.9,
+          ease: "power2.inOut",
+          force3D: true,
         });
       }
     },
@@ -473,7 +470,13 @@ function TrainMediaShowcase({
   const isHorizontalSwipe = useRef<boolean | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (isAnimating) return;
+    // Interrupt any ongoing animation for immediate finger control
+    const gsap = gsapRef.current;
+    const track = trackRef.current;
+    if (gsap && track) {
+      gsap.killTweensOf(track);
+    }
+    if (isAnimating) setIsAnimating(false);
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     touchCurrentX.current = e.touches[0].clientX;
@@ -483,7 +486,7 @@ function TrainMediaShowcase({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current || isAnimating || !isMobile) return;
+    if (!isDragging.current || !isMobile) return;
     
     const currentX = e.touches[0].clientX;
     const currentY = e.touches[0].clientY;
@@ -503,20 +506,18 @@ function TrainMediaShowcase({
     touchCurrentX.current = currentX;
     
     // Calculate the drag offset and apply it in real-time
-    const track = trackRef.current;
-    const gsap = gsapRef.current;
-    if (track && gsap) {
-      const baseOffset = currentIndex * 100;
-      const dragOffset = (diffX / window.innerWidth) * 100;
-      
-      // Add resistance at the edges
-      let resistedOffset = dragOffset;
-      if ((currentIndex === 0 && dragOffset < 0) || 
-          (currentIndex === media.length - 1 && dragOffset > 0)) {
-        resistedOffset = dragOffset * 0.3; // 30% resistance at edges
-      }
-      
-      gsap.set(track, { x: `${-(baseOffset + resistedOffset)}vw` });
+    const baseOffset = currentIndex * 100;
+    const dragOffset = (diffX / window.innerWidth) * 100;
+    
+    // Add resistance at the edges for a natural feel
+    let resistedOffset = dragOffset;
+    if ((currentIndex === 0 && dragOffset < 0) || 
+        (currentIndex === media.length - 1 && dragOffset > 0)) {
+      resistedOffset = dragOffset * 0.5; // 50% resistance at edges
+    }
+    // Use fast GSAP quickSetter for buttery finger-follow
+    if (xQuickSetterRef.current) {
+      xQuickSetterRef.current(-(baseOffset + resistedOffset));
     }
   };
 
@@ -529,7 +530,7 @@ function TrainMediaShowcase({
     const velocity = Math.abs(diff) / Math.max(timeDelta, 1); // pixels per ms
     
     // Lower threshold for faster swipes (velocity-based)
-    const threshold = velocity > 0.5 ? 20 : velocity > 0.3 ? 35 : 50;
+    const threshold = velocity > 0.5 ? 18 : velocity > 0.3 ? 25 : 30;
     
     if (Math.abs(diff) > threshold && isHorizontalSwipe.current) {
       if (diff > 0 && currentIndex < media.length - 1) {
@@ -555,8 +556,10 @@ function TrainMediaShowcase({
     if (track && isMobile && gsap) {
       gsap.to(track, {
         x: `${-currentIndex * 100}vw`,
-        duration: 0.4,
-        ease: "back.out(1.2)",
+        duration: 0.5,
+        ease: "expo.out",
+        overwrite: "auto",
+        force3D: true,
       });
     }
   }, [currentIndex, isMobile]);
@@ -602,7 +605,7 @@ function TrainMediaShowcase({
 
   if (!media || media.length === 0) {
     return (
-      <div className="w-full h-[75vh] md:h-screen bg-[#f5f5f5] flex items-center justify-center">
+      <div className="w-full h-screen bg-[#f5f5f5] flex items-center justify-center">
         <p className="text-neutral-400">No media available</p>
       </div>
     );
@@ -613,7 +616,7 @@ function TrainMediaShowcase({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-[75vh] md:h-screen bg-[#f5f5f5] overflow-hidden select-none touch-pan-y"
+      className="relative w-full h-screen md:h-screen bg-[#f5f5f5] overflow-hidden select-none touch-pan-y overscroll-x-contain"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -664,7 +667,7 @@ function TrainMediaShowcase({
           return (
           <div
             key={item.id}
-            className="relative flex-shrink-0 h-full flex items-center justify-center"
+            className="relative flex-shrink-0 h-full flex items-start md:items-center justify-center"
             style={{ width: getItemWidth(index) }}
           >
             {item.type === "video" ? (
@@ -690,7 +693,7 @@ function TrainMediaShowcase({
                   preload={isVisible ? "auto" : "none"}
                   onCanPlay={() => handleVideoCanPlay(item.id)}
                   onLoadedData={() => handleVideoCanPlay(item.id)}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-top md:object-cover"
                 />
               </div>
             ) : (
@@ -699,7 +702,7 @@ function TrainMediaShowcase({
                   src={item.url}
                   alt={`${productName} - View ${index + 1}`}
                   fill
-                  className="object-contain"
+                  className="object-cover object-top md:object-contain md:object-center"
                   sizes={index === firstImageIndex && currentIndex === firstImageIndex ? "100vw" : "50vw"}
                   priority={index === 0}
                   loading={index <= 1 ? "eager" : "lazy"}
@@ -1469,7 +1472,7 @@ export default function ProductPage() {
           onToggleAudio={toggleAudio}
         />
       ) : (
-        <div className="w-full h-[75vh] md:h-screen bg-[#f5f5f5] flex items-center justify-center">
+        <div className="w-full h-screen bg-[#f5f5f5] flex items-center justify-center">
           <p className="text-neutral-400">No images available</p>
         </div>
       )}
