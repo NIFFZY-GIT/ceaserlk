@@ -23,6 +23,7 @@ export default function SendEmailPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ total: number; successful: number; failed: number; results?: { status: string; email: string; error?: string }[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -140,6 +141,27 @@ export default function SendEmailPage() {
 
   const removeAttachment = (index: number) => {
     setAttachments(attachments.filter((_, i) => i !== index));
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) continue;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        editor?.chain().focus().setImage({ src: base64 }).run();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
   };
 
   const handleSendEmail = async () => {
@@ -308,16 +330,19 @@ export default function SendEmailPage() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                const url = prompt('Enter image URL:');
-                if (url) {
-                  editor?.chain().focus().setImage({ src: url }).run();
-                }
-              }}
+              onClick={() => imageInputRef.current?.click()}
               className="px-3 py-1 rounded bg-white border hover:bg-gray-100"
             >
               🖼️ Image
             </button>
+            <input
+              ref={imageInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
             <div className="w-px bg-gray-300 mx-1"></div>
             <input
               type="color"

@@ -71,15 +71,12 @@ const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov|m4v)$/i.test(url);
 
 // Sri Lankan cities for fake purchase notifications
 const SRI_LANKAN_CITIES = [
-  // Colombo District
   "Colombo", "Dehiwala", "Mount Lavinia", "Moratuwa", "Maharagama", "Kottawa",
   "Homagama", "Kaduwela", "Battaramulla", "Nugegoda", "Malabe", "Kolonnawa",
   "Wellampitiya", "Piliyandala", "Kesbewa",
-  // Gampaha District
   "Gampaha", "Negombo", "Wattala", "Ja-Ela", "Ragama", "Kelaniya", "Kiribathgoda",
   "Kadawatha", "Minuwangoda", "Divulapitiya", "Mirigama", "Nittambuwa", "Veyangoda",
   "Seeduwa", "Katunayake",
-  // Kalutara District
   "Kalutara", "Panadura", "Bandaragama", "Horana", "Beruwala", "Aluthgama",
   "Mathugama", "Wadduwa", "Payagala", "Ingiriya"
 ];
@@ -133,7 +130,7 @@ function FakePurchaseNotification({
     onFakePurchaseRef.current = onFakePurchase;
   }, [onFakePurchase]);
 
-  // Generate and show a notification (stable function that uses refs)
+  // Generate and show a notification
   const showNotification = useCallback(() => {
     const sizes = availableSizesRef.current;
     // Pick a random available size for the fake purchase
@@ -158,32 +155,23 @@ function FakePurchaseNotification({
     notificationTimeoutRef.current = setTimeout(() => {
       setIsVisible(false);
     }, 5000);
-  }, []); // No dependencies - uses refs
+  }, []);
 
   // Set up interval for showing notifications in a loop
   useEffect(() => {
-    // Show first notification after 15-25 seconds
     const initialDelay = Math.floor(Math.random() * 10000) + 15000;
-    
-    // Random interval between 30-60 seconds for testing
-    // Change to 300000-600000 (5-10 min) for production
     const getNextInterval = () => Math.floor(Math.random() * 30000) + 30000;
 
     let isActive = true;
     
-    // Recursive function to keep showing notifications
     const scheduleNextNotification = (delay: number) => {
       intervalRef.current = setTimeout(() => {
         if (!isActive) return;
-        
         showNotification();
-        
-        // Schedule the next one with a new random delay
         scheduleNextNotification(getNextInterval());
       }, delay);
     };
 
-    // Start the loop with initial delay
     scheduleNextNotification(initialDelay);
 
     return () => {
@@ -197,7 +185,6 @@ function FakePurchaseNotification({
 
   return (
     <>
-      {/* Toast Notification */}
       <div
         className={`fixed bottom-4 left-4 z-50 transition-all duration-500 ease-out transform ${
           isVisible
@@ -207,14 +194,11 @@ function FakePurchaseNotification({
       >
         <div className="bg-white rounded-lg shadow-xl border border-[#e5e5e5] p-4 max-w-xs sm:max-w-sm">
           <div className="flex items-start gap-3">
-            {/* Icon */}
             <div className="flex-shrink-0 w-8 h-8 bg-[#1a1a1a] rounded-full flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            
-            {/* Content */}
             <div className="flex-1 min-w-0">
               <p className="text-sm text-[#1a1a1a]">
                 <span className="font-medium">{notification.name}</span> from {notification.city}
@@ -224,8 +208,6 @@ function FakePurchaseNotification({
               </p>
               <p className="text-[10px] text-[#999] mt-1">{notification.timeAgo}</p>
             </div>
-
-            {/* Close button */}
             <button
               onClick={() => setIsVisible(false)}
               className="flex-shrink-0 text-[#999] hover:text-[#1a1a1a] transition-colors"
@@ -238,7 +220,6 @@ function FakePurchaseNotification({
         </div>
       </div>
 
-      {/* Floating stock urgency badge (always visible when stock is low) */}
       {totalDisplayStock <= 15 && !isVisible && (
         <div className="fixed bottom-4 left-4 z-40">
           <div className="bg-white border border-[#e5e5e5] rounded-full px-3 py-1.5 shadow-md">
@@ -290,14 +271,13 @@ function TrainMediaShowcase({
     });
   }, []);
 
-
-  // Initialize video loading states - only set loading for NEW videos, preserve existing states
+  // Initialize video loading states
   useEffect(() => {
     setVideoLoadingStates(prev => {
       const next = new Map(prev);
       media.forEach((item) => {
         if (item.type === "video" && !next.has(item.id)) {
-          next.set(item.id, true); // Only set loading for videos not already tracked
+          next.set(item.id, true);
         }
       });
       return next;
@@ -324,11 +304,11 @@ function TrainMediaShowcase({
   // Find the index of the first image (after videos)
   const firstImageIndex = media.findIndex((item) => item.type === "image");
 
-  // Slide to a specific index with GSAP animation
+  // Slide Animation Logic
   const slideTo = useCallback(
     (targetIndex: number) => {
       const gsap = gsapRef.current;
-      if (!gsap) return; // GSAP not loaded yet
+      if (!gsap) return;
       if (isAnimating || targetIndex < 0 || targetIndex >= media.length) return;
       if (targetIndex === currentIndex) return;
 
@@ -336,11 +316,6 @@ function TrainMediaShowcase({
       const track = trackRef.current;
       if (!track) return;
 
-      // Check if we're moving to/from the first image (not videos)
-      const movingFromFirstImage = currentIndex === firstImageIndex;
-      const movingToFirstImage = targetIndex === firstImageIndex;
-      
-      // Get the first image element (if it exists)
       const firstImageElement = firstImageIndex >= 0 ? track.children[firstImageIndex] as HTMLElement : null;
 
       // Create GSAP timeline
@@ -349,89 +324,50 @@ function TrainMediaShowcase({
           setCurrentIndex(targetIndex);
           setIsAnimating(false);
         },
+        defaults: {
+          ease: isMobile ? "power4.out" : "power3.inOut", 
+          force3D: true,
+        }
       });
 
-      // Helper to calculate offset - for paired image views, we show [targetIndex-1, targetIndex]
-      const calculateOffset = (target: number, firstImgWidth: number): number => {
+      if (isMobile) {
+        tl.to(track, {
+          x: `-${targetIndex * 100}vw`,
+          duration: 0.8,
+        });
+      } else {
+        const targetIsImage = media[targetIndex]?.type === "image";
+        const targetIsFirstImage = targetIndex === firstImageIndex;
+        
         let offset = 0;
-        
-        // On mobile, every item is 100vw
-        if (isMobile) {
-          return target * 100;
-        }
-        
-        // If target is an image (not video) and not the first image, show paired view
-        const targetIsImage = media[target]?.type === "image";
-        const showPaired = targetIsImage && target > firstImageIndex;
-        
-        // Calculate the position we need to scroll to
-        const stopIndex = showPaired ? target - 1 : target;
-        
-        for (let i = 0; i < stopIndex; i++) {
-          if (media[i]?.type === "video") {
+        const destFirstImgWidth = targetIsFirstImage ? 100 : 50;
+
+        // If viewing paired images, start calculating offset from the image BEFORE the target
+        const startIndex = (targetIsImage && !targetIsFirstImage) ? targetIndex - 1 : targetIndex;
+
+        for (let i = 0; i < startIndex; i++) {
+          if (media[i].type === "video") {
             offset += 100;
           } else if (i === firstImageIndex) {
-            offset += firstImgWidth;
+            offset += destFirstImgWidth;
           } else {
             offset += 50;
           }
         }
-        return offset;
-      };
 
-      if (isMobile) {
-        // Mobile: straightforward smooth slide
+        // Animate First Image Width
+        if (firstImageElement) {
+          tl.to(firstImageElement, {
+            width: `${destFirstImgWidth}vw`,
+            duration: 1.2,
+          }, 0);
+        }
+
+        // Animate Track Position
         tl.to(track, {
-          x: `-${targetIndex * 100}vw`,
-          duration: 0.8,
-          ease: "power3.out",
-          force3D: true,
-        });
-      } else if (movingFromFirstImage && !movingToFirstImage && firstImageElement) {
-        // First (100vw) → Paired: width AND position animate together smoothly
-        const newOffset = calculateOffset(targetIndex, 50);
-        
-        // Shrink first image AND slide track in sync
-        tl.to(firstImageElement, {
-          width: "50vw",
-          duration: 1.4,
-          ease: "power2.inOut",
+          x: `-${offset}vw`,
+          duration: 1.2,
         }, 0);
-        
-        tl.to(track, {
-          x: `-${newOffset}vw`,
-          duration: 1.4,
-          ease: "power2.inOut",
-          force3D: true,
-        }, 0);
-      } else if (movingToFirstImage && !movingFromFirstImage && firstImageElement) {
-        // Paired → First: width AND position animate together smoothly
-        const newOffset = calculateOffset(firstImageIndex, 100);
-        
-        // Expand first image AND slide track in sync
-        tl.to(firstImageElement, {
-          width: "100vw",
-          duration: 1.4,
-          ease: "power2.inOut",
-        }, 0);
-        
-        tl.to(track, {
-          x: `-${newOffset}vw`,
-          duration: 1.4,
-          ease: "power2.inOut",
-          force3D: true,
-        }, 0);
-      } else {
-        // Paired → Paired or video transitions: just slide
-        const firstImgWidth = currentIndex === firstImageIndex ? 100 : 50;
-        const newOffset = calculateOffset(targetIndex, firstImgWidth);
-        
-        tl.to(track, {
-          x: `-${newOffset}vw`,
-          duration: 0.9,
-          ease: "power2.inOut",
-          force3D: true,
-        });
       }
     },
     [currentIndex, isAnimating, firstImageIndex, media, isMobile]
@@ -461,7 +397,7 @@ function TrainMediaShowcase({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [goNext, goPrev, onClose]);
 
-  // Touch/swipe handling with real-time tracking for buttery smooth feel
+  // Touch/swipe handling
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const touchCurrentX = useRef<number>(0);
@@ -470,7 +406,6 @@ function TrainMediaShowcase({
   const isHorizontalSwipe = useRef<boolean | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Interrupt any ongoing animation for immediate finger control
     const gsap = gsapRef.current;
     const track = trackRef.current;
     if (gsap && track) {
@@ -493,29 +428,25 @@ function TrainMediaShowcase({
     const diffX = touchStartX.current - currentX;
     const diffY = touchStartY.current - currentY;
     
-    // Determine if this is a horizontal or vertical swipe (only once per gesture)
     if (isHorizontalSwipe.current === null) {
-      if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
+      if (Math.abs(diffX) > 5 || Math.abs(diffY) > 5) {
         isHorizontalSwipe.current = Math.abs(diffX) > Math.abs(diffY);
       }
     }
     
-    // Only handle horizontal swipes
     if (!isHorizontalSwipe.current) return;
     
     touchCurrentX.current = currentX;
     
-    // Calculate the drag offset and apply it in real-time
     const baseOffset = currentIndex * 100;
     const dragOffset = (diffX / window.innerWidth) * 100;
     
-    // Add resistance at the edges for a natural feel
     let resistedOffset = dragOffset;
     if ((currentIndex === 0 && dragOffset < 0) || 
         (currentIndex === media.length - 1 && dragOffset > 0)) {
-      resistedOffset = dragOffset * 0.5; // 50% resistance at edges
+      resistedOffset = dragOffset * 0.3; 
     }
-    // Use fast GSAP quickSetter for buttery finger-follow
+    
     if (xQuickSetterRef.current) {
       xQuickSetterRef.current(-(baseOffset + resistedOffset));
     }
@@ -527,10 +458,9 @@ function TrainMediaShowcase({
     
     const diff = touchStartX.current - touchCurrentX.current;
     const timeDelta = Date.now() - touchStartTime.current;
-    const velocity = Math.abs(diff) / Math.max(timeDelta, 1); // pixels per ms
+    const velocity = Math.abs(diff) / Math.max(timeDelta, 1);
     
-    // Lower threshold for faster swipes (velocity-based)
-    const threshold = velocity > 0.5 ? 18 : velocity > 0.3 ? 25 : 30;
+    const threshold = velocity > 0.5 ? 20 : 60;
     
     if (Math.abs(diff) > threshold && isHorizontalSwipe.current) {
       if (diff > 0 && currentIndex < media.length - 1) {
@@ -538,67 +468,37 @@ function TrainMediaShowcase({
       } else if (diff < 0 && currentIndex > 0) {
         goPrev();
       } else {
-        // Snap back if at edge
         snapBack();
       }
     } else {
-      // Snap back to current position
       snapBack();
     }
     
     isHorizontalSwipe.current = null;
   };
 
-  // Snap back to current position with spring-like feel
   const snapBack = useCallback(() => {
     const track = trackRef.current;
     const gsap = gsapRef.current;
     if (track && isMobile && gsap) {
       gsap.to(track, {
         x: `${-currentIndex * 100}vw`,
-        duration: 0.5,
-        ease: "expo.out",
+        duration: 0.6,
+        ease: "elastic.out(1, 0.9)",
         overwrite: "auto",
         force3D: true,
       });
     }
   }, [currentIndex, isMobile]);
 
-  // Toggle mute for videos
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _toggleMute = useCallback(() => {
-    setIsMuted((prev) => {
-      const newMuted = !prev;
-      videoRefs.current.forEach((video) => {
-        video.muted = newMuted;
-      });
-      return newMuted;
-    });
-  }, []);
-
-  // Get width for each media item
-  // On mobile: All items are 100vw (single item view)
-  // On desktop:
-  //   Videos: always 100vw (full screen)
-  //   First image: 100vw when viewing it (full screen alone)
-  //   All other images: 50vw (paired view)
   const getItemWidth = (index: number): string => {
-    // On mobile, all items are full width
-    if (isMobile) {
-      return "100vw";
-    }
+    if (isMobile) return "100vw";
+    if (media[index]?.type === "video") return "100vw";
     
-    // Videos are always full screen
-    if (media[index]?.type === "video") {
-      return "100vw";
-    }
+    const firstImgIdx = media.findIndex((item) => item.type === "image");
     
-    // Find the index of the first image in the media array
-    const firstImageIndex = media.findIndex((item) => item.type === "image");
-    
-    // First image is full screen when viewing it
-    if (index === firstImageIndex && currentIndex === firstImageIndex) {
-      return "100vw";
+    if (index === firstImgIdx) {
+      return currentIndex === firstImgIdx ? "100vw" : "50vw";
     }
     return "50vw";
   };
@@ -616,28 +516,12 @@ function TrainMediaShowcase({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-screen md:h-screen bg-[#f5f5f5] overflow-hidden select-none touch-pan-y overscroll-x-contain"
+      className="relative w-full h-[100dvh] md:h-screen bg-[#f5f5f5] overflow-hidden select-none touch-pan-y overscroll-x-contain"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Breadcrumb Navigation - Positioned below the fixed navbar */}
-      {/* <div className="absolute top-20 sm:top-24 left-1/2 -translate-x-1/2 z-40">
-        <nav className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-black/30 backdrop-blur-md rounded-full text-[10px] sm:text-xs">
-          <Link
-            href="/shop"
-            className="text-white/80 hover:text-white transition-colors"
-          >
-            Shop
-          </Link>
-          <ChevronRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/50" />
-          <span className="text-white font-medium max-w-[80px] sm:max-w-[120px] truncate">
-            {productName}
-          </span>
-        </nav>
-      </div> */}
-
-      {/* Audio Toggle Button (replaces Try it on) */}
+      {/* Audio Toggle Button */}
       {hasAudio && onToggleAudio && (
         <button
           onClick={onToggleAudio}
@@ -656,23 +540,23 @@ function TrainMediaShowcase({
       {/* Media Track - Train Style */}
       <div
         ref={trackRef}
-        className="flex h-full will-change-transform"
+        // Force track items to start from top
+        className="flex h-full will-change-transform items-start"
         style={{ transform: "translateX(0)" }}
       >
         {media.map((item, index) => {
-          // Only preload/autoplay videos that are current or adjacent
           const isVisible = index >= currentIndex - 1 && index <= currentIndex + 1;
           const isCurrent = index === currentIndex;
           
           return (
           <div
             key={item.id}
-            className="relative flex-shrink-0 h-full flex items-start md:items-center justify-center"
+            // items-start ensures inner div is top-aligned
+            className="relative flex-shrink-0 h-full flex items-start justify-center will-change-[width]"
             style={{ width: getItemWidth(index) }}
           >
             {item.type === "video" ? (
               <div className="relative w-full h-full">
-                {/* Video loading indicator */}
                 {videoLoadingStates.get(item.id) && isVisible && (
                   <div className="absolute inset-0 flex items-center justify-center bg-[#f5f5f5] z-10">
                     <div className="flex flex-col items-center gap-3">
@@ -692,8 +576,8 @@ function TrainMediaShowcase({
                   playsInline
                   preload={isVisible ? "auto" : "none"}
                   onCanPlay={() => handleVideoCanPlay(item.id)}
-                  onLoadedData={() => handleVideoCanPlay(item.id)}
-                  className="w-full h-full object-cover object-top md:object-cover"
+                  // KEY FIX: object-cover fills height, object-top prevents any top gap
+                  className="w-full h-full object-cover object-top"
                 />
               </div>
             ) : (
@@ -702,7 +586,9 @@ function TrainMediaShowcase({
                   src={item.url}
                   alt={`${productName} - View ${index + 1}`}
                   fill
-                  className="object-cover object-top md:object-contain md:object-center"
+                  // KEY FIX: object-cover fills height to remove bottom gap
+                  // object-top anchors it to the top to remove top gap
+                  className="object-cover object-top"
                   sizes={index === firstImageIndex && currentIndex === firstImageIndex ? "100vw" : "50vw"}
                   priority={index === 0}
                   loading={index <= 1 ? "eager" : "lazy"}
@@ -714,13 +600,12 @@ function TrainMediaShowcase({
         })}
       </div>
 
-      {/* Thumbnail Navigation Bar - Bottom Center on mobile, Bottom Right on desktop */}
+      {/* Thumbnail Navigation */}
       {hasMultipleImages && (
         <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-6 z-30 max-w-[calc(100%-2rem)] sm:max-w-none">
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide pb-1">
             {media.map((item, index) => {
               const isActive = index === currentIndex;
-              // In paired mode, also highlight the previous image
               const isPaired = currentIndex > 0 && index === currentIndex - 1;
 
               return (
@@ -740,7 +625,6 @@ function TrainMediaShowcase({
                   >
                     {item.type === "video" ? (
                       <div className="relative w-full h-full bg-neutral-800">
-                        {/* Use a simple play icon instead of loading video for thumbnails */}
                         <div className="absolute inset-0 flex items-center justify-center bg-neutral-700">
                           <div className="w-0 h-0 border-l-[6px] sm:border-l-[8px] border-l-white border-y-[4px] sm:border-y-[5px] border-y-transparent ml-0.5 drop-shadow-md" />
                         </div>
@@ -759,7 +643,7 @@ function TrainMediaShowcase({
               );
             })}
 
-            {/* Navigation arrows - Hidden on mobile, visible on larger screens */}
+            {/* Navigation arrows */}
             <div className="hidden sm:flex items-center gap-1 ml-2">
               <button
                 onClick={goPrev}
@@ -769,7 +653,6 @@ function TrainMediaShowcase({
                     ? "border-neutral-200 text-neutral-300 cursor-not-allowed"
                     : "border-neutral-400 text-neutral-600 hover:border-neutral-900 hover:text-neutral-900"
                 }`}
-                aria-label="Previous image"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -781,7 +664,6 @@ function TrainMediaShowcase({
                     ? "border-neutral-200 text-neutral-300 cursor-not-allowed"
                     : "border-neutral-400 text-neutral-600 hover:border-neutral-900 hover:text-neutral-900"
                 }`}
-                aria-label="Next image"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -857,7 +739,7 @@ function ProductDetailsPanel({
     return realSizeStock > 0 ? Math.max(reduced, 2) : 0;
   };
   
-  // Use fake stock for display purposes (creates urgency)
+  // Use fake stock for display purposes
   const displayStock = selectedSize ? getDisplayStockForSize(selectedSize, realStock) : realStock;
   const lowStock = displayStock <= 5 && displayStock > 0;
   
@@ -1049,15 +931,6 @@ function ProductDetailsPanel({
                   "Add to Bag"
                 )}
               </button>
-
-              {/* Wishlist Button */}
-              {/* <button
-                className="w-full py-3 text-sm font-medium border border-[#ddd] flex items-center justify-center gap-2 text-[#1a1a1a] hover:border-[#1a1a1a] transition-colors"
-                aria-label="Add to wishlist"
-              >
-                <Heart className="w-4 h-4" />
-                Add to Wishlist
-              </button> */}
 
               {/* Stock Alert - Uses fake stock for urgency */}
               {totalFakeStock > 0 && totalFakeStock <= 15 && (
@@ -1278,9 +1151,6 @@ export default function ProductPage() {
           setIsAudioPlaying(true);
         } catch {
           // Auto-play blocked, user needs to interact first
-          console.log("Auto-play blocked, waiting for user interaction");
-          setIsAudioPlaying(false);
-          
           // Add one-time click listener to start audio on first user interaction
           startAudioOnInteraction = () => {
             if (audioRef.current) {
