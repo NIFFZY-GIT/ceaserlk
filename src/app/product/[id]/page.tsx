@@ -255,7 +255,7 @@ function TrainMediaShowcase({
   const xQuickSetterRef = useRef<((value: number) => void) | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [videoLoadingStates, setVideoLoadingStates] = useState<Map<string, boolean>>(new Map());
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
