@@ -763,12 +763,12 @@ function ProductDetailsPanel({
                 </h1>
                 <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap">
                   <span className="text-xl sm:text-2xl font-semibold text-[#1a1a1a]">
-                    ${selectedVariant.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    LKR {selectedVariant.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </span>
                   {hasDiscount && (
                     <>
                       <span className="text-sm sm:text-base text-[#888] line-through">
-                        ${selectedVariant.compareAtPrice!.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        LKR {selectedVariant.compareAtPrice!.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </span>
                       <span className="px-2 py-0.5 bg-[#1a1a1a] text-white text-[10px] sm:text-xs font-medium">
                         {discountPercentage}% OFF
@@ -957,12 +957,12 @@ function ProductDetailsPanel({
               </h1>
               <div className="flex items-baseline gap-3 flex-wrap">
                 <span className="text-2xl font-semibold text-[#1a1a1a]">
-                  ${selectedVariant.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  LKR {selectedVariant.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                 </span>
                 {hasDiscount && (
                   <>
                     <span className="text-base text-[#888] line-through">
-                      ${selectedVariant.compareAtPrice!.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      LKR {selectedVariant.compareAtPrice!.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </span>
                     <span className="px-2 py-0.5 bg-[#1a1a1a] text-white text-xs font-medium">
                       {discountPercentage}% OFF
