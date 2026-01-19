@@ -516,8 +516,7 @@ function TrainMediaShowcase({
   return (
     <div
       ref={containerRef}
-      // UPDATED: h-[55dvh] for mobile - removed even more space to bring details up
-      className="relative w-full h-[55dvh] sm:h-[75dvh] md:h-screen bg-[#f5f5f5] overflow-hidden select-none touch-pan-y overscroll-x-contain"
+      className="relative w-full h-[100dvh] md:h-screen bg-[#f5f5f5] overflow-hidden select-none touch-pan-y overscroll-x-contain"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -541,6 +540,7 @@ function TrainMediaShowcase({
       {/* Media Track - Train Style */}
       <div
         ref={trackRef}
+        // KEY FIX: items-start forces top alignment
         className="flex h-full will-change-transform items-start"
         style={{ transform: "translateX(0)" }}
       >
@@ -551,6 +551,7 @@ function TrainMediaShowcase({
           return (
           <div
             key={item.id}
+            // KEY FIX: items-start ensures inner content hangs from top
             className="relative flex-shrink-0 h-full flex items-start justify-center will-change-[width]"
             style={{ width: getItemWidth(index) }}
           >
@@ -575,7 +576,8 @@ function TrainMediaShowcase({
                   playsInline
                   preload={isVisible ? "auto" : "none"}
                   onCanPlay={() => handleVideoCanPlay(item.id)}
-                  className="w-full h-full object-contain md:object-cover object-top"
+                  // KEY FIX: object-cover fills height, object-top prevents any top gap
+                  className="w-full h-full object-cover object-top"
                 />
               </div>
             ) : (
@@ -584,11 +586,10 @@ function TrainMediaShowcase({
                   src={item.url}
                   alt={`${productName} - View ${index + 1}`}
                   fill
-                  className="object-contain md:object-cover object-top"
-                  // KEY UPDATE: sizes prop ensures mobile gets full width high-res image
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  // KEY UPDATE: quality=100 ensures no compression artifacts
-                  quality={100}
+                  // KEY FIX: object-contain shows FULL image (no crop)
+                  // object-top prevents top gap (pushes whitespace to bottom)
+                  className="object-contain object-top"
+                  sizes={index === firstImageIndex && currentIndex === firstImageIndex ? "100vw" : "50vw"}
                   priority={index === 0}
                   loading={index <= 1 ? "eager" : "lazy"}
                 />
