@@ -14,9 +14,9 @@ gsap.registerPlugin(ScrollTrigger);
 
 // Data for our animated timeline
 const timelineEvents = [
-  { year: '2021', title: 'The Spark', description: 'The idea for Ceaser was born from a desire for apparel that matched our ambition.', icon: Target },
-  { year: '2022', title: 'Design & Prototype', description: 'Countless hours spent perfecting the fit, fabric, and function of our flagship products.', icon: Milestone },
-  { year: '2023', title: 'Brand Launch', description: 'Ceaser officially launched, shipping our first orders to a community of high-performers.', icon: PackageCheck },
+  { year: '2025', title: 'The Spark', description: 'The idea for Ceaser was born from a desire for apparel that matched our ambition.', icon: Target },
+  { year: '2025', title: 'Design & Prototype', description: 'Countless hours spent perfecting the fit, fabric, and function of our flagship products.', icon: Milestone },
+  { year: '2025', title: 'Brand Launch', description: 'Ceaser officially launched, shipping our first orders to a community of high-performers.', icon: PackageCheck },
 ];
 
 const AboutPage = () => {
