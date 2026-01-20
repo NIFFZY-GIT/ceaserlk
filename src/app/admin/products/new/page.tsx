@@ -934,12 +934,24 @@ const AddProductPage = () => {
                     {existingColors.length > 0 && (
                       <div>
                         <h3 className="block mb-2 text-sm font-medium text-slate-700">🎨 Existing Colors</h3>
+                        <p className="mb-3 text-xs text-slate-500">Click on any color to apply it to the active variant</p>
                         <div className="flex flex-wrap gap-2">
                            {existingColors.map(c => (
-                            <div key={c.colorName} className="flex items-center gap-2 px-2 py-1 text-xs rounded-full bg-slate-100 text-slate-700">
+                            <button
+                              key={c.colorName}
+                              type="button"
+                              onClick={() => {
+                                if (activeVariantId) {
+                                  updateVariant(activeVariantId, 'colorName', c.colorName);
+                                  updateVariant(activeVariantId, 'colorHex', c.colorHex);
+                                }
+                              }}
+                              className="flex items-center gap-2 px-2 py-1 text-xs transition-all rounded-full bg-slate-100 text-slate-700 hover:bg-primary/10 hover:text-primary hover:shadow-md active:scale-95 cursor-pointer"
+                              title={`Click to use ${c.colorName}`}
+                            >
                                <span className="block w-3 h-3 border rounded-full border-slate-300" style={{backgroundColor: c.colorHex}}></span>
                                {c.colorName}
-                            </div>
+                            </button>
                            ))}
                         </div>
                       </div>
