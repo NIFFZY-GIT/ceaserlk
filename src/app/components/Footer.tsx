@@ -111,7 +111,7 @@ const Footer = () => {
       <div className="bg-black border-t border-gray-800/80">
         <div className="container flex flex-col items-center justify-between gap-2 px-4 py-5 sm:px-6 sm:py-6 mx-auto text-center md:flex-row md:text-left">
           <p className="text-[10px] sm:text-xs text-gray-400">
-            © {new Date().getFullYear()} Ceaser.lk. All rights reserved.
+            © {new Date().getFullYear()} inceasar.com. All rights reserved.
           </p>
 
           <a
