@@ -41,14 +41,14 @@ export default function RootLayout({
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-PBTB4QVX');`,
+})(window,document,'script','dataLayer','GTM-MH8VKKGB');`,
           }}
         />
         {/* End Google Tag Manager */}
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe
-            src="https://www.googletagmanager.com/ns.html?id=GTM-PBTB4QVX"
+            src="https://www.googletagmanager.com/ns.html?id=GTM-MH8VKKGB"
             height="0"
             width="0"
             style={{ display: 'none', visibility: 'hidden' }}
