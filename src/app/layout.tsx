@@ -1,6 +1,7 @@
 // src/app/layout.tsx
 
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { Montserrat } from 'next/font/google';
 import './globals.css';
 
@@ -32,7 +33,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={montserrat.variable}>
       <head>
         {/* Google Tag Manager */}
-        <script
+        <Script
+          id="gtag-manager"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
