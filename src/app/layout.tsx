@@ -31,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={montserrat.variable}>
-      <head>
+      <body className={`bg-brand-black ${montserrat.className}`}>
         {/* Google Tag Manager */}
         <Script
           id="gtag-manager"
@@ -45,8 +45,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           }}
         />
         {/* End Google Tag Manager */}
-      </head>
-      <body className={`bg-brand-black ${montserrat.className}`}>
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe
