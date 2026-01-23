@@ -22,6 +22,12 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: 'CeaserLK - Motivation For Your Style',
   description: 'Premium quality shirts designed to inspire you.',
+  verification: {
+    google: '5Scd202sjAm8HUkdAqXIQsbcmJmlc86jQHyhhveExms',
+    other: {
+      'facebook-domain-verification': '65ktjsbn2d9csdxety54i6t42bd6zq',
+    },
+  },
 };
 
 export default function RootLayout({
