@@ -224,10 +224,17 @@ const CountdownTimer = ({ expiresAt }: { expiresAt: string | null }) => {
 
 export const CartDrawer = () => {
   const { isCartOpen, closeCart, cart, cartCount, loading } = useCart();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
+  const [isClient, setIsClient] = useState(false);
+  
   // --- UPDATED SUBTOTAL CALCULATION ---
   const subtotal = cart?.items.reduce((total, item) => total + Number(item.sku.variant.price) * item.quantity, 0) || 0;
   const drawerRef = useRef(null);
+
+  // Prevent hydration mismatch by waiting for client-side rendering
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useLayoutEffect(() => {
     // ... (Your existing GSAP animation logic is fine)
@@ -253,7 +260,7 @@ export const CartDrawer = () => {
               <X size={22} />
             </button>
           </div>
-          {!user ? (
+          {!user && !isGuest && isClient ? (
             <div className="flex flex-col items-center justify-center flex-grow p-6 sm:p-8 text-center">
               <User size={60} className="mb-4 sm:mb-6 text-gray-800" />
               <h3 className="text-xl sm:text-2xl font-semibold">Please Login</h3>

@@ -14,7 +14,7 @@ const Footer = () => {
             <Link href="/" className="inline-flex items-center">
               <Image
                 src="/images/logo1.png"
-                alt="Ceaser Brand Logo"
+                alt="CEASAR Brand Logo"
                 width={140}
                 height={58}
                 priority

@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
                      `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host')}`;
       
       const referralLink = `${baseUrl}/signup?promo=${promoCode}`;
-      const shareMessage = `🔥 Hey! I found this amazing store with incredible products. Use my link to sign up and help me unlock FREE delivery forever! 🚚✨\n\n👉 ${referralLink}\n\nTrust me, you'll love their stuff! 💯`;
+      const shareMessage = `🔥 Hey! I found this amazing CEASAR clothing brand with incredible products.I’m one step away from unlocking FREE delivery at CEASAR.\n👉 If you sign up using my link, it unlocks the reward for me—and you get access to CEASAR too 👑\n👉 ${referralLink}\n\nTrust me, you'll love their stuff! 💯`;
 
       const promoData: PromoData = {
         promoCode,

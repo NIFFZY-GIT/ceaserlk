@@ -19,7 +19,7 @@ const navLinks = [
 
 const Navbar = () => {
   const { openCart, cartCount } = useCart();
-  const { user, logout } = useAuth();
+  const { user, logout, isGuest } = useAuth();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -117,7 +117,7 @@ const Navbar = () => {
     <header className={`${positionClass} top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${navbarBgClass} ${textColorClass}`}>
       <nav className="container mx-auto flex w-full max-w-6xl items-center justify-between px-3 py-3 sm:px-5 md:px-6 md:py-5">
         <Link href="/" onClick={handleLinkClick} className="flex items-center gap-2 rounded-md transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent hover:opacity-90">
-          <Image src="/images/logo1.png" alt="Ceaser Brand Logo" width={150} height={63} priority className="h-9 w-auto sm:h-10 md:h-12" />
+          <Image src="/images/logo1.png" alt="CEASAR Brand Logo" width={150} height={63} priority className="h-9 w-auto sm:h-10 md:h-12" />
         </Link>
 
         {/* Desktop Navigation */}
@@ -219,6 +219,22 @@ const Navbar = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            ) : isGuest ? (
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-semibold uppercase tracking-wider ${usesDarkText ? 'text-neutral-900' : 'text-white/70'}`}>Guest</span>
+                <Link 
+                  href="/login" 
+                  className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 border group ${
+                    usesDarkText 
+                      ? 'bg-neutral-900/5 text-neutral-900 border-neutral-900/10 hover:bg-neutral-900 hover:text-white hover:border-neutral-900'
+                      : 'bg-white/5 text-white border-white/10 hover:bg-white hover:text-black hover:border-white hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]'
+                  }`}
+                  aria-label="Sign in"
+                  title="Sign in to your account"
+                >
+                  <User size={20} className="transition-transform duration-300 group-hover:scale-110" />
+                </Link>
               </div>
             ) : (
               <Link 

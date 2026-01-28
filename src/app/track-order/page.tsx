@@ -20,7 +20,7 @@ const buildHistory = (status: OrderStatus, placedAtIso: string) => {
   const placedDate = new Date(placedAtIso).toLocaleString();
   const events: Array<{ key: OrderStatus | 'ORDER_PLACED'; label: string; location: string }> = [
     { key: 'ORDER_PLACED', label: 'Order Placed', location: 'Website' },
-    { key: 'PAID', label: 'Payment Confirmed', location: 'Ceaser.lk' },
+    { key: 'PAID', label: 'Payment Confirmed', location: 'CEASAR.lk' },
     { key: 'PROCESSING', label: 'Processing', location: 'Warehouse' },
     { key: 'PACKED', label: 'Packed', location: 'Warehouse' },
     { key: 'SHIPPED', label: 'Shipped', location: 'Courier' },
@@ -33,13 +33,13 @@ const buildHistory = (status: OrderStatus, placedAtIso: string) => {
   if (status === 'CANCELLED') {
     return [
       { date: placedDate, status: 'Order Placed', location: 'Website' },
-      { date: placedDate, status: 'Cancelled', location: 'Ceaser.lk' },
+      { date: placedDate, status: 'Cancelled', location: 'CEASAR.lk' },
     ];
   }
   if (status === 'REFUNDED') {
     return [
       { date: placedDate, status: 'Order Placed', location: 'Website' },
-      { date: placedDate, status: 'Refunded', location: 'Ceaser.lk' },
+      { date: placedDate, status: 'Refunded', location: 'CEASAR.lk' },
     ];
   }
 

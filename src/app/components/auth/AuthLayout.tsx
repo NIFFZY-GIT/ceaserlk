@@ -28,7 +28,7 @@ interface AuthLayoutProps {
 const LogoMark = () => (
   <Image
     src="/assets/logo3.png"
-    alt="Ceaser Designs"
+    alt="CEASAR Designs"
     width={150}
     height={63}
     priority
@@ -44,33 +44,16 @@ const AuthLayout = ({
   hero,
   footer,
   bottomSlot,
-  backgroundImage = "/images/image.jpg",
+  backgroundImage = "/assets/pattern.png",
 }: AuthLayoutProps) => {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950">
-      <div className="absolute inset-0">
-        <div className="absolute inset-y-0 right-[-12rem] h-[28rem] w-[28rem] rounded-full bg-rose-500/20 blur-[140px] lg:right-[-6rem] lg:h-[36rem] lg:w-[36rem]" />
-        <div className="absolute left-[-16rem] top-[-10rem] h-[26rem] w-[26rem] rounded-full bg-indigo-500/20 blur-[150px]" />
-        <div className="absolute inset-x-0 top-[-14rem] flex justify-center">
-          <div className="h-72 w-[28rem] rounded-full bg-accent/25 blur-[140px]" />
-        </div>
-      </div>
-
+    <div className="relative min-h-screen overflow-hidden" style={{ backgroundImage: `url(${backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      <div className="absolute inset-0 bg-black/10" />
       <div className="relative z-10 flex flex-col justify-center min-h-screen px-6 py-12 sm:px-10 lg:px-16">
         <div className="flex flex-col w-full max-w-6xl gap-12 mx-auto lg:flex-row lg:items-center lg:gap-16">
           <div className="relative order-2 w-full text-white lg:order-1 lg:max-w-xl">
-            <div className="absolute inset-0 -z-10 hidden overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/5 shadow-[0_40px_140px_-60px_rgba(15,23,42,0.8)] lg:block">
-              <Image
-                src={backgroundImage}
-                alt="Motivational backdrop"
-                fill
-                priority
-                className="object-cover opacity-40"
-              />
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-950/80 via-slate-900/60 to-slate-900/90" />
-            </div>
-            <div className="space-y-8 rounded-[2.5rem] border border-white/10 bg-white/5 p-8 backdrop-blur-md lg:border-none lg:bg-transparent lg:p-0 lg:backdrop-blur-0">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.35em] text-white/70">
+            <div className="space-y-8">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.35em] text-white/70">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
                 {hero.eyebrow}
               </span>
@@ -85,7 +68,7 @@ const AuthLayout = ({
                   {hero.highlights.map((item, index) => (
                     <div
                       key={index}
-                      className="p-5 border rounded-2xl border-white/10 bg-white/10 backdrop-blur-lg"
+                      className="p-5 border rounded-2xl border-white/10"
                     >
                       <div className="flex items-center gap-3 text-sm font-semibold text-white">
                         <span className="flex items-center justify-center text-white h-9 w-9 rounded-xl bg-white/15">

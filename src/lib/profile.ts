@@ -1,4 +1,5 @@
 import { db } from './db';
+import { ensureDeliveryIdSchema } from './delivery-id';
 import type { Order } from './types';
 
 const PROFILE_QUERY = `
@@ -13,6 +14,8 @@ const PROFILE_QUERY = `
         SELECT json_agg(
           json_build_object(
             'id', o.id,
+            'order_number', o.order_number,
+            'delivery_id', o.delivery_id,
             'status', o.status,
             'totalAmount', o.total_amount::text,
             'total_amount', o.total_amount,
@@ -70,7 +73,7 @@ const PROFILE_QUERY = `
           ) ORDER BY o.created_at DESC
         )
         FROM orders o
-        WHERE o.customer_email = u.email
+        WHERE o.user_id = u.id OR (o.user_id IS NULL AND o.customer_email = u.email)
       ), '[]'::json
     ) as orders
   FROM users u
@@ -87,6 +90,7 @@ export type ProfileData = {
 };
 
 export async function getProfileWithOrders(userId: string): Promise<ProfileData | null> {
+  await ensureDeliveryIdSchema(db);
   const { rows } = await db.query(PROFILE_QUERY, [userId]);
 
   if (rows.length === 0) {

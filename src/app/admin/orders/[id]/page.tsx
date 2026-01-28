@@ -8,7 +8,7 @@ import Link from 'next/link';
 // --- (Type definitions are correct and remain the same) ---
 interface OrderItem { id: string; product_name: string; variant_color: string; variant_size: string; price_paid: string; quantity: number; }
 type OrderStatus = 'PENDING' | 'PAID' | 'PROCESSING' | 'PACKED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
-interface FullOrder { id: string; order_number?: number | null; created_at: string; status: OrderStatus; full_name: string; customer_email: string; phone_number: string; shipping_address_line1: string; shipping_city: string; shipping_postal_code: string; subtotal: string; shipping_cost: string; total_amount: string; items: OrderItem[]; }
+interface FullOrder { id: string; order_number?: number | null; delivery_id?: string | null; created_at: string; status: OrderStatus; full_name: string; customer_email: string; phone_number: string; shipping_address_line1: string; shipping_city: string; shipping_postal_code: string; subtotal: string; shipping_cost: string; total_amount: string; items: OrderItem[]; }
 
 const formatPublicOrderId = (order: Pick<FullOrder, 'order_number' | 'id'>) => {
   if (order.order_number === null || order.order_number === undefined) return order.id;
@@ -27,6 +27,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [order, setOrder] = useState<FullOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [newStatus, setNewStatus] = useState<OrderStatus | ''>('');
+  const [deliveryId, setDeliveryId] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -39,6 +40,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         const data: FullOrder = await res.json();
         setOrder(data);
         setNewStatus(data.status);
+        setDeliveryId(data.delivery_id || '');
       } catch (error) {
         console.error(error);
       } finally {
@@ -56,12 +58,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         const res = await fetch(`/api/admin/orders/${id}`, { // Use the stable 'id' variable
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus }),
+            body: JSON.stringify({ status: newStatus, delivery_id: deliveryId || null }),
         });
         if (!res.ok) throw new Error("Failed to update status");
         const updatedOrder = await res.json();
         setOrder(updatedOrder);
-        setUpdateMessage({ type: 'success', text: 'Status updated successfully!' });
+        setDeliveryId(updatedOrder.delivery_id || '');
+        setUpdateMessage({ type: 'success', text: 'Status and delivery ID updated successfully!' });
     } catch {
         setUpdateMessage({ type: 'error', text: 'Failed to update status.' });
     } finally {
@@ -96,7 +99,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <div className="space-y-6 lg:col-span-1">
           <div className="p-6 bg-white rounded-lg shadow-md"><h2 className="mb-4 text-xl font-semibold">Customer</h2><div className="space-y-1 text-sm"><p className="font-medium text-gray-900">{order.full_name}</p><a href={`mailto:${order.customer_email}`} className="text-primary hover:underline">{order.customer_email}</a><p className="text-gray-600">{order.phone_number}</p></div></div>
           <div className="p-6 bg-white rounded-lg shadow-md"><h2 className="mb-4 text-xl font-semibold">Shipping Address</h2><address className="text-sm not-italic text-gray-600">{order.shipping_address_line1}<br/>{order.shipping_city}, {order.shipping_postal_code}</address></div>
-          <div className="p-6 bg-white rounded-lg shadow-md"><h2 className="mb-4 text-xl font-semibold">Update Status</h2><select value={newStatus} onChange={e => setNewStatus(e.target.value as FullOrder['status'])} className="w-full border-gray-300 rounded-md shadow-sm"><option value="PAID">Paid</option><option value="PROCESSING">Processing</option><option value="PACKED">Packed</option><option value="SHIPPED">Shipped</option><option value="DELIVERED">Delivered</option><option value="CANCELLED">Cancelled</option><option value="REFUNDED">Refunded</option></select><button onClick={handleStatusUpdate} disabled={isUpdating || newStatus === order.status} className="w-full px-4 py-2 mt-4 font-semibold text-white transition-colors rounded-md bg-primary hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed">{isUpdating ? <Loader2 className="mx-auto animate-spin"/> : 'Save Changes'}</button>{updateMessage && <p className={`mt-2 text-sm text-center ${updateMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>{updateMessage.text}</p>}</div>
+          <div className="p-6 bg-white rounded-lg shadow-md"><h2 className="mb-4 text-xl font-semibold">Update Status & Delivery</h2><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-2">Order Status</label><select value={newStatus} onChange={e => setNewStatus(e.target.value as FullOrder['status'])} className="w-full border-gray-300 rounded-md shadow-sm"><option value="PAID">Paid</option><option value="PROCESSING">Processing</option><option value="PACKED">Packed</option><option value="SHIPPED">Shipped</option><option value="DELIVERED">Delivered</option><option value="CANCELLED">Cancelled</option><option value="REFUNDED">Refunded</option></select></div><div><label className="block text-sm font-medium text-gray-700 mb-2">Delivery ID (Koombiya Tracking Code)</label><input type="text" value={deliveryId} onChange={e => setDeliveryId(e.target.value)} placeholder="e.g., K12345678" className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/><p className="text-xs text-gray-500 mt-1">Enter the tracking code from your delivery partner</p></div></div><button onClick={handleStatusUpdate} disabled={isUpdating || newStatus === order.status} className="w-full px-4 py-2 mt-4 font-semibold text-white transition-colors rounded-md bg-primary hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed">{isUpdating ? <Loader2 className="mx-auto animate-spin"/> : 'Save Changes'}</button>{updateMessage && <p className={`mt-2 text-sm text-center ${updateMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>{updateMessage.text}</p>}</div>
         </div>
         <div className="p-6 bg-white rounded-lg shadow-md lg:col-span-2">
           <h2 className="mb-4 text-xl font-semibold">Order Items ({order.items?.length || 0})</h2>

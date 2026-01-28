@@ -59,7 +59,7 @@ const AdminLayoutShell = ({ children }: AdminLayoutShellProps) => {
               Admin
             </span>
             <span className="text-base font-semibold text-slate-900">
-              Ceaser Control Center
+              CEASAR Control Center
             </span>
           </div>
 

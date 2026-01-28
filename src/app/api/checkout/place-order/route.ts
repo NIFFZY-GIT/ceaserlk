@@ -27,10 +27,8 @@ type NormalizedShippingDetails = Required<{
 }>;
 
 export async function POST(request: NextRequest) {
+  // Allow both authenticated users and guests to place orders
   const user = await verifyAuth(request);
-  if (!user) {
-    return NextResponse.json({ error: 'Authentication required to place an order.' }, { status: 401 });
-  }
 
   let body: RequestBody;
   try {
@@ -113,9 +111,9 @@ export async function POST(request: NextRequest) {
       return total + perItemShipping * item.quantity;
     }, 0);
 
-    // Check if user wants to use free delivery promo
+    // Check if user wants to use free delivery promo (only for authenticated users)
     let freeDeliveryApplied = false;
-    if (useFreeDelivery && shippingCost > 0) {
+    if (user && useFreeDelivery && shippingCost > 0) {
       // Check if user has free delivery available
       const freeDeliveryCheck = await client.query(
         `SELECT has_free_delivery($1) as has_promo`,
@@ -152,7 +150,7 @@ export async function POST(request: NextRequest) {
     `;
 
     const orderResult = await client.query(orderInsertQuery, [
-      user.userId ? user.userId.toString() : null,
+      user ? user.userId.toString() : null, // NULL for guest orders
       normalizedDetails.email,
       fullName,
       normalizedDetails.phone,
@@ -173,8 +171,8 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to create order record.');
     }
 
-    // Mark free delivery promo as used if applied
-    if (freeDeliveryApplied) {
+    // Mark free delivery promo as used if applied (only for authenticated users)
+    if (user && freeDeliveryApplied) {
       try {
         await client.query(
           `SELECT use_free_delivery($1, $2)`,
@@ -242,6 +240,7 @@ export async function POST(request: NextRequest) {
         subtotal,
         shippingCost,
         totalAmount,
+        paymentMethod: 'COD',
       };
 
       const pdfBuffer = generateInvoicePDF(invoiceData);
@@ -261,6 +260,7 @@ export async function POST(request: NextRequest) {
           postalCode: normalizedDetails.postalCode,
           country: normalizedDetails.country,
         },
+        paymentMethod: 'COD',
       });
 
       await sendEmail({

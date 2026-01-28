@@ -14,9 +14,9 @@ gsap.registerPlugin(ScrollTrigger);
 
 // Data for our animated timeline
 const timelineEvents = [
-  { year: '2025', title: 'The Spark', description: 'The idea for Ceaser was born from a desire for apparel that matched our ambition.', icon: Target },
+  { year: '2025', title: 'The Spark', description: 'The idea for CEASAR was born from a desire for apparel that matched our ambition.', icon: Target },
   { year: '2025', title: 'Design & Prototype', description: 'Countless hours spent perfecting the fit, fabric, and function of our flagship products.', icon: Milestone },
-  { year: '2025', title: 'Brand Launch', description: 'Ceaser officially launched, shipping our first orders to a community of high-performers.', icon: PackageCheck },
+  { year: '2025', title: 'Brand Launch', description: 'CEASAR officially launched, shipping our first orders to a community of high-performers.', icon: PackageCheck },
 ];
 
 const AboutPage = () => {
@@ -112,7 +112,7 @@ const AboutPage = () => {
             <div className="hero-title-word overflow-hidden"><span className="inline-block">Born.</span></div>
           </h1>
           <p className="mt-6 text-lg md:text-xl max-w-2xl mx-auto text-gray-300 gsap-fade-in">
-            Ceaser is more than a brand. It&apos;s a testament to the power of relentless effort and uncompromising standards.
+            CEASAR is more than a brand. It&apos;s a testament to the power of relentless effort and uncompromising standards.
           </p>
         </div>
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-gray-400 text-sm animate-bounce">Scroll Down</div>
@@ -193,7 +193,7 @@ const AboutPage = () => {
       
       {/* Section 4: Our Ethos (Values) */}
       <section className="container mx-auto px-6 py-24 md:py-32 text-center">
-        <h2 className="text-4xl md:text-5xl font-bold mb-16 gsap-fade-in">The Ceaser Ethos</h2>
+        <h2 className="text-4xl md:text-5xl font-bold mb-16 gsap-fade-in">The CEASAR Ethos</h2>
         <div className="grid md:grid-cols-3 gap-10">
           {[
             { icon: ShieldCheck, title: "Uncompromising Quality", text: "We obsess over every detail, from sourcing premium fabrics to ensuring flawless construction." },

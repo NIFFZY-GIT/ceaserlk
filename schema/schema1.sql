@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict gFLTLS6cVlfuiWwj3m80IC6MN5HWOajfhygOCpmowdas6yg415gjGO9FnnaOq6x
+\restrict BWcpSlSI0Ff4j5eZ7akA21s3FdkLgS8n2Ujxdc9PWh0Qh9OWgcj9AfyfsszR8OA
 
--- Dumped from database version 18.0
--- Dumped by pg_dump version 18.0
+-- Dumped from database version 18.1
+-- Dumped by pg_dump version 18.1
 
--- Started on 2025-12-15 11:19:09
+-- Started on 2026-01-28 03:51:35
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -22,7 +22,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 2 (class 3079 OID 19072)
+-- TOC entry 2 (class 3079 OID 16689)
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -30,7 +30,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 
 
 --
--- TOC entry 5218 (class 0 OID 0)
+-- TOC entry 5262 (class 0 OID 0)
 -- Dependencies: 2
 -- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: 
 --
@@ -39,7 +39,7 @@ COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 
 
 --
--- TOC entry 908 (class 1247 OID 19111)
+-- TOC entry 915 (class 1247 OID 16728)
 -- Name: order_status; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -58,7 +58,7 @@ CREATE TYPE public.order_status AS ENUM (
 ALTER TYPE public.order_status OWNER TO postgres;
 
 --
--- TOC entry 911 (class 1247 OID 19128)
+-- TOC entry 918 (class 1247 OID 16746)
 -- Name: product_size; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -76,7 +76,7 @@ CREATE TYPE public.product_size AS ENUM (
 ALTER TYPE public.product_size OWNER TO postgres;
 
 --
--- TOC entry 914 (class 1247 OID 19144)
+-- TOC entry 921 (class 1247 OID 16762)
 -- Name: user_role; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -89,7 +89,73 @@ CREATE TYPE public.user_role AS ENUM (
 ALTER TYPE public.user_role OWNER TO postgres;
 
 --
--- TOC entry 270 (class 1255 OID 19149)
+-- TOC entry 285 (class 1255 OID 16767)
+-- Name: apply_promo_code(uuid, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.apply_promo_code(p_new_user_id uuid, p_promo_code character varying) RETURNS json
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_promo_record record;
+    v_referral_id uuid;
+BEGIN
+    -- Validate promo code exists and is active
+    SELECT pc.id, pc.user_id, pc.code
+    INTO v_promo_record
+    FROM public.promo_codes pc
+    WHERE pc.code = upper(trim(p_promo_code))
+    AND pc.is_active = true;
+    
+    IF v_promo_record.id IS NULL THEN
+        RETURN json_build_object(
+            'success', false,
+            'error', 'Invalid or inactive promo code'
+        );
+    END IF;
+    
+    -- Prevent self-referral
+    IF v_promo_record.user_id = p_new_user_id THEN
+        RETURN json_build_object(
+            'success', false,
+            'error', 'Cannot use your own promo code'
+        );
+    END IF;
+    
+    -- Check if user was already referred
+    IF EXISTS(SELECT 1 FROM public.referrals WHERE referred_id = p_new_user_id) THEN
+        RETURN json_build_object(
+            'success', false,
+            'error', 'User has already been referred'
+        );
+    END IF;
+    
+    -- Create referral record
+    INSERT INTO public.referrals (referrer_id, referred_id, promo_code_id)
+    VALUES (v_promo_record.user_id, p_new_user_id, v_promo_record.id)
+    RETURNING id INTO v_referral_id;
+    
+    -- Grant FREE DELIVERY FOR LIFE to the referrer (the person who shared the code)
+    UPDATE public.users
+    SET free_delivery_for_life = true
+    WHERE id = v_promo_record.user_id;
+    
+    -- Note: The new user (referred) does NOT get free delivery
+    -- They need to refer someone else to earn it
+    
+    RETURN json_build_object(
+        'success', true,
+        'message', 'Promo code applied! Your friend now has free delivery for life.',
+        'referral_id', v_referral_id
+    );
+END;
+$$;
+
+
+ALTER FUNCTION public.apply_promo_code(p_new_user_id uuid, p_promo_code character varying) OWNER TO postgres;
+
+--
+-- TOC entry 286 (class 1255 OID 16768)
 -- Name: cleanup_all_reservations(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -121,7 +187,7 @@ $$;
 ALTER FUNCTION public.cleanup_all_reservations() OWNER TO postgres;
 
 --
--- TOC entry 271 (class 1255 OID 19150)
+-- TOC entry 287 (class 1255 OID 16769)
 -- Name: cleanup_expired_reservations(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -152,7 +218,7 @@ $$;
 ALTER FUNCTION public.cleanup_expired_reservations() OWNER TO postgres;
 
 --
--- TOC entry 283 (class 1255 OID 19151)
+-- TOC entry 288 (class 1255 OID 16770)
 -- Name: fix_over_reservations(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -228,7 +294,72 @@ $$;
 ALTER FUNCTION public.fix_over_reservations() OWNER TO postgres;
 
 --
--- TOC entry 284 (class 1255 OID 19152)
+-- TOC entry 289 (class 1255 OID 16771)
+-- Name: generate_promo_code(uuid); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.generate_promo_code(p_user_id uuid) RETURNS character varying
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    new_code character varying(10);
+    code_exists boolean;
+BEGIN
+    -- Check if user already has a promo code
+    SELECT code INTO new_code 
+    FROM public.promo_codes 
+    WHERE user_id = p_user_id;
+    
+    IF new_code IS NOT NULL THEN
+        RETURN new_code;
+    END IF;
+    
+    -- Generate unique code
+    LOOP
+        -- Generate random 6-character alphanumeric code
+        new_code := upper(substring(md5(random()::text || clock_timestamp()::text) from 1 for 6));
+        
+        -- Check if code already exists
+        SELECT EXISTS(SELECT 1 FROM public.promo_codes WHERE code = new_code) INTO code_exists;
+        
+        EXIT WHEN NOT code_exists;
+    END LOOP;
+    
+    -- Insert the new promo code
+    INSERT INTO public.promo_codes (user_id, code)
+    VALUES (p_user_id, new_code);
+    
+    RETURN new_code;
+END;
+$$;
+
+
+ALTER FUNCTION public.generate_promo_code(p_user_id uuid) OWNER TO postgres;
+
+--
+-- TOC entry 273 (class 1255 OID 16772)
+-- Name: has_free_delivery(uuid); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.has_free_delivery(p_user_id uuid) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_has_free_delivery boolean;
+BEGIN
+    SELECT free_delivery_for_life INTO v_has_free_delivery
+    FROM public.users
+    WHERE id = p_user_id;
+    
+    RETURN COALESCE(v_has_free_delivery, false);
+END;
+$$;
+
+
+ALTER FUNCTION public.has_free_delivery(p_user_id uuid) OWNER TO postgres;
+
+--
+-- TOC entry 290 (class 1255 OID 16773)
 -- Name: reserve_stock(bigint, bigint, bigint, integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -271,7 +402,7 @@ $$;
 ALTER FUNCTION public.reserve_stock(p_product_id bigint, p_color_id bigint, p_size_id bigint, p_quantity integer) OWNER TO postgres;
 
 --
--- TOC entry 285 (class 1255 OID 19153)
+-- TOC entry 291 (class 1255 OID 16774)
 -- Name: reserve_stock(bigint, bigint, bigint, integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -347,7 +478,7 @@ $$;
 ALTER FUNCTION public.reserve_stock(p_product_id bigint, p_size_id bigint, p_color_id bigint, p_quantity integer, p_session_id character varying) OWNER TO postgres;
 
 --
--- TOC entry 286 (class 1255 OID 19154)
+-- TOC entry 292 (class 1255 OID 16775)
 -- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -363,12 +494,49 @@ $$;
 
 ALTER FUNCTION public.update_updated_at_column() OWNER TO postgres;
 
+--
+-- TOC entry 293 (class 1255 OID 16776)
+-- Name: use_free_delivery(uuid, uuid); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.use_free_delivery(p_user_id uuid, p_order_id uuid) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    v_reward_id uuid;
+BEGIN
+    -- Find the oldest unused free delivery reward
+    SELECT id INTO v_reward_id
+    FROM public.promo_rewards
+    WHERE user_id = p_user_id
+    AND reward_type = 'free_delivery'
+    AND is_used = false
+    ORDER BY created_at ASC
+    LIMIT 1
+    FOR UPDATE;
+    
+    IF v_reward_id IS NULL THEN
+        RETURN false;
+    END IF;
+    
+    -- Mark the reward as used
+    UPDATE public.promo_rewards
+    SET is_used = true, order_id = p_order_id, used_at = CURRENT_TIMESTAMP
+    WHERE id = v_reward_id;
+    
+    RETURN true;
+END;
+$$;
+
+
+ALTER FUNCTION public.use_free_delivery(p_user_id uuid, p_order_id uuid) OWNER TO postgres;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- TOC entry 220 (class 1259 OID 19155)
+-- TOC entry 220 (class 1259 OID 16777)
 -- Name: cart_items; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -385,7 +553,7 @@ CREATE TABLE public.cart_items (
 ALTER TABLE public.cart_items OWNER TO postgres;
 
 --
--- TOC entry 221 (class 1259 OID 19165)
+-- TOC entry 221 (class 1259 OID 16787)
 -- Name: carts; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -401,7 +569,7 @@ CREATE TABLE public.carts (
 ALTER TABLE public.carts OWNER TO postgres;
 
 --
--- TOC entry 222 (class 1259 OID 19173)
+-- TOC entry 222 (class 1259 OID 16795)
 -- Name: download_logs; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -421,7 +589,7 @@ CREATE TABLE public.download_logs (
 ALTER TABLE public.download_logs OWNER TO postgres;
 
 --
--- TOC entry 223 (class 1259 OID 19185)
+-- TOC entry 223 (class 1259 OID 16807)
 -- Name: order_items; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -441,7 +609,22 @@ CREATE TABLE public.order_items (
 ALTER TABLE public.order_items OWNER TO postgres;
 
 --
--- TOC entry 224 (class 1259 OID 19194)
+-- TOC entry 224 (class 1259 OID 16816)
+-- Name: order_number_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.order_number_seq
+    START WITH 10000
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.order_number_seq OWNER TO postgres;
+
+--
+-- TOC entry 225 (class 1259 OID 16817)
 -- Name: orders; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -465,15 +648,17 @@ CREATE TABLE public.orders (
     trading_card_url character varying(500),
     payhere_order_id character varying(100),
     payhere_payment_id character varying(100),
-    payment_method character varying(50) DEFAULT 'PAYHERE'::character varying
+    payment_method character varying(50) DEFAULT 'PAYHERE'::character varying,
+    order_number integer DEFAULT nextval('public.order_number_seq'::regclass),
+    delivery_id character varying(255)
 );
 
 
 ALTER TABLE public.orders OWNER TO postgres;
 
 --
--- TOC entry 5219 (class 0 OID 0)
--- Dependencies: 224
+-- TOC entry 5263 (class 0 OID 0)
+-- Dependencies: 225
 -- Name: COLUMN orders.trading_card_url; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -481,7 +666,16 @@ COMMENT ON COLUMN public.orders.trading_card_url IS 'URL path to the generated t
 
 
 --
--- TOC entry 225 (class 1259 OID 19212)
+-- TOC entry 5264 (class 0 OID 0)
+-- Dependencies: 225
+-- Name: COLUMN orders.delivery_id; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.orders.delivery_id IS 'Tracking/delivery ID from delivery partner (e.g., Koombiya tracking code)';
+
+
+--
+-- TOC entry 226 (class 1259 OID 16837)
 -- Name: password_reset_codes; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -500,7 +694,7 @@ CREATE TABLE public.password_reset_codes (
 ALTER TABLE public.password_reset_codes OWNER TO postgres;
 
 --
--- TOC entry 232 (class 1259 OID 20012)
+-- TOC entry 227 (class 1259 OID 16848)
 -- Name: pending_payhere_orders; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -523,14 +717,15 @@ CREATE TABLE public.pending_payhere_orders (
     status character varying(20) DEFAULT 'pending'::character varying,
     processed_order_id character varying(255),
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    free_delivery_applied boolean DEFAULT false
 );
 
 
 ALTER TABLE public.pending_payhere_orders OWNER TO postgres;
 
 --
--- TOC entry 231 (class 1259 OID 20011)
+-- TOC entry 228 (class 1259 OID 16866)
 -- Name: pending_payhere_orders_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -546,8 +741,8 @@ CREATE SEQUENCE public.pending_payhere_orders_id_seq
 ALTER SEQUENCE public.pending_payhere_orders_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5220 (class 0 OID 0)
--- Dependencies: 231
+-- TOC entry 5265 (class 0 OID 0)
+-- Dependencies: 228
 -- Name: pending_payhere_orders_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -555,7 +750,7 @@ ALTER SEQUENCE public.pending_payhere_orders_id_seq OWNED BY public.pending_payh
 
 
 --
--- TOC entry 226 (class 1259 OID 19223)
+-- TOC entry 229 (class 1259 OID 16867)
 -- Name: product_variants; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -575,7 +770,7 @@ CREATE TABLE public.product_variants (
 ALTER TABLE public.product_variants OWNER TO postgres;
 
 --
--- TOC entry 227 (class 1259 OID 19233)
+-- TOC entry 230 (class 1259 OID 16877)
 -- Name: products; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -597,7 +792,57 @@ CREATE TABLE public.products (
 ALTER TABLE public.products OWNER TO postgres;
 
 --
--- TOC entry 228 (class 1259 OID 19247)
+-- TOC entry 231 (class 1259 OID 16891)
+-- Name: promo_codes; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.promo_codes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    code character varying(10) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    is_active boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE public.promo_codes OWNER TO postgres;
+
+--
+-- TOC entry 5266 (class 0 OID 0)
+-- Dependencies: 231
+-- Name: TABLE promo_codes; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.promo_codes IS 'Stores unique promo codes for each user';
+
+
+--
+-- TOC entry 232 (class 1259 OID 16901)
+-- Name: referrals; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.referrals (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    referrer_id uuid NOT NULL,
+    referred_id uuid NOT NULL,
+    promo_code_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.referrals OWNER TO postgres;
+
+--
+-- TOC entry 5267 (class 0 OID 0)
+-- Dependencies: 232
+-- Name: TABLE referrals; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON TABLE public.referrals IS 'Tracks referral relationships between users';
+
+
+--
+-- TOC entry 233 (class 1259 OID 16910)
 -- Name: stock_keeping_units; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -612,7 +857,7 @@ CREATE TABLE public.stock_keeping_units (
 ALTER TABLE public.stock_keeping_units OWNER TO postgres;
 
 --
--- TOC entry 229 (class 1259 OID 19256)
+-- TOC entry 234 (class 1259 OID 16919)
 -- Name: users; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -622,18 +867,38 @@ CREATE TABLE public.users (
     last_name character varying(50) NOT NULL,
     email character varying(255) NOT NULL,
     phone_number character varying(20),
-    password_hash character varying(255) NOT NULL,
+    password_hash character varying(255),
     role public.user_role DEFAULT 'USER'::public.user_role NOT NULL,
     is_verified boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    free_delivery_for_life boolean DEFAULT false NOT NULL,
+    google_id character varying(255)
 );
 
 
 ALTER TABLE public.users OWNER TO postgres;
 
 --
--- TOC entry 230 (class 1259 OID 19273)
+-- TOC entry 5268 (class 0 OID 0)
+-- Dependencies: 234
+-- Name: COLUMN users.free_delivery_for_life; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.free_delivery_for_life IS 'User has earned free delivery for life through successful referral';
+
+
+--
+-- TOC entry 5269 (class 0 OID 0)
+-- Dependencies: 234
+-- Name: COLUMN users.google_id; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.users.google_id IS 'Google OAuth user ID (sub claim from Google)';
+
+
+--
+-- TOC entry 235 (class 1259 OID 16937)
 -- Name: variant_images; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -649,7 +914,7 @@ CREATE TABLE public.variant_images (
 ALTER TABLE public.variant_images OWNER TO postgres;
 
 --
--- TOC entry 4984 (class 2604 OID 20015)
+-- TOC entry 4981 (class 2604 OID 16947)
 -- Name: pending_payhere_orders id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -657,7 +922,7 @@ ALTER TABLE ONLY public.pending_payhere_orders ALTER COLUMN id SET DEFAULT nextv
 
 
 --
--- TOC entry 4991 (class 2606 OID 19284)
+-- TOC entry 5012 (class 2606 OID 16949)
 -- Name: cart_items cart_items_cart_id_sku_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -666,7 +931,7 @@ ALTER TABLE ONLY public.cart_items
 
 
 --
--- TOC entry 4993 (class 2606 OID 19286)
+-- TOC entry 5014 (class 2606 OID 16951)
 -- Name: cart_items cart_items_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -675,7 +940,7 @@ ALTER TABLE ONLY public.cart_items
 
 
 --
--- TOC entry 4996 (class 2606 OID 19288)
+-- TOC entry 5017 (class 2606 OID 16953)
 -- Name: carts carts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -684,7 +949,7 @@ ALTER TABLE ONLY public.carts
 
 
 --
--- TOC entry 4998 (class 2606 OID 19290)
+-- TOC entry 5019 (class 2606 OID 16955)
 -- Name: carts carts_session_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -693,7 +958,7 @@ ALTER TABLE ONLY public.carts
 
 
 --
--- TOC entry 5002 (class 2606 OID 19292)
+-- TOC entry 5023 (class 2606 OID 16957)
 -- Name: download_logs download_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -702,7 +967,7 @@ ALTER TABLE ONLY public.download_logs
 
 
 --
--- TOC entry 5008 (class 2606 OID 19294)
+-- TOC entry 5029 (class 2606 OID 16959)
 -- Name: order_items order_items_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -711,7 +976,16 @@ ALTER TABLE ONLY public.order_items
 
 
 --
--- TOC entry 5012 (class 2606 OID 19296)
+-- TOC entry 5033 (class 2606 OID 16961)
+-- Name: orders orders_order_number_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_order_number_unique UNIQUE (order_number);
+
+
+--
+-- TOC entry 5035 (class 2606 OID 16963)
 -- Name: orders orders_payment_intent_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -720,7 +994,7 @@ ALTER TABLE ONLY public.orders
 
 
 --
--- TOC entry 5014 (class 2606 OID 19298)
+-- TOC entry 5037 (class 2606 OID 16965)
 -- Name: orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -729,7 +1003,7 @@ ALTER TABLE ONLY public.orders
 
 
 --
--- TOC entry 5018 (class 2606 OID 19300)
+-- TOC entry 5041 (class 2606 OID 16967)
 -- Name: password_reset_codes password_reset_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -738,7 +1012,7 @@ ALTER TABLE ONLY public.password_reset_codes
 
 
 --
--- TOC entry 5048 (class 2606 OID 20033)
+-- TOC entry 5048 (class 2606 OID 16969)
 -- Name: pending_payhere_orders pending_payhere_orders_order_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -747,7 +1021,7 @@ ALTER TABLE ONLY public.pending_payhere_orders
 
 
 --
--- TOC entry 5050 (class 2606 OID 20031)
+-- TOC entry 5050 (class 2606 OID 16971)
 -- Name: pending_payhere_orders pending_payhere_orders_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -756,7 +1030,7 @@ ALTER TABLE ONLY public.pending_payhere_orders
 
 
 --
--- TOC entry 5023 (class 2606 OID 19302)
+-- TOC entry 5053 (class 2606 OID 16973)
 -- Name: product_variants product_variants_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -765,7 +1039,7 @@ ALTER TABLE ONLY public.product_variants
 
 
 --
--- TOC entry 5025 (class 2606 OID 19304)
+-- TOC entry 5055 (class 2606 OID 16975)
 -- Name: product_variants product_variants_sku_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -774,7 +1048,7 @@ ALTER TABLE ONLY public.product_variants
 
 
 --
--- TOC entry 5028 (class 2606 OID 19306)
+-- TOC entry 5058 (class 2606 OID 16977)
 -- Name: products products_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -783,7 +1057,34 @@ ALTER TABLE ONLY public.products
 
 
 --
--- TOC entry 5031 (class 2606 OID 19308)
+-- TOC entry 5062 (class 2606 OID 16979)
+-- Name: promo_codes promo_codes_code_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_code_key UNIQUE (code);
+
+
+--
+-- TOC entry 5064 (class 2606 OID 16981)
+-- Name: promo_codes promo_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 5070 (class 2606 OID 16983)
+-- Name: referrals referrals_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.referrals
+    ADD CONSTRAINT referrals_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 5075 (class 2606 OID 16985)
 -- Name: stock_keeping_units stock_keeping_units_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -792,7 +1093,7 @@ ALTER TABLE ONLY public.stock_keeping_units
 
 
 --
--- TOC entry 5033 (class 2606 OID 19310)
+-- TOC entry 5077 (class 2606 OID 16987)
 -- Name: stock_keeping_units stock_keeping_units_variant_id_size_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -801,7 +1102,7 @@ ALTER TABLE ONLY public.stock_keeping_units
 
 
 --
--- TOC entry 5020 (class 2606 OID 19312)
+-- TOC entry 5043 (class 2606 OID 16989)
 -- Name: password_reset_codes unique_email; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -810,7 +1111,25 @@ ALTER TABLE ONLY public.password_reset_codes
 
 
 --
--- TOC entry 5036 (class 2606 OID 19314)
+-- TOC entry 5072 (class 2606 OID 16991)
+-- Name: referrals unique_referred_user; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.referrals
+    ADD CONSTRAINT unique_referred_user UNIQUE (referred_id);
+
+
+--
+-- TOC entry 5066 (class 2606 OID 16993)
+-- Name: promo_codes unique_user_promo_code; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT unique_user_promo_code UNIQUE (user_id);
+
+
+--
+-- TOC entry 5081 (class 2606 OID 16995)
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -819,7 +1138,16 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 5038 (class 2606 OID 19316)
+-- TOC entry 5083 (class 2606 OID 16997)
+-- Name: users users_google_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_google_id_key UNIQUE (google_id);
+
+
+--
+-- TOC entry 5085 (class 2606 OID 16999)
 -- Name: users users_phone_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -828,7 +1156,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 5040 (class 2606 OID 19318)
+-- TOC entry 5087 (class 2606 OID 17001)
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -837,7 +1165,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 5043 (class 2606 OID 19320)
+-- TOC entry 5090 (class 2606 OID 17003)
 -- Name: variant_images variant_images_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -846,7 +1174,7 @@ ALTER TABLE ONLY public.variant_images
 
 
 --
--- TOC entry 4994 (class 1259 OID 19321)
+-- TOC entry 5015 (class 1259 OID 17004)
 -- Name: idx_cart_items_cart_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -854,7 +1182,7 @@ CREATE INDEX idx_cart_items_cart_id ON public.cart_items USING btree (cart_id);
 
 
 --
--- TOC entry 4999 (class 1259 OID 19322)
+-- TOC entry 5020 (class 1259 OID 17005)
 -- Name: idx_carts_session_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -862,7 +1190,7 @@ CREATE INDEX idx_carts_session_id ON public.carts USING btree (session_id);
 
 
 --
--- TOC entry 5000 (class 1259 OID 19323)
+-- TOC entry 5021 (class 1259 OID 17006)
 -- Name: idx_carts_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -870,7 +1198,7 @@ CREATE INDEX idx_carts_user_id ON public.carts USING btree (user_id);
 
 
 --
--- TOC entry 5003 (class 1259 OID 19324)
+-- TOC entry 5024 (class 1259 OID 17007)
 -- Name: idx_download_logs_downloaded_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -878,7 +1206,7 @@ CREATE INDEX idx_download_logs_downloaded_at ON public.download_logs USING btree
 
 
 --
--- TOC entry 5004 (class 1259 OID 19325)
+-- TOC entry 5025 (class 1259 OID 17008)
 -- Name: idx_download_logs_order_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -886,7 +1214,7 @@ CREATE INDEX idx_download_logs_order_id ON public.download_logs USING btree (ord
 
 
 --
--- TOC entry 5005 (class 1259 OID 19326)
+-- TOC entry 5026 (class 1259 OID 17009)
 -- Name: idx_download_logs_product_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -894,7 +1222,7 @@ CREATE INDEX idx_download_logs_product_id ON public.download_logs USING btree (p
 
 
 --
--- TOC entry 5006 (class 1259 OID 19327)
+-- TOC entry 5027 (class 1259 OID 17010)
 -- Name: idx_download_logs_user_email; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -902,7 +1230,7 @@ CREATE INDEX idx_download_logs_user_email ON public.download_logs USING btree (u
 
 
 --
--- TOC entry 5009 (class 1259 OID 20010)
+-- TOC entry 5030 (class 1259 OID 17011)
 -- Name: idx_orders_payhere_order_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -910,7 +1238,7 @@ CREATE INDEX idx_orders_payhere_order_id ON public.orders USING btree (payhere_o
 
 
 --
--- TOC entry 5010 (class 1259 OID 19328)
+-- TOC entry 5031 (class 1259 OID 17012)
 -- Name: idx_orders_trading_card_url; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -918,7 +1246,7 @@ CREATE INDEX idx_orders_trading_card_url ON public.orders USING btree (trading_c
 
 
 --
--- TOC entry 5015 (class 1259 OID 19329)
+-- TOC entry 5038 (class 1259 OID 17013)
 -- Name: idx_password_reset_codes_email; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -926,7 +1254,7 @@ CREATE INDEX idx_password_reset_codes_email ON public.password_reset_codes USING
 
 
 --
--- TOC entry 5016 (class 1259 OID 19330)
+-- TOC entry 5039 (class 1259 OID 17014)
 -- Name: idx_password_reset_codes_expires_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -934,7 +1262,7 @@ CREATE INDEX idx_password_reset_codes_expires_at ON public.password_reset_codes 
 
 
 --
--- TOC entry 5044 (class 1259 OID 20034)
+-- TOC entry 5044 (class 1259 OID 17015)
 -- Name: idx_pending_payhere_order_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -942,7 +1270,7 @@ CREATE INDEX idx_pending_payhere_order_id ON public.pending_payhere_orders USING
 
 
 --
--- TOC entry 5045 (class 1259 OID 20036)
+-- TOC entry 5045 (class 1259 OID 17016)
 -- Name: idx_pending_payhere_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -950,7 +1278,7 @@ CREATE INDEX idx_pending_payhere_status ON public.pending_payhere_orders USING b
 
 
 --
--- TOC entry 5046 (class 1259 OID 20035)
+-- TOC entry 5046 (class 1259 OID 17017)
 -- Name: idx_pending_payhere_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -958,7 +1286,7 @@ CREATE INDEX idx_pending_payhere_user_id ON public.pending_payhere_orders USING 
 
 
 --
--- TOC entry 5021 (class 1259 OID 19331)
+-- TOC entry 5051 (class 1259 OID 17018)
 -- Name: idx_product_variants_product_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -966,7 +1294,7 @@ CREATE INDEX idx_product_variants_product_id ON public.product_variants USING bt
 
 
 --
--- TOC entry 5026 (class 1259 OID 19332)
+-- TOC entry 5056 (class 1259 OID 17019)
 -- Name: idx_products_category; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -974,7 +1302,39 @@ CREATE INDEX idx_products_category ON public.products USING btree (category);
 
 
 --
--- TOC entry 5029 (class 1259 OID 19333)
+-- TOC entry 5059 (class 1259 OID 17020)
+-- Name: idx_promo_codes_code; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_promo_codes_code ON public.promo_codes USING btree (code);
+
+
+--
+-- TOC entry 5060 (class 1259 OID 17021)
+-- Name: idx_promo_codes_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_promo_codes_user_id ON public.promo_codes USING btree (user_id);
+
+
+--
+-- TOC entry 5067 (class 1259 OID 17022)
+-- Name: idx_referrals_referred_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_referrals_referred_id ON public.referrals USING btree (referred_id);
+
+
+--
+-- TOC entry 5068 (class 1259 OID 17023)
+-- Name: idx_referrals_referrer_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_referrals_referrer_id ON public.referrals USING btree (referrer_id);
+
+
+--
+-- TOC entry 5073 (class 1259 OID 17024)
 -- Name: idx_stock_keeping_units_variant_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -982,7 +1342,7 @@ CREATE INDEX idx_stock_keeping_units_variant_id ON public.stock_keeping_units US
 
 
 --
--- TOC entry 5034 (class 1259 OID 19334)
+-- TOC entry 5078 (class 1259 OID 17025)
 -- Name: idx_users_email; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -990,7 +1350,15 @@ CREATE INDEX idx_users_email ON public.users USING btree (email);
 
 
 --
--- TOC entry 5041 (class 1259 OID 19335)
+-- TOC entry 5079 (class 1259 OID 17026)
+-- Name: idx_users_google_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_users_google_id ON public.users USING btree (google_id) WHERE (google_id IS NOT NULL);
+
+
+--
+-- TOC entry 5088 (class 1259 OID 17027)
 -- Name: idx_variant_images_variant_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -998,7 +1366,7 @@ CREATE INDEX idx_variant_images_variant_id ON public.variant_images USING btree 
 
 
 --
--- TOC entry 5064 (class 2620 OID 19336)
+-- TOC entry 5108 (class 2620 OID 17028)
 -- Name: products update_products_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1006,7 +1374,7 @@ CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON public.products FOR E
 
 
 --
--- TOC entry 5065 (class 2620 OID 19337)
+-- TOC entry 5109 (class 2620 OID 17029)
 -- Name: users update_users_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1014,7 +1382,7 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH RO
 
 
 --
--- TOC entry 5051 (class 2606 OID 19338)
+-- TOC entry 5091 (class 2606 OID 17030)
 -- Name: cart_items cart_items_cart_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1023,7 +1391,7 @@ ALTER TABLE ONLY public.cart_items
 
 
 --
--- TOC entry 5052 (class 2606 OID 19343)
+-- TOC entry 5092 (class 2606 OID 17035)
 -- Name: cart_items cart_items_sku_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1032,7 +1400,7 @@ ALTER TABLE ONLY public.cart_items
 
 
 --
--- TOC entry 5053 (class 2606 OID 19348)
+-- TOC entry 5093 (class 2606 OID 17040)
 -- Name: carts carts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1041,7 +1409,7 @@ ALTER TABLE ONLY public.carts
 
 
 --
--- TOC entry 5054 (class 2606 OID 19353)
+-- TOC entry 5094 (class 2606 OID 17045)
 -- Name: download_logs download_logs_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1050,7 +1418,7 @@ ALTER TABLE ONLY public.download_logs
 
 
 --
--- TOC entry 5055 (class 2606 OID 19358)
+-- TOC entry 5095 (class 2606 OID 17050)
 -- Name: download_logs download_logs_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1059,7 +1427,7 @@ ALTER TABLE ONLY public.download_logs
 
 
 --
--- TOC entry 5056 (class 2606 OID 19363)
+-- TOC entry 5096 (class 2606 OID 17055)
 -- Name: order_items order_items_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1068,7 +1436,7 @@ ALTER TABLE ONLY public.order_items
 
 
 --
--- TOC entry 5057 (class 2606 OID 19368)
+-- TOC entry 5097 (class 2606 OID 17060)
 -- Name: order_items order_items_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1077,7 +1445,7 @@ ALTER TABLE ONLY public.order_items
 
 
 --
--- TOC entry 5058 (class 2606 OID 19373)
+-- TOC entry 5098 (class 2606 OID 17065)
 -- Name: order_items order_items_sku_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1086,7 +1454,7 @@ ALTER TABLE ONLY public.order_items
 
 
 --
--- TOC entry 5059 (class 2606 OID 19378)
+-- TOC entry 5099 (class 2606 OID 17070)
 -- Name: orders orders_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1095,7 +1463,7 @@ ALTER TABLE ONLY public.orders
 
 
 --
--- TOC entry 5060 (class 2606 OID 19383)
+-- TOC entry 5100 (class 2606 OID 17075)
 -- Name: password_reset_codes password_reset_codes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1104,7 +1472,7 @@ ALTER TABLE ONLY public.password_reset_codes
 
 
 --
--- TOC entry 5061 (class 2606 OID 19388)
+-- TOC entry 5101 (class 2606 OID 17080)
 -- Name: product_variants product_variants_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1113,7 +1481,43 @@ ALTER TABLE ONLY public.product_variants
 
 
 --
--- TOC entry 5062 (class 2606 OID 19393)
+-- TOC entry 5102 (class 2606 OID 17085)
+-- Name: promo_codes promo_codes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.promo_codes
+    ADD CONSTRAINT promo_codes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 5103 (class 2606 OID 17090)
+-- Name: referrals referrals_promo_code_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.referrals
+    ADD CONSTRAINT referrals_promo_code_id_fkey FOREIGN KEY (promo_code_id) REFERENCES public.promo_codes(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 5104 (class 2606 OID 17095)
+-- Name: referrals referrals_referred_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.referrals
+    ADD CONSTRAINT referrals_referred_id_fkey FOREIGN KEY (referred_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 5105 (class 2606 OID 17100)
+-- Name: referrals referrals_referrer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.referrals
+    ADD CONSTRAINT referrals_referrer_id_fkey FOREIGN KEY (referrer_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 5106 (class 2606 OID 17105)
 -- Name: stock_keeping_units stock_keeping_units_variant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1122,7 +1526,7 @@ ALTER TABLE ONLY public.stock_keeping_units
 
 
 --
--- TOC entry 5063 (class 2606 OID 19398)
+-- TOC entry 5107 (class 2606 OID 17110)
 -- Name: variant_images variant_images_variant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1130,11 +1534,11 @@ ALTER TABLE ONLY public.variant_images
     ADD CONSTRAINT variant_images_variant_id_fkey FOREIGN KEY (variant_id) REFERENCES public.product_variants(id) ON DELETE CASCADE;
 
 
--- Completed on 2025-12-15 11:19:09
+-- Completed on 2026-01-28 03:51:35
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict gFLTLS6cVlfuiWwj3m80IC6MN5HWOajfhygOCpmowdas6yg415gjGO9FnnaOq6x
+\unrestrict BWcpSlSI0Ff4j5eZ7akA21s3FdkLgS8n2Ujxdc9PWh0Qh9OWgcj9AfyfsszR8OA
 

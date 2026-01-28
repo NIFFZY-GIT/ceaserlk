@@ -243,7 +243,8 @@ export async function POST(request: NextRequest) {
             items,
             subtotal: parseFloat(pendingOrder.subtotal),
             shippingCost: parseFloat(pendingOrder.shipping_cost),
-            totalAmount: parseFloat(payhereAmount)
+            totalAmount: parseFloat(payhereAmount),
+            paymentMethod: 'CARD'
           };
 
           const pdfBuffer = await generateInvoicePDF(invoiceData);
@@ -258,7 +259,8 @@ export async function POST(request: NextRequest) {
             subtotal: parseFloat(pendingOrder.subtotal),
             shippingCost: parseFloat(pendingOrder.shipping_cost),
             totalAmount: parseFloat(payhereAmount),
-            shippingAddress: shippingAddressObj
+            shippingAddress: shippingAddressObj,
+            paymentMethod: 'CARD'
           });
 
           await sendEmail({

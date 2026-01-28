@@ -63,11 +63,16 @@ const ForgotPasswordPage = () => {
     validatePassword(password, newConfirmPassword);
   };
 
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    setError(null);
+  };
+
   const isPasswordValid = () => Object.values(passwordValidation).every(Boolean);
 
   const sendVerificationCode = async () => {
     if (!email) {
-      setError('Please enter the email connected to your Ceaser account.');
+      setError('Please enter the email connected to your CEASAR account.');
       return;
     }
 
@@ -187,7 +192,7 @@ const ForgotPasswordPage = () => {
   const formSubtitle = (() => {
     switch (currentStep) {
       case 'email':
-        return 'Drop the email tied to your Ceaser Designs account and we’ll send a code.';
+        return 'Drop the email tied to your CEASAR Designs account and we’ll send a code.';
       case 'verify':
         return `We emailed a six-digit code to ${email || 'your inbox'}. Enter it below to continue.`;
       case 'reset':
@@ -204,29 +209,29 @@ const ForgotPasswordPage = () => {
       case 'email':
         return (
           <form onSubmit={handleSendCode} className="space-y-6">
-            <label htmlFor="reset-email" className="text-sm font-medium text-slate-500">
+            <label htmlFor="reset-email" className="block text-sm font-medium text-slate-700">
               Email address
-              <div className="relative mt-2">
-                <Mail className="absolute w-4 h-4 -translate-y-1/2 pointer-events-none left-4 top-1/2 text-slate-400" />
-                <input
-                  id="reset-email"
-                  type="email"
-                  value={email}
-                  onChange={event => setEmail(event.target.value)}
-                  className="block w-full px-12 py-3 text-sm font-medium transition bg-white border shadow-sm outline-none rounded-xl border-slate-200 text-slate-900 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-                  placeholder="you@ceaserfan.com"
-                  required
-                />
-              </div>
             </label>
+            <div className="relative">
+              <Mail className="absolute w-4 h-4 -translate-y-1/2 pointer-events-none left-4 top-1/2 text-slate-400" />
+              <input
+                id="reset-email"
+                name="email"
+                type="email"
+                value={email}
+                onChange={handleEmailChange}
+                placeholder="you@ceasarfan.com"
+                required
+                className="block w-full pl-11 pr-4 py-3 text-sm font-medium text-slate-900 placeholder-slate-400 bg-white border border-slate-300 rounded-xl focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 focus:outline-none"
+                autoComplete="email"
+              />
+            </div>
             {error && (
               <div className="flex items-start gap-3 px-4 py-3 text-sm border rounded-2xl border-rose-100 bg-rose-50 text-rose-700" role="alert">
                 <AlertCircle className="mt-0.5 h-4 w-4" />
                 <span className="font-medium">{error}</span>
               </div>
             )}
-            {/* Add extra space between input and button */}
-            <div className="h-2" />
             <button
               type="submit"
               disabled={loading}
@@ -424,10 +429,10 @@ const ForgotPasswordPage = () => {
       formTitle={formTitleMap[currentStep]}
       formSubtitle={formSubtitle}
       hero={{
-        eyebrow: 'Ceaser Designs Support',
+        eyebrow: 'CEASAR Designs Support',
         title: 'Reset your access and keep the creativity flowing',
         description:
-          'Glitches happen. We’ll get you back into the Ceaser universe so you can keep wearing motivation on your sleeve.',
+          'Glitches happen. We’ll get you back into the CEASAR universe so you can keep wearing motivation on your sleeve.',
         highlights: heroHighlights,
       }}
       bottomSlot={

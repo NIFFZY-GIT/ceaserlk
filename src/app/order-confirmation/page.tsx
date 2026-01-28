@@ -2,9 +2,10 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CheckCircle, Loader2, Package, Download, ShoppingBag, User, Sparkles, Gift, Mail } from 'lucide-react';
+import { CheckCircle, Loader2, Package, Download, ShoppingBag, User, Sparkles, Gift, Mail, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import TradingCardDownload from '@/components/TradingCardDownload';
 
 interface OrderItem {
@@ -33,6 +34,7 @@ function OrderConfirmationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { fetchCart } = useCart();
+  const { user, isGuest } = useAuth();
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -259,13 +261,23 @@ function OrderConfirmationContent() {
               Download Invoice
             </button>
             
-            <Link 
-              href="/profile" 
-              className="flex items-center justify-center px-6 py-4 font-semibold text-white transition-all duration-300 transform shadow-lg group bg-gradient-to-r from-gray-600 to-gray-700 rounded-xl hover:from-gray-500 hover:to-gray-600 hover:scale-105 hover:shadow-2xl"
-            >
-              <User className="w-5 h-5 mr-2 group-hover:animate-bounce" />
-              Order History
-            </Link>
+            {isGuest ? (
+              <Link 
+                href="/track-order" 
+                className="flex items-center justify-center px-6 py-4 font-semibold text-white transition-all duration-300 transform shadow-lg group bg-gradient-to-r from-gray-600 to-gray-700 rounded-xl hover:from-gray-500 hover:to-gray-600 hover:scale-105 hover:shadow-2xl"
+              >
+                <Search className="w-5 h-5 mr-2 group-hover:animate-bounce" />
+                Track Order
+              </Link>
+            ) : (
+              <Link 
+                href="/profile" 
+                className="flex items-center justify-center px-6 py-4 font-semibold text-white transition-all duration-300 transform shadow-lg group bg-gradient-to-r from-gray-600 to-gray-700 rounded-xl hover:from-gray-500 hover:to-gray-600 hover:scale-105 hover:shadow-2xl"
+              >
+                <User className="w-5 h-5 mr-2 group-hover:animate-bounce" />
+                Order History
+              </Link>
+            )}
           </div>
         </div>
 
@@ -292,48 +304,67 @@ function OrderConfirmationContent() {
           </div>
         )}
 
-        {/* Additional Info Card */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="p-6 transition-shadow duration-300 bg-gray-900 border border-gray-700 shadow-lg rounded-xl hover:shadow-xl">
-            <h4 className="flex items-center mb-3 text-lg font-bold text-gray-100">
-              <Package className="w-6 h-6 mr-2 text-primary" />
-              What&apos;s Next?
-            </h4>
-            <ul className="space-y-2 text-gray-300">
-              <li className="flex items-center">
-                <div className="w-2 h-2 mr-3 bg-green-500 rounded-full"></div>
-                Order confirmation email sent
-              </li>
-              <li className="flex items-center">
-                <div className="w-2 h-2 mr-3 rounded-full bg-primary"></div>
-                Processing begins within 24 hours
-              </li>
-              <li className="flex items-center">
-                <div className="w-2 h-2 mr-3 bg-gray-500 rounded-full"></div>
-                Shipping notification will follow
-              </li>
-              <li className="flex items-center">
-                <div className="w-2 h-2 mr-3 bg-yellow-500 rounded-full"></div>
-                Track your package anytime
-              </li>
-            </ul>
-          </div>
-
-          <div className="p-6 transition-shadow duration-300 bg-gray-900 border border-gray-600 bg-gradient-to-br from-primary/10 to-green-500/10 rounded-xl hover:shadow-xl">
-            <h4 className="flex items-center mb-3 text-lg font-bold text-gray-100">
-              <Sparkles className="w-6 h-6 mr-2 text-primary" />
-              Special Offer
-            </h4>
+        {/* Guest Order Tracking Info */}
+        {!user && orderData && (
+          <div className="p-8 mb-8 bg-gradient-to-r from-blue-900/20 to-primary/20 border border-blue-700/50 shadow-xl rounded-2xl">
+            <h3 className="flex items-center mb-4 text-2xl font-bold text-gray-100">
+              <Package className="w-6 h-6 mr-3 text-primary" />
+              Track Your Order
+            </h3>
             <p className="mb-4 text-gray-300">
-              Get 15% off your next order! Use code <strong className="text-primary">THANKYOU15</strong> at checkout.
+              You&apos;re shopping as a guest. Save your order number to track your package:
             </p>
-            <Link 
-              href="/shop"
-              className="inline-flex items-center px-4 py-2 font-medium text-white transition-colors duration-200 rounded-lg bg-primary hover:bg-primary/90"
-            >
-              Shop Again
-            </Link>
+            <div className="flex items-center gap-4 p-4 mb-4 bg-gray-900 border border-gray-700 rounded-xl">
+              <div>
+                <p className="mb-1 text-sm text-gray-400">Order Number</p>
+                <p className="text-2xl font-mono font-bold text-primary">
+                  #{formatPublicOrderId(orderData)}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link 
+                href="/track-order"
+                className="flex items-center justify-center px-6 py-3 font-semibold text-white transition-all duration-300 transform shadow-lg bg-primary rounded-xl hover:bg-primary/90 hover:scale-105"
+              >
+                <Search className="w-5 h-5 mr-2" />
+                Track Order Status
+              </Link>
+              <Link 
+                href="/signup"
+                className="flex items-center justify-center px-6 py-3 font-semibold text-white transition-all duration-300 transform border shadow-lg bg-gray-900/50 border-primary/50 rounded-xl hover:bg-gray-800 hover:scale-105"
+              >
+                <User className="w-5 h-5 mr-2" />
+                Create Account to Save Orders
+              </Link>
+            </div>
           </div>
+        )}
+
+        {/* Additional Info Card */}
+        <div className="p-6 transition-shadow duration-300 bg-gray-900 border border-gray-700 shadow-lg rounded-xl hover:shadow-xl">
+          <h4 className="flex items-center mb-3 text-lg font-bold text-gray-100">
+            <Package className="w-6 h-6 mr-2 text-primary" />
+            What&apos;s Next?
+          </h4>
+          <ul className="space-y-2 text-gray-300">
+            <li className="flex items-center">
+              <div className="w-2 h-2 mr-3 bg-green-500 rounded-full"></div>
+              Order confirmation email sent
+            </li>
+            <li className="flex items-center">
+              <div className="w-2 h-2 mr-3 rounded-full bg-primary"></div>
+              Processing begins within 24 hours
+            </li>
+            <li className="flex items-center">
+              <div className="w-2 h-2 mr-3 bg-gray-500 rounded-full"></div>
+              Shipping notification will follow
+            </li>
+            <li className="flex items-center">
+              <div className="w-2 h-2 mr-3 bg-yellow-500 rounded-full"></div>
+              Track your package anytime
+            </li>
+          </ul>
         </div>
       </div>
     </div>

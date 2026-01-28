@@ -21,7 +21,7 @@ type NetworkInformation = {
 
 const showcaseData = [
   {
-    title: "WHERE LUXURY MEETS MOTIVATION",
+    title: "To rule an empire, you must dress like an emperor",
     description:
       "Crafted for those who demand excellence.\nEvery detail reflects power, precision, and purpose.",
     cta: { text: "Discover The Tech", href: "/about" }
@@ -175,7 +175,10 @@ const VideoShowcase = () => {
   const activeSlide = showcaseData[activeIndex];
 
   return (
-    <section ref={sectionRef} className="relative h-[90vh] min-h-[700px] w-full bg-brand-black text-white flex items-center">
+    <section
+      ref={sectionRef}
+      className="relative h-screen min-h-[820px] w-full bg-brand-black text-white flex items-center"
+    >
       {/* Background Image */}
       <div className="absolute top-0 left-0 w-full h-full z-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -203,14 +206,21 @@ const VideoShowcase = () => {
           </button>
         </div>
       )} */}
-      <div className="absolute inset-0 bg-black/30 z-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/55 z-10" />
 
       {/* Content */}
-      <div className="relative z-20 container mx-auto px-6 h-full flex flex-col justify-center lg:justify-end lg:pb-32">
-        <div className="max-w-2xl">
-          <h2 className="text-5xl md:text-7xl font-bold uppercase tracking-tighter whitespace-pre-line slide-title">{activeSlide.title}</h2>
-          <p className="mt-6 text-lg text-gray-300 leading-relaxed whitespace-pre-line slide-description">{activeSlide.description}</p>
-          <Link href={activeSlide.cta.href} className="group inline-flex items-center gap-3 mt-8 text-white font-bold text-lg slide-cta">
+      <div className="relative z-20 container mx-auto px-6 h-full flex flex-col justify-end pt-16 lg:pt-24 pb-24 lg:pb-32 gap-10">
+        <div className="max-w-3xl lg:max-w-5xl space-y-8 lg:space-y-10">
+          <h2 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold uppercase tracking-tight leading-[0.9] whitespace-pre-line slide-title">
+            {activeSlide.title}
+          </h2>
+          <p className="text-lg sm:text-xl lg:text-2xl text-gray-100 leading-relaxed whitespace-pre-line max-w-3xl slide-description">
+            {activeSlide.description}
+          </p>
+          <Link
+            href={activeSlide.cta.href}
+            className="group inline-flex items-center gap-3 pt-3 text-white font-bold text-lg lg:text-xl slide-cta"
+          >
             <span>{activeSlide.cta.text}</span>
             <ArrowRight className="w-6 h-6 transition-transform duration-300 group-hover:translate-x-2" />
           </Link>
@@ -222,7 +232,7 @@ const VideoShowcase = () => {
             <button
               key={index}
               onClick={() => handleSlideChange(index)}
-              className="w-24 h-1 bg-gray-700/80 rounded-full overflow-hidden"
+              className="w-28 h-1.5 bg-gray-700/80 rounded-full overflow-hidden"
               aria-label={`Go to slide ${index + 1}`}
             >
               <div

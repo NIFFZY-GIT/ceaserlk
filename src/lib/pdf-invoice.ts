@@ -22,6 +22,7 @@ export interface InvoiceData {
   subtotal: number;
   shippingCost: number;
   totalAmount: number;
+  paymentMethod?: 'CARD' | 'COD';
 }
 
 export function generateInvoicePDF(invoiceData: InvoiceData): Buffer {
@@ -190,12 +191,32 @@ export function generateInvoicePDF(invoiceData: InvoiceData): Buffer {
   yPosition += 20;
   
   // Payment Status
-  doc.setFillColor(34, 197, 94); // Green background
-  doc.rect(leftMargin, yPosition, contentWidth, 12, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('PAYMENT STATUS: PAID', pageWidth / 2, yPosition + 7, { align: 'center' });
+  const isPaid = invoiceData.paymentMethod === 'CARD';
+  const isCOD = invoiceData.paymentMethod === 'COD';
+  
+  if (isPaid) {
+    doc.setFillColor(34, 197, 94); // Green background for paid
+    doc.rect(leftMargin, yPosition, contentWidth, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYMENT STATUS: PAID', pageWidth / 2, yPosition + 7, { align: 'center' });
+  } else if (isCOD) {
+    doc.setFillColor(239, 68, 68); // Red background for COD
+    doc.rect(leftMargin, yPosition, contentWidth, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYMENT METHOD: PAY ON DELIVERY', pageWidth / 2, yPosition + 7, { align: 'center' });
+  } else {
+    // Fallback for older invoices without payment method
+    doc.setFillColor(34, 197, 94);
+    doc.rect(leftMargin, yPosition, contentWidth, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYMENT STATUS: PAID', pageWidth / 2, yPosition + 7, { align: 'center' });
+  }
   
   yPosition += 25;
   

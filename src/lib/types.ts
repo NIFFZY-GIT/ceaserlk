@@ -79,6 +79,8 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  order_number?: number | null;
+  delivery_id?: string | null; // Tracking code from delivery partner (e.g., Koombiya tracking ID)
   status: 'PENDING'|'PAID'|'PROCESSING'|'PACKED'|'SHIPPED'|'DELIVERED'|'CANCELLED'|'REFUNDED';
   totalAmount: string;
   createdAt: string; // Changed from created_at for JS convention

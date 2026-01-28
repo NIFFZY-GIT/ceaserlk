@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sendEmail, generateOrderStatusUpdateEmail } from '@/lib/email';
 import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
+import { ensureDeliveryIdSchema } from '@/lib/delivery-id';
 // import { verifyAuth } from '@/lib/auth'; // TEMPORARILY DISABLED FOR TESTING
 
 // --- GET a single order's full details (with corrected signature) ---
@@ -89,16 +90,29 @@ export async function PUT(
 
   try {
     await ensureOrderNumberSchema(db);
-    const { status } = await request.json();
+    await ensureDeliveryIdSchema(db);
+    const { status, delivery_id } = await request.json();
 
     const validStatuses = [ 'PENDING', 'PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED' ];
     if (!status || !validStatuses.includes(status)) {
         return NextResponse.json({ error: "Invalid status provided" }, { status: 400 });
     }
     
-    // Update the order status
-    const updateQuery = `UPDATE orders SET status = $1 WHERE id = $2 RETURNING *;`;
-    const { rows } = await db.query(updateQuery, [status, id]);
+    // Update the order status and optionally delivery_id
+    let updateQuery = `UPDATE orders SET status = $1`;
+    const params: (string | null)[] = [status];
+    let paramIndex = 2;
+    
+    if (delivery_id !== undefined && delivery_id !== null) {
+      updateQuery += `, delivery_id = $${paramIndex}`;
+      params.push(delivery_id);
+      paramIndex++;
+    }
+    
+    updateQuery += ` WHERE id = $${paramIndex} RETURNING *;`;
+    params.push(id);
+    
+    const { rows } = await db.query(updateQuery, params);
 
     if (rows.length === 0) {
       return NextResponse.json({ error: "Order not found to update" }, { status: 404 });
@@ -116,6 +130,7 @@ export async function PUT(
           orderId: publicOrderId,
           newStatus: updatedOrder.status,
           profileUrl: profileUrl,
+          deliveryId: updatedOrder.delivery_id,
         });
 
         await sendEmail({

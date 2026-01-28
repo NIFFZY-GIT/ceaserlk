@@ -184,7 +184,7 @@ export default function TradingCardDownload({
             className="flex items-center px-4 py-2 space-x-2 text-white transition-all duration-200 rounded-lg shadow-md bg-primary hover:bg-primary/90 disabled:bg-primary/50 hover:shadow-lg"
           >
             <Download className="w-4 h-4" />
-            <span>{isDownloading ? 'Downloading...' : 'Download Card'}</span>
+            <span>{isDownloading ? 'Downloading...' : 'Set as Wallpaper'}</span>
           </button>
 
           <button

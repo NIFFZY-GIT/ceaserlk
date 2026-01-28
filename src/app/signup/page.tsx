@@ -149,7 +149,7 @@ const SignUpPage = () => {
     {
       icon: <Palette className="h-5 w-5 text-emerald-500" />,
       title: 'Creative Styling',
-      description: 'Get weekly outfit inspo built around bold Ceaser artwork.',
+      description: 'Get weekly outfit inspo built around bold CEASAR artwork.',
     },
     {
       icon: <Mail className="h-5 w-5 text-rose-500" />,
@@ -163,10 +163,10 @@ const SignUpPage = () => {
       formTitle="Join the Empire"
       formSubtitle=""
       hero={{
-        eyebrow: 'Ceaser Designs Studio',
+        eyebrow: 'CEASAR Designs Studio',
         title: 'Those Who Aim Higher, Choose CEASAR',
         description:
-          'Creators, athletes, and visionaries wear Ceaser when they want a shirt that speaks as loudly as they do.',
+          'Creators, athletes, and visionaries wear CEASAR when they want a shirt that speaks as loudly as they do.',
         highlights: heroHighlights,
       }}
       footer={

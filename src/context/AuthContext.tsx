@@ -12,9 +12,12 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  isGuest: boolean;
+  guestId: string | null;
   isLoading: boolean;
   login: (userData: User) => void;
   logout: () => void;
+  startGuestMode: () => void;
   checkAuth: () => Promise<void>;
 }
 
@@ -22,8 +25,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
+  const [guestId, setGuestId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+
+  // Initialize guest ID from localStorage if exists
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedGuestId = localStorage.getItem('guest_id');
+      const storedIsGuest = localStorage.getItem('is_guest') === 'true';
+      if (storedGuestId && storedIsGuest) {
+        setGuestId(storedGuestId);
+        setIsGuest(true);
+      }
+    }
+  }, []);
 
   const checkAuth = async () => {
     setIsLoading(true);
@@ -85,6 +102,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = (userData: User) => {
     setUser(userData);
+    setIsGuest(false);
+    setGuestId(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('guest_id');
+      localStorage.removeItem('is_guest');
+    }
+  };
+
+  const startGuestMode = () => {
+    setUser(null);
+    setIsGuest(true);
+    // Create unique guest ID and store it
+    const newGuestId = crypto.randomUUID();
+    setGuestId(newGuestId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('guest_id', newGuestId);
+      localStorage.setItem('is_guest', 'true');
+      // Also set this as the cart session ID for consistency
+      localStorage.setItem('cart_session_id', newGuestId);
+    }
   };
 
   const logout = async () => {
@@ -103,6 +140,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
+      setIsGuest(false);
+      setGuestId(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('guest_id');
+        localStorage.removeItem('is_guest');
+      }
       router.push('/login');
     }
   };
@@ -125,9 +168,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider value={{
       user,
+      isGuest,
+      guestId,
       isLoading,
       login,
       logout,
+      startGuestMode,
       checkAuth,
     }}>
       {children}

@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { PoolClient } from 'pg';
-import { verifyAuth, createUnauthorizedResponse } from '@/lib/auth';
 
 const CART_EXPIRATION_SECONDS = 1800;
 
@@ -60,12 +59,7 @@ async function getOrCreateCartId(sessionId: string, client: PoolClient): Promise
 // --- Your existing route handlers now have access to the helper ---
 
 export async function GET(request: NextRequest) {
-  // Check authentication
-  const user = await verifyAuth(request);
-  if (!user) {
-    return createUnauthorizedResponse();
-  }
-
+  // Cart is session-based, no authentication required
   const { searchParams } = new URL(request.url);
   const sessionId = searchParams.get('sessionId');
 
@@ -180,12 +174,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Check authentication
-  const user = await verifyAuth(request);
-  if (!user) {
-    return createUnauthorizedResponse();
-  }
-
+  // Cart is session-based, no authentication required
   const { skuId, quantity, sessionId } = await request.json();
   if (!skuId || !quantity || !sessionId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -228,12 +217,7 @@ export async function POST(request: NextRequest) {
 
 // --- UPDATED: Update an item's quantity WITH stock management ---
 export async function PUT(request: NextRequest) {
-  // Check authentication
-  const user = await verifyAuth(request);
-  if (!user) {
-    return createUnauthorizedResponse();
-  }
-
+  // Cart is session-based, no authentication required
   const { cartItemId, newQuantity } = await request.json();
 
   if (!cartItemId || newQuantity === undefined) {
@@ -284,12 +268,7 @@ export async function PUT(request: NextRequest) {
 
 // --- UPDATED: Remove an item from the cart WITH stock restoration ---
 export async function DELETE(request: NextRequest) {
-  // Check authentication
-  const user = await verifyAuth(request);
-  if (!user) {
-    return createUnauthorizedResponse();
-  }
-
+  // Cart is session-based, no authentication required
   const { cartItemId } = await request.json();
   if (!cartItemId) return NextResponse.json({ error: 'Cart item ID is required' }, { status: 400 });
 

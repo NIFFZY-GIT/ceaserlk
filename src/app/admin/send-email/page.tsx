@@ -21,6 +21,7 @@ export default function SendEmailPage() {
   const [subject, setSubject] = useState('');
   const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
   const [result, setResult] = useState<{ total: number; successful: number; failed: number; results?: { status: string; email: string; error?: string }[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +39,9 @@ export default function SendEmailPage() {
       Image.configure({
         inline: true,
         allowBase64: true,
+        HTMLAttributes: {
+          class: 'max-w-full h-auto rounded',
+        },
       }),
     ],
     content: '',
@@ -50,13 +54,49 @@ export default function SendEmailPage() {
         if (!items) return false;
 
         for (let i = 0; i < items.length; i++) {
-          if (items[i].type.indexOf('image') !== -1) {
-            const file = items[i].getAsFile();
+          const item = items[i];
+          
+          // Handle image paste
+          if (item.type.indexOf('image') !== -1) {
+            event.preventDefault();
+            const file = item.getAsFile();
             if (file) {
               const reader = new FileReader();
               reader.onload = (e) => {
                 const base64 = e.target?.result as string;
-                editor?.chain().focus().setImage({ src: base64 }).run();
+                if (editor) {
+                  editor.chain().focus().setImage({ src: base64 }).run();
+                }
+              };
+              reader.readAsDataURL(file);
+              return true;
+            }
+          }
+        }
+        return false;
+      },
+      handleDrop: (view, event, slice, moved) => {
+        if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+          const files = event.dataTransfer.files;
+          
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.type.startsWith('image/')) {
+              event.preventDefault();
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const base64 = e.target?.result as string;
+                if (editor) {
+                  const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+                  if (coordinates) {
+                    editor.chain().focus().insertContentAt(coordinates.pos, {
+                      type: 'image',
+                      attrs: { src: base64 },
+                    }).run();
+                  } else {
+                    editor.chain().focus().setImage({ src: base64 }).run();
+                  }
+                }
               };
               reader.readAsDataURL(file);
               return true;
@@ -216,6 +256,44 @@ export default function SendEmailPage() {
     }
   };
 
+  const handleTestEmail = async () => {
+    const testEmail = prompt('Enter your email address to receive a test email:');
+    if (!testEmail) return;
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(testEmail)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    setTestLoading(true);
+
+    try {
+      const response = await fetch('/api/admin/test-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ testEmail }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert(`✅ Test email sent successfully to ${testEmail}!\n\nCheck your inbox (and spam folder). Message ID: ${data.messageId}`);
+      } else {
+        alert(`❌ Failed to send test email:\n\n${data.error}\n\nDetails: ${data.details || 'No additional details'}`);
+        console.error('Test email error:', data);
+      }
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      alert('Failed to send test email. Check console for details.');
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
@@ -224,7 +302,16 @@ export default function SendEmailPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Send Email to All Users</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Send Email to All Users</h1>
+        <button
+          onClick={handleTestEmail}
+          disabled={testLoading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {testLoading ? '⏳ Sending...' : '🧪 Test Email Configuration'}
+        </button>
+      </div>
 
       <div className="bg-white rounded-lg shadow p-6 space-y-6">
         {/* Subject */}
@@ -353,14 +440,17 @@ export default function SendEmailPage() {
           </div>
 
           {/* Editor */}
-          <div className="border border-t-0 border-gray-300 rounded-b-lg bg-white">
+          <div className="border border-t-0 border-gray-300 rounded-b-lg bg-white relative">
             <EditorContent editor={editor} />
+            <div className="absolute bottom-2 right-2 text-xs text-gray-400 pointer-events-none">
+              💡 Paste (Ctrl+V) or Drag & Drop images
+            </div>
           </div>
           
           <p className="mt-2 text-sm text-gray-500">
-            You can use placeholders: {'{'}{'{'} firstName {'}'}{'}'},  {'{'}{'{'} lastName {'}'}{'}'},  {'{'}{'{'} fullName {'}'}{'}'} 
+            <strong>✨ Image Support:</strong> Copy and paste images directly from your clipboard, or drag & drop image files into the editor.
             <br />
-            Paste images directly (Ctrl+V) to embed them in the email.
+            <strong>🔤 Placeholders:</strong> Use {'{'}{'{'} firstName {'}'}{'}'},  {'{'}{'{'} lastName {'}'}{'}'},  {'{'}{'{'} fullName {'}'}{'}'} to personalize emails.
           </p>
         </div>
 

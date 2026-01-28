@@ -155,7 +155,7 @@ const BrandEthos = () => {
           ============================================== */}
       <div className="container px-6 py-24 mx-auto md:hidden">
          <h2 className="mb-16 text-4xl font-bold tracking-wider text-center uppercase">
-            The Ceaser Ethos
+            The CEASAR Ethos
           </h2>
         <div className="grid grid-cols-1 gap-16">
           {ethosData.map((item, index) => (

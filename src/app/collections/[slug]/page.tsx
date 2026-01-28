@@ -8,7 +8,7 @@ const collectionCopy: Record<string, { title: string; description: string; tagli
   },
   'best-sellers': {
     title: 'Best Sellers',
-    description: 'Tried-and-true staples the Ceaser community can’t get enough of.',
+    description: 'Tried-and-true staples the CEASAR community can’t get enough of.',
     tagline: 'Certified by relentless athletes everywhere.',
   },
   'on-sale': {

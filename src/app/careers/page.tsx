@@ -15,7 +15,7 @@ const openings = [
     title: 'Community & Events Coordinator',
     location: 'Hybrid / Colombo',
     type: 'Full-time',
-    summary: 'Activate the Ceaser community through training meetups, launches, and content partnerships.',
+    summary: 'Activate the CEASAR community through training meetups, launches, and content partnerships.',
   },
 ];
 
@@ -40,7 +40,7 @@ export default function CareersPage() {
                 <p className="mt-1 text-sm text-gray-400">{location} • {type}</p>
               </div>
               <a
-                href="mailto:talent@ceaserbrand.com?subject=Ceaser%20Careers"
+                href="mailto:talent@ceaserbrand.com?subject=CEASAR%20Careers"
                 className="self-start px-4 py-2 text-sm font-semibold transition-colors border border-accent text-accent hover:bg-accent hover:text-black rounded-full"
               >
                 Introduce yourself

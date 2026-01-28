@@ -20,7 +20,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: 'CeaserLK - Motivation For Your Style',
+  title: 'CEASAR - Official Website',
   description: 'Premium quality shirts designed to inspire you.',
   verification: {
     google: '5Scd202sjAm8HUkdAqXIQsbcmJmlc86jQHyhhveExms',
@@ -60,7 +60,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             style={{ display: 'none', visibility: 'hidden' }}
           />
         </noscript>
-        {/* End Google Tag Manager (noscriptddddd */}
+        {/* End Google Tag Manager (noscript) */}
         <AuthProvider>
           <CartProvider>
             {/* <MarqueeBar /> */}

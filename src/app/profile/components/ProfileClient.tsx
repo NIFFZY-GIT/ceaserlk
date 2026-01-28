@@ -5,8 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import OrderHistory from './OrderHistory';
 import AccountDetails from './AccountDetails';
 import PromoSection from './PromoSection';
+import TrackOrder from './TrackOrder';
 import type { User, Order } from '@/lib/types';
-import { UserCircle, ClipboardList, Gift } from 'lucide-react';
+import { UserCircle, ClipboardList, Gift, Truck, Package } from 'lucide-react';
 
 interface ProfileClientProps {
   user: User;
@@ -21,7 +22,7 @@ export default function ProfileClient({ user: initialUser, orders }: ProfileClie
 
   // Update active tab when URL changes
   useEffect(() => {
-    if (tabFromUrl && ['orders', 'promo', 'account'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['orders', 'promo', 'account', 'track'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [tabFromUrl]);
@@ -70,6 +71,24 @@ export default function ProfileClient({ user: initialUser, orders }: ProfileClie
               <UserCircle className="w-5 h-5" />
               <span className="font-semibold">Account Details</span>
             </button>
+            <button
+              onClick={() => setActiveTab('track')}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-md text-left transition-colors duration-200 group ${
+                activeTab === 'track' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+              }`}
+            >
+              <Package className="w-5 h-5" />
+              <span className="font-semibold">Track Order</span>
+            </button>
+            <a
+              href="https://koombiyodelivery.lk/track"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center space-x-3 px-4 py-3 rounded-md text-left transition-colors duration-200 text-gray-400 hover:bg-blue-900/30 hover:text-blue-400"
+            >
+              <Truck className="w-5 h-5" />
+              <span className="font-semibold">Track Delivery</span>
+            </a>
           </nav>
         </div>
       </aside>
@@ -80,6 +99,7 @@ export default function ProfileClient({ user: initialUser, orders }: ProfileClie
           {activeTab === 'orders' && <OrderHistory orders={orders} />}
           {activeTab === 'promo' && <PromoSection />}
           {activeTab === 'account' && <AccountDetails user={user} onSaveSuccess={handleUserUpdate} />}
+          {activeTab === 'track' && <TrackOrder />}
         </div>
       </main>
     </div>

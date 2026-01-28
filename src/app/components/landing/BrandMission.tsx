@@ -10,7 +10,7 @@ const BrandMission = () => {
         <div className="relative w-full overflow-hidden rounded-md h-80 md:h-96">
           <Image
             src="/images/image.jpg" // A lifestyle image of people wearing the shirts
-            alt="Ceaser community"
+            alt="CEASAR community"
             fill
             style={{objectFit: 'cover'}}
           />
@@ -20,7 +20,7 @@ const BrandMission = () => {
         <div className="text-center md:text-left">
           <h2 className="text-4xl font-bold">A SYMBOL OF YOUR DRIVE</h2>
           <p className="mt-4 text-lg leading-relaxed text-gray-200">
-            We are not just selling shirts. We are building a community of leaders, creators, and conquerors. Each Ceaser design is a badge of honor—a daily reminder that your potential is limitless and your goals are within reach.
+            We are not just selling shirts. We are building a community of leaders, creators, and conquerors. Each CEASAR design is a badge of honor—a daily reminder that your potential is limitless and your goals are within reach.
           </p>
           <Link 
             href="/about" 

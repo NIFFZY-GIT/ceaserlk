@@ -92,7 +92,7 @@ export default function PromoSection() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Get Free Delivery!',
+          title: 'Unlock free delivery',
           text: promoData.shareMessage,
           url: promoData.referralLink,
         });
@@ -139,7 +139,7 @@ export default function PromoSection() {
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-1 sm:mb-2">
-              🚚 Get FREE Delivery Forever!
+              🚚 Unlock free delivery
             </h2>
             <p className="text-sm sm:text-base text-gray-300 max-w-md">
               Invite just <span className="text-primary font-bold">ONE friend</span> to sign up and unlock unlimited free shipping on every order!
@@ -158,7 +158,7 @@ export default function PromoSection() {
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-emerald-400">
-                ✨ FREE DELIVERY UNLOCKED!
+                ✨ Free delivery unlocked!
               </h2>
               <p className="text-sm sm:text-base text-gray-300">
                 You&apos;ve earned unlimited free shipping on all orders. Enjoy! 🎉
@@ -248,7 +248,7 @@ export default function PromoSection() {
             <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] sm:text-xs font-bold flex items-center justify-center">
               ✓
             </span>
-            <span className="text-emerald-400 font-semibold">You unlock FREE delivery forever!</span>
+            <span className="text-emerald-400 font-semibold">You unlock free delivery!</span>
           </li>
         </ol>
       </div>

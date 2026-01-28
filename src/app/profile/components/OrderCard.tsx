@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import type { Order } from '@/lib/types';
-import { MapPin, ChevronDown, Banknote, Package, ImageOff } from 'lucide-react';
+import { MapPin, ChevronDown, Banknote, Package, ImageOff, Truck, Copy } from 'lucide-react';
 import TradingCardDownload from '@/components/TradingCardDownload';
 import OrderStatusTimeline from './OrderStatusTimeline';
 
@@ -95,7 +95,7 @@ const OrderCard = ({ order }: OrderCardProps) => {
             <div>
               <div className="flex items-center gap-3">
                 <p className="text-lg font-bold text-gray-100">
-                  Order #{order.id.split('-')[0].toUpperCase()}
+                  Order #{order.order_number ? String(order.order_number).padStart(5, '0') : order.id.split('-')[0].toUpperCase()}
                 </p>
                 <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-800 text-gray-300">
                   {order.items.length} item{order.items.length !== 1 ? 's' : ''}
@@ -257,6 +257,68 @@ const OrderCard = ({ order }: OrderCardProps) => {
               </p>
             </div>
           </div>
+          
+          {/* Order Status Tracking Section */}
+          <div className="grid gap-4 mt-6 pt-4 border-t border-gray-800">
+            <div>
+              <h4 className="flex items-center mb-3 font-semibold text-gray-200">
+                <Package className="w-4 h-4 mr-2 text-purple-400"/>
+                Track Order Status
+              </h4>
+              <p className="text-sm text-gray-400 mb-3">
+                Monitor your order processing status from placement to delivery
+              </p>
+              <a
+                href="/track-order"
+                className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white transition-all duration-200 transform rounded-lg shadow-lg bg-purple-600 hover:bg-purple-700 hover:scale-105 hover:shadow-2xl"
+              >
+                <Package className="w-4 h-4 mr-2"/>
+                View Order Status
+              </a>
+            </div>
+          </div>
+          
+          {/* Delivery Tracking Section */}
+          {['SHIPPED', 'DELIVERED'].includes(order.status) && (
+            <div className="grid gap-4 mt-6 pt-4 border-t border-gray-800">
+              <div>
+                <h4 className="flex items-center mb-3 font-semibold text-gray-200">
+                  <Truck className="w-4 h-4 mr-2 text-blue-400"/>
+                  Delivery Tracking
+                </h4>
+                <p className="text-sm text-gray-400 mb-3">
+                  Your order is being delivered by <strong>Koombiya Delivery</strong>
+                </p>
+                {order.delivery_id && (
+                  <div className="p-3 mb-3 rounded-md bg-blue-900/20 border border-blue-700/40">
+                    <p className="text-xs text-gray-400 mb-2">Tracking ID:</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-mono font-bold text-blue-300">{order.delivery_id}</p>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(order.delivery_id || '');
+                          // Optional: Show toast feedback
+                        }}
+                        className="p-1.5 rounded hover:bg-blue-700/30 transition-colors text-blue-300 hover:text-blue-200"
+                        title="Copy tracking ID"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <a
+                  href="https://koombiyodelivery.lk/track"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white transition-all duration-200 transform rounded-lg shadow-lg bg-blue-600 hover:bg-blue-700 hover:scale-105 hover:shadow-2xl"
+                >
+                  <Truck className="w-4 h-4 mr-2"/>
+                  Track Delivery
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       

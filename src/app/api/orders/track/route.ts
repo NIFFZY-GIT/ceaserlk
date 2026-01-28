@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
+import { ensureDeliveryIdSchema } from '@/lib/delivery-id';
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -20,18 +21,20 @@ export async function POST(request: NextRequest) {
     }
 
     await ensureOrderNumberSchema(db);
+    await ensureDeliveryIdSchema(db);
 
     type OrderRow = {
       id: string;
       order_number: number | null;
       status: string;
       created_at: string;
+      delivery_id: string | null;
     };
 
     let rows: OrderRow[] = [];
     if (isUuid(input)) {
       const query = `
-        SELECT id, order_number, status, created_at
+        SELECT id, order_number, status, created_at, delivery_id
         FROM orders
         WHERE id = $1::uuid
         LIMIT 1;
@@ -40,7 +43,7 @@ export async function POST(request: NextRequest) {
       rows = result.rows;
     } else if (/^\d{1,5}$/.test(input)) {
       const query = `
-        SELECT id, order_number, status, created_at
+        SELECT id, order_number, status, created_at, delivery_id
         FROM orders
         WHERE order_number = $1
         LIMIT 1;
@@ -66,6 +69,7 @@ export async function POST(request: NextRequest) {
         publicOrderId,
         status: order.status,
         created_at: order.created_at,
+        delivery_id: order.delivery_id,
       },
     });
   } catch (error) {

@@ -25,7 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 const LoginPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, startGuestMode } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -232,7 +232,7 @@ const LoginPage = () => {
         </AnimatePresence>
 
         {/* Submit Button */}
-        <div className="pt-2">
+        <div className="pt-2 space-y-3">
           <button
             type="submit"
             disabled={loading}
@@ -246,6 +246,18 @@ const LoginPage = () => {
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </>
             )}
+          </button>
+          
+          {/* Guest Login Button */}
+          <button
+            type="button"
+            onClick={() => {
+              startGuestMode();
+              router.push('/');
+            }}
+            className="w-full px-4 py-3 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors border border-slate-200 hover:border-slate-300"
+          >
+            Continue as Guest
           </button>
         </div>
       </motion.form>

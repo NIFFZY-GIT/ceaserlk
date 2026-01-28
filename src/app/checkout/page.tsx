@@ -631,7 +631,7 @@ export default function CheckoutPage() {
                             <Gift className="w-4 h-4 text-emerald-400" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className="text-xs sm:text-sm font-bold text-emerald-400">✨ FREE DELIVERY UNLOCKED!</span>
+                            <span className="text-xs sm:text-sm font-bold text-emerald-400">✨ Free delivery unlocked!</span>
                             <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400">
                               Thank you for referring a friend!
                             </p>

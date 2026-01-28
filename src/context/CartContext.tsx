@@ -62,6 +62,7 @@ const getSessionId = (): string => {
   if (typeof window === 'undefined') return '';
   let sessionId = localStorage.getItem('cart_session_id');
   if (!sessionId) {
+    // Create new session ID if doesn't exist
     sessionId = crypto.randomUUID();
     localStorage.setItem('cart_session_id', sessionId);
   }
@@ -69,7 +70,7 @@ const getSessionId = (): string => {
 };
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, isGuest, guestId } = useAuth();
   const router = useRouter();
   const routerRef = useRef(router);
   routerRef.current = router; // Keep ref current
@@ -94,8 +95,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, []); // No dependencies needed with ref
 
   const fetchCart = useCallback(async () => {
-    // Don't fetch cart if user is not authenticated
-    if (!user) {
+    // Don't fetch cart if user is not authenticated AND not a guest
+    if (!user && !isGuest) {
       setCart(null);
       setLoading(false);
       return;
@@ -103,11 +104,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     setLoading(true);
     setError(null);
-    const sessionId = getSessionId();
+    
+    // Use guestId if available, otherwise fall back to session storage
+    const sessionId = guestId || getSessionId();
     if (!sessionId) { 
+      console.warn('No session ID available for cart');
       setLoading(false); 
       return; 
     }
+    
+    console.log('Fetching cart with sessionId:', sessionId, 'isGuest:', isGuest, 'hasUser:', !!user);
     
     try {
       const res = await fetch(`/api/cart?sessionId=${sessionId}`);
@@ -119,6 +125,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Failed to fetch cart");
       }
       const data: Cart = await res.json();
+      console.log('Cart fetched successfully:', data);
       setCart(data);
     } catch (error) {
       console.error("Cart fetch error:", error);
@@ -126,24 +133,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [user, handleAuthError]);
+  }, [user, isGuest, guestId, handleAuthError]);
 
   // Separate effect for initial load and user changes
-  const lastUserIdRef = useRef<number | null>(null);
   
   useEffect(() => {
     let isMounted = true;
     
-    // Prevent unnecessary fetches if user ID hasn't changed
-    if (lastUserIdRef.current === (user?.userId || null)) {
-      return;
-    }
-    lastUserIdRef.current = user?.userId || null;
-    
+    // Load cart for both authenticated users and guests
     const loadCart = async () => {
-      const currentUser = user; // Capture user at the time of effect
-      
-      if (!currentUser) {
+      // If not logged in and not a guest, skip cart loading
+      if (!user && !isGuest) {
         if (isMounted) {
           setCart(null);
           setLoading(false);
@@ -161,6 +161,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         if (isMounted) setLoading(false); 
         return; 
       }
+      
+      console.log('Loading cart with sessionId:', sessionId, 'isGuest:', isGuest);
       
       try {
         const res = await fetch(`/api/cart?sessionId=${sessionId}`);
@@ -194,22 +196,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       isMounted = false;
     };
-  }, [user, handleAuthError]); // Include user since we use it
+  }, [user, isGuest, guestId, handleAuthError]); // Include guestId in dependencies
 
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 
   // --- ENHANCED MUTATION FUNCTIONS WITH STOCK VALIDATION ---
   const addToCart = async (skuId: string, quantity: number): Promise<boolean> => {
-    // Check authentication first
-    if (!user) {
+    // Check authentication first - allow both authenticated users and guests
+    if (!user && !isGuest) {
       handleAuthError({ status: 401 }, 'add items to cart');
       return false;
     }
 
     setLoading(true);
     setError(null);
-    const sessionId = getSessionId();
+    const sessionId = guestId || getSessionId();
+    console.log('Adding to cart with sessionId:', sessionId, 'skuId:', skuId);
     try {
       const res = await fetch('/api/cart', {
         method: 'POST',
@@ -242,8 +245,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const updateQuantity = async (cartItemId: string, newQuantity: number): Promise<boolean> => {
-    // Check authentication first
-    if (!user) {
+    // Check authentication first - allow both authenticated users and guests
+    if (!user && !isGuest) {
       handleAuthError({ status: 401 }, 'update cart');
       return false;
     }
@@ -298,8 +301,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeFromCart = async (cartItemId: string): Promise<boolean> => {
-    // Check authentication first
-    if (!user) {
+    // Check authentication first - allow both authenticated users and guests
+    if (!user && !isGuest) {
       handleAuthError({ status: 401 }, 'remove items from cart');
       return false;
     }

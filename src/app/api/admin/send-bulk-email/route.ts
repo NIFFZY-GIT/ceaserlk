@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create email transporter with no-reply email
-    const transporter = nodemailer.createTransport({
+    const emailConfig = {
       host: process.env.EMAIL_HOST || 'smtp.zoho.com',
       port: parseInt(process.env.EMAIL_PORT || '465'),
       secure: process.env.EMAIL_SECURE === 'true',
@@ -55,10 +55,37 @@ export async function POST(req: NextRequest) {
         pass: process.env.NO_REPLY_PASSWORD || process.env.EMAIL_PASSWORD || '',
       },
       tls: {
-        minVersion: 'TLSv1.2',
+        minVersion: 'TLSv1.2' as const,
         rejectUnauthorized: true
       }
+    };
+
+    console.log('Email configuration:', {
+      host: emailConfig.host,
+      port: emailConfig.port,
+      secure: emailConfig.secure,
+      user: emailConfig.auth.user,
+      hasPassword: !!emailConfig.auth.pass,
     });
+
+    const transporter = nodemailer.createTransport(emailConfig);
+
+    // Verify transporter connection
+    try {
+      await transporter.verify();
+      console.log('✅ Email transporter verified successfully');
+    } catch (verifyError) {
+      console.error('❌ Email transporter verification failed:', verifyError);
+      return NextResponse.json({ 
+        error: 'Email server connection failed', 
+        details: String(verifyError),
+        config: {
+          host: emailConfig.host,
+          port: emailConfig.port,
+          user: emailConfig.auth.user,
+        }
+      }, { status: 500 });
+    }
 
     // Prepare attachments
     const emailAttachments = attachments?.map((att) => ({
@@ -75,7 +102,7 @@ export async function POST(req: NextRequest) {
         .replace(/{{fullName}}/g, `${user.first_name} ${user.last_name}`);
 
       const mailOptions = {
-        from: `"${process.env.EMAIL_FROM_NAME || 'Ceasar'}" <${process.env.NO_REPLY_EMAIL || 'no-reply@inceasar.com'}>`,
+        from: `"${process.env.EMAIL_FROM_NAME || 'CEASAR'}" <${process.env.NO_REPLY_EMAIL || 'no-reply@inceasar.com'}>` ,
         to: user.email,
         subject: subject,
         html: personalizedHtml,
@@ -83,10 +110,12 @@ export async function POST(req: NextRequest) {
       };
 
       try {
-        await transporter.sendMail(mailOptions);
-        return { email: user.email, status: 'sent' };
+        console.log(`Sending email to: ${user.email}`);
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`✅ Email sent to ${user.email}, Message ID: ${info.messageId}`);
+        return { email: user.email, status: 'sent', messageId: info.messageId };
       } catch (error) {
-        console.error(`Failed to send email to ${user.email}:`, error);
+        console.error(`❌ Failed to send email to ${user.email}:`, error);
         return { email: user.email, status: 'failed', error: String(error) };
       }
     });
@@ -95,6 +124,13 @@ export async function POST(req: NextRequest) {
 
     const successCount = results.filter(r => r.status === 'sent').length;
     const failedCount = results.filter(r => r.status === 'failed').length;
+
+    console.log('📊 Email sending summary:', {
+      total: users.length,
+      successful: successCount,
+      failed: failedCount,
+      results: results
+    });
 
     return NextResponse.json({
       message: `Emails sent successfully`,

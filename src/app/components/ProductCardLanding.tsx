@@ -32,7 +32,7 @@ const OutOfStockLine = () => (
 
 export const ProductCard = ({ product }: { product: Product }) => {
   const { addToCart } = useCart();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const router = useRouter();
 
   const [activeVariantIndex, setActiveVariantIndex] = useState(0);
@@ -90,7 +90,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!user) {
+    if (!user && !isGuest) {
       router.push(`/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
       return;
     }
@@ -150,7 +150,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
           {isOnSale && (<div className="absolute top-0 left-0"><div className="absolute px-12 py-1.5 text-sm font-bold text-white uppercase transform -rotate-45 bg-black top-2 -left-10">SALE</div></div>)}
         </Link>
         <div className="flex flex-col flex-grow mt-4">
-          <h3 className="text-lg font-semibold text-black uppercase">{product.name}</h3>
+          <h3 className="text-lg font-semibold text-black capitalize">{product.name}</h3>
           <div className="flex items-center gap-2 mt-1">
             {isOnSale ? (<><span className="text-xl font-bold text-black">LKR {price.toFixed(2)}</span><span className="font-medium text-gray-500 line-through text-md">LKR {compareAtPrice!.toFixed(2)}</span></>) : (<span className="text-xl font-bold text-black">LKR {price.toFixed(2)}</span>)}
           </div>

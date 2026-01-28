@@ -54,7 +54,7 @@ export async function sendEmail(emailData: EmailData): Promise<void> {
   const transporter = createEmailTransporter();
 
   const mailOptions = {
-    from: `"${process.env.EMAIL_FROM_NAME || 'Ceaser LK'}" <${process.env.EMAIL_USER}>`,
+    from: `"${process.env.EMAIL_FROM_NAME || 'CEASAR'}" <${process.env.EMAIL_USER}>`,
     to: emailData.to,
     subject: emailData.subject,
     html: emailData.html,
@@ -93,16 +93,17 @@ export function generateOrderConfirmationEmail(orderData: {
     postalCode: string;
     country: string;
   };
+  paymentMethod?: 'CARD' | 'COD';
 }): string {
   const itemsHtml = orderData.items
     .map(
       (item) => `
-    <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.productName}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.variantColor} / ${item.variantSize}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">LKR ${item.pricePaid.toFixed(2)}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">LKR ${(item.pricePaid * item.quantity).toFixed(2)}</td>
+    <tr style="border-bottom: 1px solid rgba(16, 125, 63, 0.1);">
+      <td style="padding: 16px 12px; color: #000000; font-weight: 500;">${item.productName}</td>
+      <td style="padding: 16px 12px; color: #666666;">${item.variantColor} / ${item.variantSize}</td>
+      <td style="padding: 16px 12px; text-align: center; color: #000000; font-weight: 600;">${item.quantity}</td>
+      <td style="padding: 16px 12px; text-align: right; color: #000000;">LKR ${item.pricePaid.toFixed(2)}</td>
+      <td style="padding: 16px 12px; text-align: right; color: #107D3F; font-weight: 600;">LKR ${(item.pricePaid * item.quantity).toFixed(2)}</td>
     </tr>
   `
     )
@@ -114,73 +115,122 @@ export function generateOrderConfirmationEmail(orderData: {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Order Confirmation - Ceaser LK</title>
+      <title>Order Confirmation | CEASAR</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #000; margin-bottom: 10px;">Ceaser LK</h1>
-        <h2 style="color: #666; font-weight: normal;">Order Confirmation</h2>
+    <body style="font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.8; color: #000000; max-width: 650px; margin: 0 auto; padding: 0; background-color: #ffffff;">
+      
+      <!-- Tri-Color Flag Header -->
+      <div style="display: flex; height: 4px;">
+        <div style="flex: 1; background-color: #107D3F;"></div>
+        <div style="flex: 1; background-color: #ffffff;"></div>
+        <div style="flex: 1; background-color: #EF3D4C;"></div>
       </div>
       
-      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-        <h3 style="color: #000; margin-top: 0;">Thank you for your order, ${orderData.customerName}!</h3>
-        <p>Your order has been confirmed and is being processed. Here are your order details:</p>
-        <p><strong>Order ID:</strong> ${orderData.orderId}</p>
+      <div style="background-color: #000000; padding: 50px 30px; text-align: center; border-bottom: 1px solid rgba(16, 125, 63, 0.2);">
+        <h1 style="color: #FFFFFF; margin: 0; font-size: 3.5em; letter-spacing: 8px; font-weight: 300; text-transform: uppercase;">CEASAR</h1>
+        <p style="color: #107D3F; font-size: 0.95em; letter-spacing: 3px; margin: 15px 0 0 0; text-transform: uppercase; font-weight: 600;">Order Confirmation</p>
       </div>
-
-      <div style="margin-bottom: 30px;">
-        <h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 10px;">Order Items</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-          <thead>
-            <tr style="background-color: #f8f9fa;">
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Product</th>
-              <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Variant</th>
-              <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd;">Qty</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #ddd;">Price</th>
-              <th style="padding: 12px; text-align: right; border-bottom: 2px solid #ddd;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
-      </div>
-
-      <div style="margin-bottom: 30px;">
-        <h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 10px;">Order Summary</h3>
-        <table style="width: 100%; margin-top: 15px;">
-          <tr>
-            <td style="padding: 8px 0;">Subtotal:</td>
-            <td style="text-align: right; padding: 8px 0;">LKR ${orderData.subtotal.toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0;">Shipping:</td>
-            <td style="text-align: right; padding: 8px 0;">LKR ${orderData.shippingCost.toFixed(2)}</td>
-          </tr>
-          <tr style="border-top: 2px solid #000; font-weight: bold; font-size: 1.1em;">
-            <td style="padding: 12px 0;">Total:</td>
-            <td style="text-align: right; padding: 12px 0;">LKR ${orderData.totalAmount.toFixed(2)}</td>
-          </tr>
-        </table>
-      </div>
-
-      <div style="margin-bottom: 30px;">
-        <h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 10px;">Shipping Address</h3>
-        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
-          <p style="margin: 0;">${orderData.shippingAddress.line1}</p>
-          <p style="margin: 5px 0 0 0;">${orderData.shippingAddress.city}, ${orderData.shippingAddress.postalCode}</p>
-          <p style="margin: 5px 0 0 0;">${orderData.shippingAddress.country}</p>
+      
+      <div style="padding: 40px 30px; background-color: #ffffff;">
+        
+        <!-- Welcome Message -->
+        <div style="background-color: #f8f8f8; padding: 30px; border-radius: 8px; margin-bottom: 40px; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; display: flex;">
+            <div style="flex: 1; background-color: #107D3F;"></div>
+            <div style="flex: 1; background-color: #ffffff;"></div>
+            <div style="flex: 1; background-color: #EF3D4C;"></div>
+          </div>
+          <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 1.8em; font-weight: 400; letter-spacing: 1px;">Thank You, ${orderData.customerName}</h2>
+          <p style="color: #333333; margin: 0 0 20px 0; font-size: 1.05em; line-height: 1.7;">Your order has been confirmed and will be processed with the utmost care. We appreciate your trust in CEASAR.</p>
+          <div style="background-color: #000000; color: #FFFFFF; display: inline-block; padding: 12px 24px; border-radius: 6px; margin-top: 10px;">
+            <span style="color: #107D3F; font-weight: 600; letter-spacing: 1px;">ORDER #</span>
+            <span style="font-weight: 700; font-size: 1.2em; letter-spacing: 2px; margin-left: 8px;">${orderData.orderId}</span>
+          </div>
         </div>
+
+        <!-- Order Items -->
+        <div style="margin-bottom: 40px;">
+          <div style="background-color: #000000; color: #FFFFFF; padding: 16px 20px; border-radius: 8px 8px 0 0;">
+            <h3 style="margin: 0; font-size: 1.2em; font-weight: 400; letter-spacing: 2px; text-transform: uppercase;">Your Selection</h3>
+          </div>
+          <div style="background-color: #FFFFFF; border: 2px solid #f0f0f0; border-top: none; border-radius: 0 0 8px 8px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background-color: #f8f8f8; border-bottom: 2px solid #107D3F;">
+                  <th style="padding: 14px 12px; text-align: left; color: #000000; font-weight: 600; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Item</th>
+                  <th style="padding: 14px 12px; text-align: left; color: #000000; font-weight: 600; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Details</th>
+                  <th style="padding: 14px 12px; text-align: center; color: #000000; font-weight: 600; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Qty</th>
+                  <th style="padding: 14px 12px; text-align: right; color: #000000; font-weight: 600; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Price</th>
+                  <th style="padding: 14px 12px; text-align: right; color: #000000; font-weight: 600; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div style="margin-bottom: 40px;">
+          <div style="background-color: #107D3F; color: #FFFFFF; padding: 16px 20px; border-radius: 8px 8px 0 0;">
+            <h3 style="margin: 0; font-size: 1.2em; font-weight: 400; letter-spacing: 2px; text-transform: uppercase;">Order Summary</h3>
+          </div>
+          <div style="background-color: #FFFFFF; border: 2px solid #f0f0f0; border-top: none; border-radius: 0 0 8px 8px; padding: 25px;">
+            <table style="width: 100%; font-size: 1.05em;">
+              <tr>
+                <td style="padding: 12px 0; color: #666666; letter-spacing: 0.5px;">Subtotal</td>
+                <td style="text-align: right; padding: 12px 0; color: #000000; font-weight: 500;">LKR ${orderData.subtotal.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; color: #666666; letter-spacing: 0.5px;">Shipping</td>
+                <td style="text-align: right; padding: 12px 0; color: #000000; font-weight: 500;">LKR ${orderData.shippingCost.toFixed(2)}</td>
+              </tr>
+              <tr style="border-top: 3px solid #107D3F;">
+                <td style="padding: 20px 0 0 0; color: #000000; font-weight: 700; font-size: 1.2em; letter-spacing: 1px; text-transform: uppercase;">Total</td>
+                <td style="text-align: right; padding: 20px 0 0 0; color: #107D3F; font-weight: 700; font-size: 1.4em;">LKR ${orderData.totalAmount.toFixed(2)}</td>
+              </tr>
+              ${orderData.paymentMethod === 'COD' ? `
+              <tr style="border-top: 2px solid #f0f0f0;">
+                <td style="padding: 20px 0 0 0; color: #EF3D4C; font-weight: 600; font-size: 1em; letter-spacing: 0.5px;">Payment Method</td>
+                <td style="text-align: right; padding: 20px 0 0 0; color: #EF3D4C; font-weight: 700; font-size: 1.1em;">PAY ON DELIVERY</td>
+              </tr>` : orderData.paymentMethod === 'CARD' ? `
+              <tr style="border-top: 2px solid #f0f0f0;">
+                <td style="padding: 20px 0 0 0; color: #107D3F; font-weight: 600; font-size: 1em; letter-spacing: 0.5px;">Payment Status</td>
+                <td style="text-align: right; padding: 20px 0 0 0; color: #107D3F; font-weight: 700; font-size: 1.1em;">PAID</td>
+              </tr>` : ''}
+            </table>
+          </div>
+        </div>
+
+        <!-- Shipping Address -->
+        <div style="margin-bottom: 40px;">
+          <div style="background-color: #EF3D4C; color: #FFFFFF; padding: 16px 20px; border-radius: 8px 8px 0 0;">
+            <h3 style="margin: 0; font-size: 1.2em; font-weight: 400; letter-spacing: 2px; text-transform: uppercase;">Shipping Address</h3>
+          </div>
+          <div style="background-color: #FFFFFF; border: 2px solid #f0f0f0; border-top: none; border-radius: 0 0 8px 8px; padding: 25px;">
+            <p style="margin: 0; color: #000000; font-weight: 600; font-size: 1.1em; line-height: 1.8;">${orderData.shippingAddress.line1}</p>
+            <p style="margin: 8px 0 0 0; color: #666666; font-size: 1.05em; line-height: 1.8;">${orderData.shippingAddress.city}, ${orderData.shippingAddress.postalCode}</p>
+            <p style="margin: 5px 0 0 0; color: #666666; font-size: 1.05em; line-height: 1.8;">${orderData.shippingAddress.country}</p>
+          </div>
+        </div>
+
       </div>
 
-      <div style="background-color: #000; color: #fff; padding: 20px; border-radius: 8px; text-align: center;">
-        <p style="margin: 0;">We'll send you a shipping confirmation email when your order is on its way.</p>
-        <p style="margin: 10px 0 0 0;">Thank you for shopping with Ceaser LK!</p>
+      <!-- Footer -->
+      <div style="background-color: #000000; padding: 45px 30px; text-align: center;">
+        <h2 style="color: #FFFFFF; margin: 0 0 8px 0; font-size: 2.2em; letter-spacing: 8px; font-weight: 300; text-transform: uppercase;">CEASAR</h2>
+        <p style="color: #107D3F; margin: 0 0 30px 0; font-size: 0.85em; letter-spacing: 3px; text-transform: uppercase; font-weight: 500;">Luxury Streetwear</p>
+        <p style="margin: 0; color: #999999; font-size: 0.9em; line-height: 1.8;">Questions? Contact us at <a href="mailto:contactus@inceasar.com" style="color: #107D3F; text-decoration: none; font-weight: 600;">contactus@inceasar.com</a></p>
       </div>
-
-      <div style="text-align: center; margin-top: 30px; font-size: 0.9em; color: #666;">
-        <p>This email was sent from Ceaser LK. If you have any questions, please contact us.</p>
+      
+      <!-- Tri-Color Flag Footer -->
+      <div style="display: flex; height: 4px;">
+        <div style="flex: 1; background-color: #107D3F;"></div>
+        <div style="flex: 1; background-color: #ffffff;"></div>
+        <div style="flex: 1; background-color: #EF3D4C;"></div>
       </div>
+      
     </body>
     </html>
   `;
@@ -212,17 +262,17 @@ export function generateAdminOrderNotificationEmail(notificationData: {
     .map(
       (item) => `
         <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.productName}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.variantColor} / ${item.variantSize}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">LKR ${(item.pricePaid * item.quantity).toFixed(2)}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #f0f0f0;">${item.productName}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #f0f0f0; color: #666;">${item.variantColor} / ${item.variantSize}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #f0f0f0; text-align: center; font-weight: 600;">${item.quantity}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #f0f0f0; text-align: right; color: #107D3F; font-weight: 600;">LKR ${(item.pricePaid * item.quantity).toFixed(2)}</td>
         </tr>
       `
     )
     .join('');
 
   const phoneLine = notificationData.phoneNumber
-    ? `<p style="margin: 4px 0 0 0;"><strong>Phone:</strong> ${notificationData.phoneNumber}</p>`
+    ? `<p style="margin: 8px 0 0 0; color: #666;"><strong style="color: #000;">Phone:</strong> ${notificationData.phoneNumber}</p>`
     : '';
 
   return `
@@ -231,59 +281,99 @@ export function generateAdminOrderNotificationEmail(notificationData: {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>New Order Notification</title>
+      <title>New Order Notification | CEASAR</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 640px; margin: 0 auto; padding: 20px;">
-      <h2 style="margin-top: 0; color: #111;">New Order Placed</h2>
-      <p style="margin: 0 0 16px 0;">A new order has been placed on Ceaser LK. Here are the details:</p>
+    <body style="font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.6; color: #000000; max-width: 650px; margin: 0 auto; padding: 0; background-color: #ffffff;">
+      
+      <!-- Tri-Color Flag Header -->
+      <div style="display: flex; height: 4px;">
+        <div style="flex: 1; background-color: #107D3F;"></div>
+        <div style="flex: 1; background-color: #ffffff;"></div>
+        <div style="flex: 1; background-color: #EF3D4C;"></div>
+      </div>
+      
+      <div style="background-color: #000000; padding: 50px 30px; text-align: center; border-bottom: 1px solid rgba(16, 125, 63, 0.2);">
+        <h1 style="color: #FFFFFF; margin: 0; font-size: 3em; letter-spacing: 8px; font-weight: 300; text-transform: uppercase;">CEASAR</h1>
+        <p style="color: #107D3F; margin: 15px 0 0 0; font-size: 0.9em; letter-spacing: 2px; text-transform: uppercase; font-weight: 500;">New Order Notification</p>
+      </div>
+      
+      <div style="padding: 40px 30px;">
+        
+        <p style="margin: 0 0 25px 0; color: #333; font-size: 1.05em;">A new order has been placed on CEASAR.</p>
 
-      <div style="background-color: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-        <p style="margin: 0;"><strong>Order ID:</strong> ${notificationData.orderId}</p>
-        <p style="margin: 4px 0 0 0;"><strong>Customer:</strong> ${notificationData.customerName}</p>
-        <p style="margin: 4px 0 0 0;"><strong>Email:</strong> ${notificationData.customerEmail}</p>
-        ${phoneLine}
+        <!-- Customer Details -->
+        <div style="background-color: #f8f8f8; padding: 25px; border-radius: 8px; margin-bottom: 30px; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; display: flex;">
+            <div style="flex: 1; background-color: #107D3F;"></div>
+            <div style="flex: 1; background-color: #ffffff;"></div>
+            <div style="flex: 1; background-color: #EF3D4C;"></div>
+          </div>
+          <p style="margin: 0 0 8px 0;"><strong style="color: #000;">Order ID:</strong> <span style="font-family: monospace; font-size: 1.1em; color: #107D3F;">${notificationData.orderId}</span></p>
+          <p style="margin: 8px 0; color: #666;"><strong style="color: #000;">Customer:</strong> ${notificationData.customerName}</p>
+          <p style="margin: 8px 0 0 0; color: #666;"><strong style="color: #000;">Email:</strong> ${notificationData.customerEmail}</p>
+          ${phoneLine}
+        </div>
+
+        <!-- Order Items -->
+        <div style="margin-bottom: 30px;">
+          <h3 style="color: #000000; margin: 0 0 15px 0; font-size: 1.1em; letter-spacing: 1px; text-transform: uppercase; border-bottom: 2px solid #000000; padding-bottom: 10px;">Order Items</h3>
+          <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border: 1px solid #f0f0f0; border-radius: 8px;">
+            <thead>
+              <tr style="background-color: #000000; color: #ffffff;">
+                <th style="padding: 12px; text-align: left; font-weight: 500; font-size: 0.85em; letter-spacing: 1px; text-transform: uppercase;">Product</th>
+                <th style="padding: 12px; text-align: left; font-weight: 500; font-size: 0.85em; letter-spacing: 1px; text-transform: uppercase;">Variant</th>
+                <th style="padding: 12px; text-align: center; font-weight: 500; font-size: 0.85em; letter-spacing: 1px; text-transform: uppercase;">Qty</th>
+                <th style="padding: 12px; text-align: right; font-weight: 500; font-size: 0.85em; letter-spacing: 1px; text-transform: uppercase;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Order Summary -->
+        <div style="background-color: #f8f8f8; padding: 20px 25px; border-radius: 8px; margin-bottom: 30px;">
+          <table style="width: 100%; font-size: 1.05em;">
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Subtotal</td>
+              <td style="padding: 8px 0; text-align: right; color: #000; font-weight: 500;">LKR ${notificationData.subtotal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666;">Shipping</td>
+              <td style="padding: 8px 0; text-align: right; color: #000; font-weight: 500;">LKR ${notificationData.shippingCost.toFixed(2)}</td>
+            </tr>
+            <tr style="border-top: 2px solid #107D3F;">
+              <td style="padding: 15px 0 0 0; color: #000; font-weight: 700; font-size: 1.15em; letter-spacing: 1px; text-transform: uppercase;">Total</td>
+              <td style="padding: 15px 0 0 0; text-align: right; color: #107D3F; font-weight: 700; font-size: 1.3em;">LKR ${notificationData.totalAmount.toFixed(2)}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Shipping Address -->
+        <div style="border-left: 3px solid #000000; padding-left: 20px; margin-bottom: 30px;">
+          <h3 style="margin: 0 0 12px 0; color: #000000; font-size: 1em; letter-spacing: 1px; text-transform: uppercase;">Shipping Address</h3>
+          <p style="margin: 0; color: #000; font-size: 1.05em; line-height: 1.8;">${notificationData.shippingAddress.line1}</p>
+          <p style="margin: 5px 0 0 0; color: #666; font-size: 1.05em; line-height: 1.8;">${notificationData.shippingAddress.city}, ${notificationData.shippingAddress.postalCode}</p>
+          <p style="margin: 5px 0 0 0; color: #666; font-size: 1.05em; line-height: 1.8;">${notificationData.shippingAddress.country}</p>
+        </div>
+
+        <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 0.9em; color: #999;">This notification was sent automatically by CEASAR.</p>
       </div>
 
-      <h3 style="color: #111; border-bottom: 2px solid #111; padding-bottom: 8px;">Order Items</h3>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-        <thead>
-          <tr style="background-color: #f1f1f1;">
-            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Product</th>
-            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Variant</th>
-            <th style="padding: 8px; text-align: center; border-bottom: 2px solid #ddd;">Qty</th>
-            <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Line Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsHtml}
-        </tbody>
-      </table>
-
-      <div style="margin-bottom: 20px;">
-        <table style="width: 100%;">
-          <tr>
-            <td style="padding: 4px 0;">Subtotal:</td>
-            <td style="padding: 4px 0; text-align: right;">LKR ${notificationData.subtotal.toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 4px 0;">Shipping:</td>
-            <td style="padding: 4px 0; text-align: right;">LKR ${notificationData.shippingCost.toFixed(2)}</td>
-          </tr>
-          <tr style="font-weight: bold; font-size: 1.05em;">
-            <td style="padding: 6px 0; border-top: 1px solid #ddd;">Total:</td>
-            <td style="padding: 6px 0; border-top: 1px solid #ddd; text-align: right;">LKR ${notificationData.totalAmount.toFixed(2)}</td>
-          </tr>
-        </table>
+      <!-- Footer -->
+      <div style="background-color: #000000; padding: 30px; text-align: center;">
+        <h2 style="color: #FFFFFF; margin: 0; font-size: 1.8em; letter-spacing: 6px; font-weight: 300; text-transform: uppercase;">CEASAR</h2>
+        <p style="color: #107D3F; margin: 8px 0 0 0; font-size: 0.8em; letter-spacing: 2px; text-transform: uppercase;">Luxury Streetwear</p>
+      </div>
+      
+      <!-- Tri-Color Flag Footer -->
+      <div style="display: flex; height: 4px;">
+        <div style="flex: 1; background-color: #107D3F;"></div>
+        <div style="flex: 1; background-color: #ffffff;"></div>
+        <div style="flex: 1; background-color: #EF3D4C;"></div>
       </div>
 
-      <div style="background-color: #f8f9fa; padding: 16px; border-radius: 8px;">
-        <h3 style="margin-top: 0; color: #111;">Shipping Address</h3>
-        <p style="margin: 0;">${notificationData.shippingAddress.line1}</p>
-        <p style="margin: 4px 0 0 0;">${notificationData.shippingAddress.city}, ${notificationData.shippingAddress.postalCode}</p>
-        <p style="margin: 4px 0 0 0;">${notificationData.shippingAddress.country}</p>
-      </div>
-
-      <p style="margin-top: 24px; font-size: 0.9em; color: #555;">This email was sent automatically by the Ceaser LK store when an order was placed.</p>
     </body>
     </html>
   `;
@@ -295,6 +385,7 @@ export function generateOrderStatusUpdateEmail(updateData: {
   orderId: string;
   newStatus: string;
   profileUrl: string;
+  deliveryId?: string | null;
 }): string {
   const statusDescriptions: Record<string, string> = {
     PROCESSING: 'Your order is now being processed. We are getting your items ready for shipment.',
@@ -313,28 +404,78 @@ export function generateOrderStatusUpdateEmail(updateData: {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Order Status Update - Ceaser LK</title>
+      <title>Order Status Update | CEASAR</title>
     </head>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #000; margin-bottom: 10px;">Ceaser LK</h1>
-        <h2 style="color: #666; font-weight: normal;">Order Status Update</h2>
+    <body style="font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.6; color: #000000; max-width: 650px; margin: 0 auto; padding: 0; background-color: #ffffff;">
+      
+      <!-- Tri-Color Flag Header -->
+      <div style="display: flex; height: 4px;">
+        <div style="flex: 1; background-color: #107D3F;"></div>
+        <div style="flex: 1; background-color: #ffffff;"></div>
+        <div style="flex: 1; background-color: #EF3D4C;"></div>
       </div>
       
-      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-        <h3 style="color: #000; margin-top: 0;">Hello, ${updateData.customerName}!</h3>
-        <p>The status of your order <strong>#${updateData.orderId}</strong> has been updated to: <strong>${updateData.newStatus}</strong>.</p>
-        <p>${description}</p>
+      <div style="background-color: #000000; padding: 50px 30px; text-align: center; border-bottom: 1px solid rgba(16, 125, 63, 0.2);">
+        <h1 style="color: #FFFFFF; margin: 0; font-size: 3em; letter-spacing: 8px; font-weight: 300; text-transform: uppercase;">CEASAR</h1>
+        <p style="color: #107D3F; margin: 15px 0 0 0; font-size: 0.9em; letter-spacing: 2px; text-transform: uppercase; font-weight: 500;">Order Status Update</p>
+      </div>
+      
+      <div style="padding: 40px 30px;">
+        
+        <!-- Status Update Message -->
+        <div style="background-color: #f8f8f8; padding: 30px; border-radius: 8px; margin-bottom: 35px; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; display: flex;">
+            <div style="flex: 1; background-color: #107D3F;"></div>
+            <div style="flex: 1; background-color: #ffffff;"></div>
+            <div style="flex: 1; background-color: #EF3D4C;"></div>
+          </div>
+          <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 1.5em; font-weight: 400; letter-spacing: 1px;">Hello, ${updateData.customerName}</h2>
+          <p style="margin: 0 0 15px 0; color: #333; font-size: 1.05em; line-height: 1.8;">Your order <strong style="color: #107D3F; font-family: monospace;">#${updateData.orderId}</strong> status has been updated to:</p>
+          <div style="background-color: #000000; color: #FFFFFF; display: inline-block; padding: 12px 24px; border-radius: 6px; margin: 10px 0 15px 0;">
+            <span style="font-weight: 700; font-size: 1.1em; letter-spacing: 2px; text-transform: uppercase;">${updateData.newStatus}</span>
+          </div>
+          <p style="margin: 15px 0 0 0; color: #666; font-size: 1.05em; line-height: 1.8;">${description}</p>
+        </div>
+
+        ${updateData.deliveryId ? `
+        <!-- Tracking Information -->
+        <div style="background-color: #f8f8f8; padding: 25px; border-radius: 8px; margin-bottom: 35px; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; display: flex;">
+            <div style="flex: 1; background-color: #107D3F;"></div>
+            <div style="flex: 1; background-color: #ffffff;"></div>
+            <div style="flex: 1; background-color: #EF3D4C;"></div>
+          </div>
+          <h3 style="color: #000000; margin: 0 0 15px 0; font-size: 1.1em; letter-spacing: 1px; text-transform: uppercase;">Track Your Delivery</h3>
+          <p style="margin: 0 0 15px 0; color: #666; font-size: 1.05em;">Your Koombiya Delivery tracking code:</p>
+          <div style="background-color: #ffffff; padding: 15px 20px; border-radius: 6px; margin: 15px 0;">
+            <p style="font-family: 'Courier New', monospace; font-size: 1.3em; font-weight: bold; color: #107D3F; margin: 0; letter-spacing: 2px;">${updateData.deliveryId}</p>
+          </div>
+          <a href="https://koombiyodelivery.com" target="_blank" style="display: inline-block; color: #107D3F; text-decoration: none; font-weight: 600; font-size: 1.05em; margin-top: 10px;">Track on Koombiya Delivery →</a>
+        </div>
+        ` : ''}
+
+        <!-- View Orders Button -->
+        <div style="text-align: center; margin: 35px 0;">
+          <p style="margin: 0 0 20px 0; color: #666; font-size: 1.05em;">View the full details of your order:</p>
+          <a href="${updateData.profileUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 14px 35px; text-decoration: none; border-radius: 6px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 0.95em;">View My Orders</a>
+        </div>
+
+        <p style="text-align: center; margin-top: 35px; padding-top: 25px; border-top: 1px solid #e0e0e0; color: #999; font-size: 0.95em; line-height: 1.8;">Thank you for shopping with CEASAR. If you have any questions, please contact us at <a href="mailto:contactus@inceasar.com" style="color: #107D3F; text-decoration: none;">contactus@inceasar.com</a></p>
       </div>
 
-      <div style="text-align: center; margin-bottom: 30px;">
-        <p>You can view the full details of your order by visiting your profile:</p>
-        <a href="${updateData.profileUrl}" style="display: inline-block; background-color: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">View My Orders</a>
+      <!-- Footer -->
+      <div style="background-color: #000000; padding: 30px; text-align: center;">
+        <h2 style="color: #FFFFFF; margin: 0; font-size: 1.8em; letter-spacing: 6px; font-weight: 300; text-transform: uppercase;">CEASAR</h2>
+        <p style="color: #107D3F; margin: 8px 0 0 0; font-size: 0.8em; letter-spacing: 2px; text-transform: uppercase;">Luxury Streetwear</p>
+      </div>
+      
+      <!-- Tri-Color Flag Footer -->
+      <div style="display: flex; height: 4px;">
+        <div style="flex: 1; background-color: #107D3F;"></div>
+        <div style="flex: 1; background-color: #ffffff;"></div>
+        <div style="flex: 1; background-color: #EF3D4C;"></div>
       </div>
 
-      <div style="text-align: center; margin-top: 30px; font-size: 0.9em; color: #666;">
-        <p>Thank you for shopping with Ceaser LK. If you have any questions, please reply to this email.</p>
-      </div>
     </body>
     </html>
   `;
