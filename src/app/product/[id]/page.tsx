@@ -14,6 +14,7 @@ import {
   Volume2,
   VolumeX,
   Loader2,
+  X,
 } from "lucide-react";
 
 // GSAP is loaded dynamically
@@ -259,6 +260,7 @@ function TrainMediaShowcase({
   const [isMobile, setIsMobile] = useState(false);
   const [videoLoadingStates, setVideoLoadingStates] = useState<Map<string, boolean>>(new Map());
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
   // Load GSAP on mount
   useEffect(() => {
@@ -270,6 +272,29 @@ function TrainMediaShowcase({
       }
     });
   }, []);
+
+  // Fullscreen handlers
+  const openFullscreen = (index: number) => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setFullscreenIndex(index);
+    }
+  };
+
+  const closeFullscreen = () => {
+    setFullscreenIndex(null);
+  };
+
+  const goToPreviousFullscreen = () => {
+    if (fullscreenIndex !== null && fullscreenIndex > 0) {
+      setFullscreenIndex(fullscreenIndex - 1);
+    }
+  };
+
+  const goToNextFullscreen = () => {
+    if (fullscreenIndex !== null && fullscreenIndex < media.length - 1) {
+      setFullscreenIndex(fullscreenIndex + 1);
+    }
+  };
 
   // Initialize video loading states
   useEffect(() => {
@@ -551,8 +576,13 @@ function TrainMediaShowcase({
           return (
           <div
             key={item.id}
-            className="relative flex-shrink-0 h-full flex items-start justify-center will-change-[width]"
+            className="relative flex-shrink-0 h-full flex items-start justify-center will-change-[width] cursor-pointer"
             style={{ width: getItemWidth(index) }}
+            onClick={() => openFullscreen(index)}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              openFullscreen(index);
+            }}
           >
             {item.type === "video" ? (
               <div className="relative w-full h-full">
@@ -684,6 +714,88 @@ function TrainMediaShowcase({
           ))}
         </div>
       </div>
+
+      {/* Fullscreen Modal - Mobile Only */}
+      {fullscreenIndex !== null && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center animate-in fade-in zoom-in-75 duration-300"
+          onTouchStart={(e) => {
+            touchStartX.current = e.touches[0].clientX;
+          }}
+          onTouchEnd={(e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX.current - touchEndX;
+            if (Math.abs(diff) > 50) {
+              if (diff > 0) {
+                goToNextFullscreen();
+              } else {
+                goToPreviousFullscreen();
+              }
+            }
+          }}
+        >
+          {/* Close Button */}
+          <button
+            onClick={closeFullscreen}
+            className="absolute top-4 right-4 z-50 bg-white/10 hover:bg-white/20 rounded-full p-2 transition-all duration-200 hover:scale-110"
+            aria-label="Close fullscreen"
+          >
+            <X className="w-6 h-6 text-white" />
+          </button>
+
+          {/* Previous Button */}
+          {fullscreenIndex > 0 && (
+            <button
+              onClick={goToPreviousFullscreen}
+              className="absolute left-4 z-50 bg-white/10 hover:bg-white/20 rounded-full p-2 transition-all duration-200 hover:scale-110"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="w-6 h-6 text-white" />
+            </button>
+          )}
+
+          {/* Next Button */}
+          {fullscreenIndex < media.length - 1 && (
+            <button
+              onClick={goToNextFullscreen}
+              className="absolute right-4 z-50 bg-white/10 hover:bg-white/20 rounded-full p-2 transition-all duration-200 hover:scale-110"
+              aria-label="Next image"
+            >
+              <ChevronRight className="w-6 h-6 text-white" />
+            </button>
+          )}
+
+          {/* Media Display */}
+          <div className="w-full h-full flex items-center justify-center p-4">
+            {media[fullscreenIndex].type === "video" ? (
+              <video
+                key={`video-${fullscreenIndex}`}
+                src={media[fullscreenIndex].url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="max-w-full max-h-full object-contain animate-in zoom-in-50 fade-in duration-500 transition-all"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={`img-${fullscreenIndex}`}
+                src={media[fullscreenIndex].url}
+                alt={productName}
+                className="max-w-full max-h-full object-contain animate-in zoom-in-50 fade-in duration-500 transition-all"
+              />
+            )}
+          </div>
+
+          {/* Image Counter */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full animate-in fade-in duration-500">
+            <span className="text-white text-sm font-medium">
+              {fullscreenIndex + 1} / {media.length}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
