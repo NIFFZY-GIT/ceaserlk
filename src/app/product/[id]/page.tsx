@@ -309,6 +309,16 @@ function TrainMediaShowcase({
     });
   }, [media]);
 
+  // Preload all images for faster swiping
+  useEffect(() => {
+    media.forEach((item) => {
+      if (item.type === "image") {
+        const imgElement = document.createElement("img");
+        imgElement.src = item.url;
+      }
+    });
+  }, [media]);
+
   // Handle video load complete
   const handleVideoCanPlay = useCallback((id: string) => {
     setVideoLoadingStates(prev => {
@@ -619,8 +629,8 @@ function TrainMediaShowcase({
                   sizes="(max-width: 768px) 100vw, 50vw"
                   // KEY UPDATE: quality=100 ensures no compression artifacts
                   quality={100}
-                  priority={index === 0}
-                  loading={index <= 1 ? "eager" : "lazy"}
+                  priority={index <= 3}
+                  loading="eager"
                 />
               </div>
             )}
