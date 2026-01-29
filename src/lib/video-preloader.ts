@@ -87,7 +87,13 @@ class VideoPreloader {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to preload video: ${response.status}`);
+        // Handle 404 and other errors gracefully - this is expected for missing videos
+        cached.status = 'error';
+        this.cache.set(url, cached);
+        if (response.status !== 404) {
+          console.warn(`[VideoPreloader] Failed to preload video (${response.status}): ${url}`);
+        }
+        return;
       }
 
       // Read the response to ensure it's fully downloaded
@@ -97,9 +103,14 @@ class VideoPreloader {
       cached.blob = blob;
       this.cache.set(url, cached);
 
-      console.log(`[VideoPreloader] Preloaded: ${url}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[VideoPreloader] Preloaded: ${url}`);
+      }
     } catch (error) {
-      console.error(`[VideoPreloader] Error preloading ${url}:`, error);
+      // Network errors are expected in some cases (offline, server issues)
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[VideoPreloader] Error preloading ${url}:`, error);
+      }
       cached.status = 'error';
       this.cache.set(url, cached);
     }
