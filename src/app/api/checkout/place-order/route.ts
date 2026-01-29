@@ -128,21 +128,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check stock availability for all items
-    const outOfStockItems = cartItemsResult.rows.filter(
-      item => item.stock_quantity < item.quantity
-    );
-    
-    if (outOfStockItems.length > 0) {
-      await client.query('ROLLBACK');
-      const itemNames = outOfStockItems.map(item => 
-        `${item.product_name} (${item.color_name}, ${item.size})`
-      ).join(', ');
-      return NextResponse.json(
-        { error: `Some items are no longer available in the requested quantity: ${itemNames}. Please update your cart.` },
-        { status: 400 }
-      );
-    }
+    // Note: Stock was already reserved/decremented when items were added to cart.
+    // No need to check stock again here - if items are in cart, stock is already allocated.
 
     const subtotal = cartItemsResult.rows.reduce((total, item) => {
       return total + Number.parseFloat(item.variant_price) * item.quantity;

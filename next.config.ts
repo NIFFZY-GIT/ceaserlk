@@ -32,6 +32,19 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      // Production domain
+      {
+        protocol: 'https',
+        hostname: 'www.inceasar.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'inceasar.com',
+        port: '',
+        pathname: '/**',
+      },
       // Add localhost for development
       {
         protocol: 'http',

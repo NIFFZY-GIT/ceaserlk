@@ -188,7 +188,7 @@ export async function sendSecureEmail(options: EmailOptions): Promise<void> {
     const transporter = createSecureTransporter();
 
     // Prepare email options
-    const fromAddress = `"${env.EMAIL_FROM_NAME || 'Ceaser LK'}" <${env.EMAIL_USER}>`;
+    const fromAddress = `"${env.EMAIL_FROM_NAME || 'CEASAR'}" <${env.EMAIL_USER}>`;
     
     const mailOptions = {
       from: fromAddress,
@@ -256,44 +256,115 @@ export async function sendPasswordResetEmail(
   firstName: string,
   verificationCode: string
 ): Promise<void> {
-  const subject = 'Password Reset Verification Code - CeaserLK';
+  const subject = 'Password Reset - CEASAR';
   
   const htmlContent = `
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 28px;">Password Reset Request</h1>
-      </div>
-      
-      <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Hello ${sanitizeHtml(firstName)},</p>
-        
-        <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
-          We received a request to reset your password. Use the verification code below to continue:
-        </p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <div style="display: inline-block; background: #667eea; color: white; padding: 20px 40px; border-radius: 10px; font-size: 32px; font-weight: bold; letter-spacing: 8px;">
-            ${verificationCode}
-          </div>
-        </div>
-        
-        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin: 20px 0;">
-          <p style="color: #856404; margin: 0; font-size: 14px;">
-            <strong>⚠️ Security Notice:</strong> This code will expire in 10 minutes. If you didn't request this password reset, please ignore this email and contact support immediately.
-          </p>
-        </div>
-        
-        <p style="font-size: 14px; color: #666; margin-top: 30px;">
-          For security reasons, never share this code with anyone. Our support team will never ask for your verification code.
-        </p>
-        
-        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
-          <p style="font-size: 12px; color: #6c757d; margin: 0;">
-            © ${new Date().getFullYear()} CeaserLK. All rights reserved.
-          </p>
-        </div>
-      </div>
-    </div>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Password Reset | CEASAR</title>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased;">
+      <!-- Outer wrapper table for background -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5;">
+        <tr>
+          <td align="center" style="padding: 20px 10px;">
+            
+            <!-- Main content table -->
+            <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px;">
+              
+              <!-- Header Image -->
+              <tr>
+                <td align="center" style="padding: 0; background-color: #000000;">
+                  <img src="https://www.inceasar.com/assets/mailheadertop.png" alt="CEASAR" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;" />
+                </td>
+              </tr>
+              
+              <!-- Title -->
+              <tr>
+                <td align="center" style="padding: 40px 30px 30px 30px;">
+                  <h1 style="font-size: 24px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; margin: 0 0 15px 0; color: #000000;">Password Reset</h1>
+                  <p style="font-size: 14px; color: #888888; line-height: 1.6; margin: 0;">
+                    Hello ${sanitizeHtml(firstName)}, we received a request to reset your password.
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Verification Code -->
+              <tr>
+                <td align="center" style="padding: 0 30px 40px 30px;">
+                  <p style="font-size: 14px; color: #000000; margin: 0 0 20px 0;">Use this verification code to continue:</p>
+                  <table cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="background-color: #000000; color: #ffffff; padding: 20px 40px; font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: bold; letter-spacing: 8px;">
+                        ${verificationCode}
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Security Notice -->
+              <tr>
+                <td style="padding: 0 30px 40px 30px;">
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5; border-left: 4px solid #EF3D4C;">
+                    <tr>
+                      <td style="padding: 15px 20px;">
+                        <p style="font-size: 13px; color: #666666; margin: 0; line-height: 1.6;">
+                          <strong style="color: #000000;">⚠️ Security Notice:</strong> This code will expire in 10 minutes. If you didn't request this password reset, please ignore this email.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Additional Info -->
+              <tr>
+                <td style="padding: 0 30px 40px 30px;">
+                  <p style="font-size: 13px; color: #888888; line-height: 1.6; margin: 0;">
+                    For security reasons, never share this code with anyone. Our support team will never ask for your verification code.
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 30px; border-top: 1px solid #e5e5e5; background-color: #fafafa;">
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td align="center">
+                        <p style="font-size: 11px; color: #888888; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 15px 0;">
+                          <a href="https://www.inceasar.com" style="color: #000000; font-weight: bold; text-decoration: none;">InCeasar.com</a>
+                        </p>
+                        <!-- Tri-Color Flag -->
+                        <table cellpadding="0" cellspacing="0" border="0" align="center">
+                          <tr>
+                            <td width="10" height="3" style="background-color: #107D3F;"></td>
+                            <td width="10" height="3" style="background-color: #ffffff; border-top: 1px solid #eee; border-bottom: 1px solid #eee;"></td>
+                            <td width="10" height="3" style="background-color: #EF3D4C;"></td>
+                          </tr>
+                        </table>
+                        <p style="font-size: 10px; color: #999999; margin: 15px 0 0 0; line-height: 1.6;">
+                          Need assistance? <a href="mailto:contactus@inceasar.com" style="color: #000000; text-decoration: underline;">Contact Support</a><br>
+                          &copy; ${new Date().getFullYear()} CEASAR. All rights reserved.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+            </table>
+            <!-- End main content table -->
+            
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
   `;
 
   const textContent = `

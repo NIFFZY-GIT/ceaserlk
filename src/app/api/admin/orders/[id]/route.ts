@@ -28,6 +28,9 @@ export async function GET(
   }
 
   try {
+    // Ensure order_number column exists and backfill any NULL values
+    await ensureOrderNumberSchema(db);
+    
     const query = `
       SELECT
         o.*,

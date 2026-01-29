@@ -3,14 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
-import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote, Wallet, Gift } from 'lucide-react';
+import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote, Wallet, Gift, Plus, Minus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import PayHerePaymentHandler from './PayHerePaymentHandler';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, loading: cartLoading, cartCount, fetchCart } = useCart();
+  const { cart, loading: cartLoading, cartCount, fetchCart, updateQuantity, removeFromCart } = useCart();
 
   const [shippingDetails, setShippingDetails] = useState({
     email: '',
@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<'payhere' | 'cod'>('payhere');
   const [codSubmitting, setCodSubmitting] = useState(false);
   const [codError, setCodError] = useState<string | null>(null);
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
   // Cart expiration timer state
   const [cartTimeRemaining, setCartTimeRemaining] = useState<number | null>(null);
@@ -147,6 +148,21 @@ export default function CheckoutPage() {
       setCodError(null);
     }
     setShippingDetails({ ...shippingDetails, [e.target.name]: e.target.value });
+  };
+
+  // Handle quantity update for cart items
+  const handleQuantityUpdate = async (itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    setUpdatingItemId(itemId);
+    await updateQuantity(itemId, newQuantity);
+    setUpdatingItemId(null);
+  };
+
+  // Handle remove item from cart
+  const handleRemoveItem = async (itemId: string) => {
+    setUpdatingItemId(itemId);
+    await removeFromCart(itemId);
+    setUpdatingItemId(null);
   };
 
   if (cartLoading) {
@@ -619,39 +635,76 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="mt-3 sm:mt-6 space-y-2 sm:space-y-3 overflow-y-auto max-h-48 sm:max-h-80">
-                    {cart.items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 transition-all duration-300 border rounded-lg sm:rounded-xl border-gray-800/60 bg-gray-900/40"
-                      >
-                        <div className="relative flex-shrink-0 w-10 h-10 sm:w-14 sm:h-14 overflow-hidden border border-gray-800 rounded-md sm:rounded-lg">
-                          <Image
-                            src={
-                              item.sku.variant.variant_images && item.sku.variant.variant_images.length > 0
-                                ? item.sku.variant.variant_images[0].image_url
-                                : item.sku.variant.thumbnail_url || '/images/image.jpg'
-                            }
-                            alt={item.sku.variant.product.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] sm:text-sm font-semibold truncate text-brand-white">
-                            {item.sku.variant.product.name}
+                    {cart.items.map((item) => {
+                      const isUpdating = updatingItemId === item.id;
+                      // Get image URL with fallback logic matching CartDrawer
+                      const getImageUrl = () => {
+                        const variant = item.sku.variant;
+                        if (variant.thumbnail_url) return variant.thumbnail_url;
+                        if (variant.variant_images && variant.variant_images.length > 0) {
+                          return variant.variant_images[0].image_url;
+                        }
+                        return '/images/image.jpg';
+                      };
+                      const imageUrl = getImageUrl();
+                      
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 transition-all duration-300 border rounded-lg sm:rounded-xl border-gray-800/60 bg-gray-900/40 ${isUpdating ? 'opacity-50' : ''}`}
+                        >
+                          <div className="relative flex-shrink-0 w-10 h-10 sm:w-14 sm:h-14 overflow-hidden border border-gray-800 rounded-md sm:rounded-lg">
+                            <Image
+                              src={imageUrl}
+                              alt={item.sku.variant.product.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] sm:text-sm font-semibold truncate text-brand-white">
+                              {item.sku.variant.product.name}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-gray-300">
+                              {item.sku.size} • {item.sku.variant.color_name}
+                            </p>
+                            {/* Quantity Controls */}
+                            <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5">
+                              <button
+                                onClick={() => handleQuantityUpdate(item.id, item.quantity - 1)}
+                                disabled={isUpdating || item.quantity <= 1}
+                                className="p-1 sm:p-1.5 rounded-md border border-gray-700 bg-gray-800/50 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                title="Decrease quantity"
+                              >
+                                <Minus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-300" />
+                              </button>
+                              <span className="min-w-[20px] sm:min-w-[24px] text-center text-[11px] sm:text-xs font-semibold text-brand-white">
+                                {isUpdating ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : item.quantity}
+                              </span>
+                              <button
+                                onClick={() => handleQuantityUpdate(item.id, item.quantity + 1)}
+                                disabled={isUpdating}
+                                className="p-1 sm:p-1.5 rounded-md border border-gray-700 bg-gray-800/50 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                title="Increase quantity"
+                              >
+                                <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-300" />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveItem(item.id)}
+                                disabled={isUpdating}
+                                className="p-1 sm:p-1.5 ml-1 rounded-md border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                title="Remove item"
+                              >
+                                <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-400" />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-[11px] sm:text-sm font-semibold text-brand-white whitespace-nowrap">
+                            LKR {(parseFloat(item.sku.variant.price) * item.quantity).toLocaleString()}
                           </p>
-                          <p className="text-[10px] sm:text-xs text-gray-300">
-                            {item.sku.size} • {item.sku.variant.color_name}
-                          </p>
-                          <span className="inline-block mt-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-primary">
-                            Qty {item.quantity}
-                          </span>
                         </div>
-                        <p className="text-[11px] sm:text-sm font-semibold text-brand-white whitespace-nowrap">
-                          LKR {(parseFloat(item.sku.variant.price) * item.quantity).toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <div className="pt-3 sm:pt-6 mt-3 sm:mt-6 space-y-2 sm:space-y-3 text-[11px] sm:text-sm border-t border-gray-800/60">
