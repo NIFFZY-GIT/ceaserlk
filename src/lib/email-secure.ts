@@ -365,10 +365,15 @@ export function generateOrderConfirmationEmail(orderData: {
     </head>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f4f4f4;">
         <div style="max-width: 600px; margin: 0 auto; background: white; padding: 0; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+            <!-- Header Image -->
+            <div style="text-align: center; background-color: #000000; border-radius: 10px 10px 0 0;">
+              <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" style="width: 100%; max-width: 600px; height: auto; display: block; border-radius: 10px 10px 0 0;" />
+            </div>
+            
             <!-- Header -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                <h1 style="margin: 0; font-size: 28px;">Order Confirmed!</h1>
-                <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">Thank you for your purchase</p>
+            <div style="background: #000000; color: white; padding: 20px 30px; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px; color: #107D3F;">Order Confirmed!</h1>
+                <p style="margin: 10px 0 0; font-size: 14px; opacity: 0.9;">Thank you for your purchase</p>
             </div>
             
             <!-- Content -->

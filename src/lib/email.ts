@@ -119,16 +119,13 @@ export function generateOrderConfirmationEmail(orderData: {
     </head>
     <body style="font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.8; color: #000000; max-width: 650px; margin: 0 auto; padding: 0; background-color: #ffffff;">
       
-      <!-- Tri-Color Flag Header -->
-      <div style="display: flex; height: 4px;">
-        <div style="flex: 1; background-color: #107D3F;"></div>
-        <div style="flex: 1; background-color: #ffffff;"></div>
-        <div style="flex: 1; background-color: #EF3D4C;"></div>
+      <!-- Header Image -->
+      <div style="text-align: center; background-color: #000000;">
+        <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" style="width: 100%; max-width: 650px; height: auto; display: block;" />
       </div>
       
-      <div style="background-color: #000000; padding: 50px 30px; text-align: center; border-bottom: 1px solid rgba(16, 125, 63, 0.2);">
-        <h1 style="color: #FFFFFF; margin: 0; font-size: 3.5em; letter-spacing: 8px; font-weight: 300; text-transform: uppercase;">CEASAR</h1>
-        <p style="color: #107D3F; font-size: 0.95em; letter-spacing: 3px; margin: 15px 0 0 0; text-transform: uppercase; font-weight: 600;">Order Confirmation</p>
+      <div style="background-color: #000000; padding: 30px 30px 40px; text-align: center; border-bottom: 1px solid rgba(16, 125, 63, 0.2);">
+        <p style="color: #107D3F; font-size: 0.95em; letter-spacing: 3px; margin: 0; text-transform: uppercase; font-weight: 600;">Order Confirmation</p>
       </div>
       
       <div style="padding: 40px 30px; background-color: #ffffff;">
@@ -408,16 +405,13 @@ export function generateOrderStatusUpdateEmail(updateData: {
     </head>
     <body style="font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.6; color: #000000; max-width: 650px; margin: 0 auto; padding: 0; background-color: #ffffff;">
       
-      <!-- Tri-Color Flag Header -->
-      <div style="display: flex; height: 4px;">
-        <div style="flex: 1; background-color: #107D3F;"></div>
-        <div style="flex: 1; background-color: #ffffff;"></div>
-        <div style="flex: 1; background-color: #EF3D4C;"></div>
+      <!-- Header Image -->
+      <div style="text-align: center; background-color: #000000;">
+        <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" style="width: 100%; max-width: 650px; height: auto; display: block;" />
       </div>
       
-      <div style="background-color: #000000; padding: 50px 30px; text-align: center; border-bottom: 1px solid rgba(16, 125, 63, 0.2);">
-        <h1 style="color: #FFFFFF; margin: 0; font-size: 3em; letter-spacing: 8px; font-weight: 300; text-transform: uppercase;">CEASAR</h1>
-        <p style="color: #107D3F; margin: 15px 0 0 0; font-size: 0.9em; letter-spacing: 2px; text-transform: uppercase; font-weight: 500;">Order Status Update</p>
+      <div style="background-color: #000000; padding: 30px 30px 40px; text-align: center; border-bottom: 1px solid rgba(16, 125, 63, 0.2);">
+        <p style="color: #107D3F; margin: 0; font-size: 0.9em; letter-spacing: 2px; text-transform: uppercase; font-weight: 500;">Order Status Update</p>
       </div>
       
       <div style="padding: 40px 30px;">
