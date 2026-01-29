@@ -280,12 +280,4 @@ export async function POST(request: NextRequest) {
 }
 
 export const runtime = 'nodejs';
-
-export const config = {
-    api: {
-        bodyParser: {
-            sizeLimit: '200mb',
-        },
-    },
-    maxDuration: 300,
-};
+export const maxDuration = 300;
