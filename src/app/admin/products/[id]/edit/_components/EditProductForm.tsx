@@ -283,18 +283,33 @@ const MediaPreviewItem = ({
   // Only show error for server URLs that fail to load
   if (loadError && !isBlobUrl) {
     return (
-      <div className="relative flex flex-col items-center justify-center gap-2 overflow-hidden border-2 border-dashed rounded-lg border-red-300 bg-red-50 aspect-square p-2">
-        <ImageIcon size={28} className="text-red-400" />
-        <span className="text-xs font-medium text-red-600 text-center">Image Not Found</span>
-        <span className="text-[10px] text-red-400 px-1 text-center break-all line-clamp-2">{previewUrl.split('/').pop()}</span>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="mt-1 px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors flex items-center gap-1"
-        >
-          <X size={12} />
-          Remove
-        </button>
+      <div className="relative group aspect-square">
+        <div className="flex flex-col items-center justify-center w-full h-full gap-2 border-2 border-dashed rounded-lg border-red-200 bg-gradient-to-br from-red-50 to-orange-50 p-3">
+          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+            <ImageIcon size={20} className="text-red-400" />
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-semibold text-red-600">Missing File</p>
+            <p className="text-[10px] text-red-400 mt-0.5 max-w-[100px] truncate" title={previewUrl}>
+              {previewUrl.split('/').pop()?.substring(0, 20)}...
+            </p>
+          </div>
+        </div>
+        {/* Hover overlay with remove button */}
+        <div className="absolute inset-0 flex items-center justify-center transition-opacity bg-black/60 rounded-lg opacity-0 group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={onRemove}
+            className="px-3 py-2 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-lg"
+          >
+            <Trash2 size={14} />
+            Remove
+          </button>
+        </div>
+        {/* Always visible delete indicator */}
+        <div className="absolute top-1 right-1 p-1 bg-red-500 rounded-full">
+          <X size={10} className="text-white" />
+        </div>
       </div>
     );
   }

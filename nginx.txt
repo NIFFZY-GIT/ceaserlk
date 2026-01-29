@@ -28,6 +28,14 @@ server {
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
 
+    # Serve uploaded files directly from filesystem (bypasses Next.js for better performance)
+    location /uploads/ {
+        alias /var/www/inceasar/public/uploads/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
     # 5. Proxy Configuration
     location / {
         proxy_pass http://localhost:3000;
