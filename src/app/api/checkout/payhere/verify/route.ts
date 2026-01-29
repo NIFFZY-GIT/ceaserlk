@@ -145,11 +145,7 @@ export async function POST(request: NextRequest) {
                 item.sku_id
               ]);
 
-              // Deduct stock
-              await client.query(
-                'UPDATE stock_keeping_units SET stock_quantity = stock_quantity - $1 WHERE id = $2',
-                [item.quantity, item.sku_id]
-              );
+              // Note: Stock was already deducted when items were added to cart
             }
 
             // Delete cart

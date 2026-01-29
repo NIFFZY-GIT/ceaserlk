@@ -185,7 +185,7 @@ export function generateOrderConfirmationEmail(orderData: {
               <!-- Header Image -->
               <tr>
                 <td align="center" style="padding: 0; background-color: #000000;">
-                  <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;" />
+                  <img src="https://www.inceasar.com/assets/mailheadertop.png" alt="CEASAR" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;" />
                 </td>
               </tr>
               
