@@ -72,6 +72,31 @@ export async function POST(request: NextRequest) {
     await ensureOrderNumberSchema(client);
     await client.query('BEGIN');
 
+    // First check if cart exists and hasn't expired
+    const cartCheck = await client.query(
+      `SELECT id, expires_at FROM carts WHERE id = $1`,
+      [cartId]
+    );
+
+    if (cartCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return NextResponse.json(
+        { error: 'Your cart session has expired or was not found. Please add items to your cart again.' },
+        { status: 400 }
+      );
+    }
+
+    const cartExpiresAt = new Date(cartCheck.rows[0].expires_at);
+    if (cartExpiresAt < new Date()) {
+      // Cart has expired - clean it up
+      await client.query('DELETE FROM carts WHERE id = $1', [cartId]);
+      await client.query('COMMIT');
+      return NextResponse.json(
+        { error: 'Your cart session has expired. Please add items to your cart again and try checking out.' },
+        { status: 400 }
+      );
+    }
+
     const cartItemsResult = await client.query(
       `
         SELECT
@@ -79,6 +104,7 @@ export async function POST(request: NextRequest) {
           ci.quantity,
           ci.sku_id,
           s.size,
+          s.stock_quantity,
           v.price AS variant_price,
           v.color_name,
           p.id AS product_id,
@@ -98,6 +124,22 @@ export async function POST(request: NextRequest) {
       await client.query('ROLLBACK');
       return NextResponse.json(
         { error: 'Your cart is empty. Please add items before placing an order.' },
+        { status: 400 }
+      );
+    }
+
+    // Check stock availability for all items
+    const outOfStockItems = cartItemsResult.rows.filter(
+      item => item.stock_quantity < item.quantity
+    );
+    
+    if (outOfStockItems.length > 0) {
+      await client.query('ROLLBACK');
+      const itemNames = outOfStockItems.map(item => 
+        `${item.product_name} (${item.color_name}, ${item.size})`
+      ).join(', ');
+      return NextResponse.json(
+        { error: `Some items are no longer available in the requested quantity: ${itemNames}. Please update your cart.` },
         { status: 400 }
       );
     }

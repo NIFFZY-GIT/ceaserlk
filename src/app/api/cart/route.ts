@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { PoolClient } from 'pg';
 
-const CART_EXPIRATION_SECONDS = 1800;
+const CART_EXPIRATION_SECONDS = 3600; // 1 hour (increased from 30 minutes)
 
 // --- HELPER FUNCTION: Cleanup expired carts and restore stock ---
 async function cleanupExpiredCarts(client: PoolClient): Promise<void> {

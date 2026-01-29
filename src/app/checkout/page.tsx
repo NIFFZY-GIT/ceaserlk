@@ -26,8 +26,40 @@ export default function CheckoutPage() {
   const [codSubmitting, setCodSubmitting] = useState(false);
   const [codError, setCodError] = useState<string | null>(null);
 
+  // Cart expiration timer state
+  const [cartTimeRemaining, setCartTimeRemaining] = useState<number | null>(null);
+  const [cartExpired, setCartExpired] = useState(false);
+
   // Free delivery promo state (lifetime if earned)
   const [hasFreeDeliveryForLife, setHasFreeDeliveryForLife] = useState(false);
+
+  // Cart expiration timer effect
+  useEffect(() => {
+    if (!cart?.expiresAt) return;
+    
+    const updateTimer = () => {
+      const expiresAt = new Date(cart.expiresAt!).getTime();
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((expiresAt - now) / 1000));
+      
+      setCartTimeRemaining(remaining);
+      if (remaining <= 0) {
+        setCartExpired(true);
+      }
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [cart?.expiresAt]);
+
+  // Refresh cart when it's about to expire (within 5 minutes)
+  useEffect(() => {
+    if (cartTimeRemaining !== null && cartTimeRemaining > 0 && cartTimeRemaining <= 300 && !cartExpired) {
+      // Refresh cart to extend expiration
+      fetchCart();
+    }
+  }, [cartTimeRemaining, cartExpired, fetchCart]);
 
   // Check for free delivery promo on mount
   const checkFreeDelivery = useCallback(async () => {
@@ -129,15 +161,21 @@ export default function CheckoutPage() {
     );
   }
 
-  if (!cart || cartCount === 0) {
+  if (cartExpired || !cart || cartCount === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center bg-brand-black">
         <div className="p-12 border border-gray-800 bg-gray-900/30 rounded-3xl backdrop-blur-sm">
           <div className="flex items-center justify-center w-24 h-24 mx-auto mb-6 rounded-full bg-gray-800/50">
-            <span className="text-4xl">🛒</span>
+            <span className="text-4xl">{cartExpired ? '⏰' : '🛒'}</span>
           </div>
-          <h1 className="mb-4 text-3xl font-bold tracking-wide text-brand-white">Your cart is empty</h1>
-          <p className="max-w-md mb-8 text-gray-400">Looks like you haven&apos;t added anything to your cart yet. Let&apos;s change that!</p>
+          <h1 className="mb-4 text-3xl font-bold tracking-wide text-brand-white">
+            {cartExpired ? 'Your cart session expired' : 'Your cart is empty'}
+          </h1>
+          <p className="max-w-md mb-8 text-gray-400">
+            {cartExpired 
+              ? 'Your cart session has expired for security reasons. Please add your items again to continue shopping.'
+              : "Looks like you haven't added anything to your cart yet. Let's change that!"}
+          </p>
           <Link 
             href="/shop" 
             className="inline-flex items-center gap-3 px-8 py-4 font-bold tracking-wider uppercase transition-all duration-300 bg-gradient-to-r from-primary to-accent text-brand-black rounded-2xl hover:scale-105 hover:-translate-y-1 hover:shadow-xl"
@@ -553,6 +591,21 @@ export default function CheckoutPage() {
 
             <aside className="space-y-4 sm:space-y-6 xl:pl-2 order-1 xl:order-2">
               <div className="xl:sticky xl:top-6">
+                {/* Cart expiration warning */}
+                {cartTimeRemaining !== null && cartTimeRemaining <= 600 && cartTimeRemaining > 0 && (
+                  <div className="mb-4 p-3 sm:p-4 rounded-xl border border-amber-500/40 bg-amber-500/10">
+                    <div className="flex items-center gap-2 text-amber-400">
+                      <span className="text-lg">⏰</span>
+                      <div>
+                        <p className="text-xs sm:text-sm font-semibold">
+                          Cart expires in {Math.floor(cartTimeRemaining / 60)}:{(cartTimeRemaining % 60).toString().padStart(2, '0')}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-amber-400/80">Complete checkout to secure your items</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className={`${sectionCardClass} overflow-hidden`}>
                   <div className="flex items-start justify-between gap-2 sm:gap-4">
                     <div className="min-w-0 flex-1">
