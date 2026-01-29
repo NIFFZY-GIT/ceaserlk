@@ -98,9 +98,9 @@ export interface FullProduct {
 }
 type ExistingColor = { colorName: string; colorHex: string };
 
-// Upload size limits (reduced to work with common VPS/Nginx defaults)
-const MAX_TOTAL_UPLOAD_BYTES = 50 * 1024 * 1024;  // 50MB total
-const MAX_FILE_UPLOAD_BYTES = 25 * 1024 * 1024;   // 25MB per file
+// Upload size limits - ensure nginx client_max_body_size matches (currently 200M)
+const MAX_TOTAL_UPLOAD_BYTES = 200 * 1024 * 1024;  // 200MB total
+const MAX_FILE_UPLOAD_BYTES = 100 * 1024 * 1024;   // 100MB per file
 const MAX_TOTAL_UPLOAD_MB = MAX_TOTAL_UPLOAD_BYTES / (1024 * 1024);
 const MAX_FILE_UPLOAD_MB = MAX_FILE_UPLOAD_BYTES / (1024 * 1024);
 
