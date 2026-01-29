@@ -46,21 +46,21 @@ function createSecureRedirectResponse(url: string, request: NextRequest): NextRe
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   
-  // Content Security Policy - restrictive but functional
-  // SECURITY: Removed 'unsafe-eval' to prevent code injection attacks (CVE-2025-55182)
+  // Content Security Policy - permissive for third-party analytics/tracking
+  // Allows all HTTPS connections to prevent blocking analytics services
   const csp = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' blob: https://js.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://connect.facebook.net https://platform.linkedin.com https://analytics.tiktok.com https://platform.twitter.com https://cdn.segment.com https://cdn.jsdelivr.net",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.googletagmanager.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https: https://www.google-analytics.com https://www.googletagmanager.com https://www.facebook.com https://connect.facebook.net https://platform.linkedin.com https://analytics.tiktok.com https://t.co https://platform.twitter.com https://www.google.com https://googleads.g.doubleclick.net",
+    "default-src 'self' https:",
+    "script-src 'self' 'unsafe-inline' blob: https:",
+    "style-src 'self' 'unsafe-inline' https:",
+    "font-src 'self' https: data:",
+    "img-src 'self' data: blob: https:",
     "media-src 'self' blob: data: https:",
-    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://region1.google-analytics.com https://region1.analytics.google.com https://www.google.com https://googleads.g.doubleclick.net https://www.facebook.com https://connect.facebook.net https://platform.linkedin.com https://analytics.tiktok.com https://platform.twitter.com https://api.segment.com",
+    "connect-src 'self' blob: https: wss:",
     "worker-src 'self' blob:",
-    "frame-src https://checkout.stripe.com https://js.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://www.facebook.com https://www.instagram.com https://www.googletagmanager.com https://td.doubleclick.net https://platform.linkedin.com https://analytics.tiktok.com https://platform.twitter.com",
+    "frame-src 'self' https:",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self' https://www.payhere.lk https://sandbox.payhere.lk https://www.facebook.com https://www.google.com"
+    "form-action 'self' https:"
   ].join('; ');
   
   response.headers.set('Content-Security-Policy', csp);
@@ -79,21 +79,21 @@ function createSecureNextResponse(init?: Parameters<typeof NextResponse.next>[0]
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   
-  // Content Security Policy
-  // SECURITY: Removed 'unsafe-eval' to prevent code injection attacks (CVE-2025-55182)
+  // Content Security Policy - permissive for third-party analytics/tracking
+  // Allows all HTTPS connections to prevent blocking analytics services
   const csp = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' blob: https://js.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com https://ssl.google-analytics.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://connect.facebook.net https://platform.linkedin.com https://analytics.tiktok.com https://platform.twitter.com https://cdn.segment.com https://cdn.jsdelivr.net",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.googletagmanager.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https: https://www.google-analytics.com https://www.googletagmanager.com https://www.facebook.com https://connect.facebook.net https://platform.linkedin.com https://analytics.tiktok.com https://t.co https://platform.twitter.com https://www.google.com https://googleads.g.doubleclick.net",
+    "default-src 'self' https:",
+    "script-src 'self' 'unsafe-inline' blob: https:",
+    "style-src 'self' 'unsafe-inline' https:",
+    "font-src 'self' https: data:",
+    "img-src 'self' data: blob: https:",
     "media-src 'self' blob: data: https:",
-    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://region1.google-analytics.com https://region1.analytics.google.com https://www.google.com https://googleads.g.doubleclick.net https://www.facebook.com https://connect.facebook.net https://platform.linkedin.com https://analytics.tiktok.com https://platform.twitter.com https://api.segment.com",
+    "connect-src 'self' blob: https: wss:",
     "worker-src 'self' blob:",
-    "frame-src https://checkout.stripe.com https://js.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://www.facebook.com https://www.instagram.com https://www.googletagmanager.com https://td.doubleclick.net https://platform.linkedin.com https://analytics.tiktok.com https://platform.twitter.com",
+    "frame-src 'self' https:",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self' https://www.payhere.lk https://sandbox.payhere.lk https://www.facebook.com https://www.google.com"
+    "form-action 'self' https:"
   ].join('; ');
   
   response.headers.set('Content-Security-Policy', csp);
