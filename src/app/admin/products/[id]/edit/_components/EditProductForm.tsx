@@ -283,15 +283,16 @@ const MediaPreviewItem = ({
   // Only show error for server URLs that fail to load
   if (loadError && !isBlobUrl) {
     return (
-      <div className="relative flex flex-col items-center justify-center gap-1 overflow-hidden border rounded-lg border-red-200 bg-red-50 aspect-square">
-        <ImageIcon size={24} className="text-red-400" />
-        <span className="text-xs text-red-500">Failed to load</span>
-        <span className="text-[10px] text-red-400 px-2 text-center truncate w-full">{previewUrl}</span>
+      <div className="relative flex flex-col items-center justify-center gap-2 overflow-hidden border-2 border-dashed rounded-lg border-red-300 bg-red-50 aspect-square p-2">
+        <ImageIcon size={28} className="text-red-400" />
+        <span className="text-xs font-medium text-red-600 text-center">Image Not Found</span>
+        <span className="text-[10px] text-red-400 px-1 text-center break-all line-clamp-2">{previewUrl.split('/').pop()}</span>
         <button
           type="button"
           onClick={onRemove}
-          className="mt-1 text-xs text-red-600 underline"
+          className="mt-1 px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors flex items-center gap-1"
         >
+          <X size={12} />
           Remove
         </button>
       </div>
