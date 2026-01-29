@@ -121,11 +121,7 @@ export function generateOrderConfirmationEmail(orderData: {
       
       <!-- Header Image -->
       <div style="text-align: center; background-color: #000000;">
-        <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" style="width: 100%; max-width: 650px; height: auto; display: block;" />
-      </div>
-      
-      <div style="background-color: #000000; padding: 30px 30px 40px; text-align: center; border-bottom: 1px solid rgba(16, 125, 63, 0.2);">
-        <p style="color: #107D3F; font-size: 0.95em; letter-spacing: 3px; margin: 0; text-transform: uppercase; font-weight: 600;">Order Confirmation</p>
+        <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR - Order Confirmation" style="width: 100%; max-width: 650px; height: auto; display: block;" />
       </div>
       
       <div style="padding: 40px 30px; background-color: #ffffff;">
