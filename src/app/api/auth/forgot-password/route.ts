@@ -75,9 +75,9 @@ export async function POST(request: NextRequest) {
 
     // Send email with verification code
     const mailOptions = {
-      from: `${process.env.EMAIL_FROM_NAME || 'CeaserLK'} <${process.env.EMAIL_USER}>`,
+      from: `${process.env.EMAIL_FROM_NAME || 'CEASAR'} <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Password Reset Verification Code - CeaserLK',
+      subject: 'Password Reset Verification Code - CEASAR',
       html: `
         <!DOCTYPE html>
         <html lang="en">
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
       text: `
 Hello ${user.first_name},
 
-We received a request to reset your password for your CeaserLK account.
+We received a request to reset your password for your CEASAR account.
 
 Your verification code is: ${verificationCode}
 
