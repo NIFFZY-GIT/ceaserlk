@@ -79,41 +79,106 @@ export async function POST(request: NextRequest) {
       to: email,
       subject: 'Password Reset Verification Code - CeaserLK',
       html: `
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Password Reset Request</h1>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
-            <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Hello ${user.first_name},</p>
-            
-            <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
-              We received a request to reset your password. Use the verification code below to continue:
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <div style="display: inline-block; background: #667eea; color: white; padding: 20px 40px; border-radius: 10px; font-size: 32px; font-weight: bold; letter-spacing: 8px;">
-                ${verificationCode}
-              </div>
-            </div>
-            
-            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin: 20px 0;">
-              <p style="color: #856404; margin: 0; font-size: 14px;">
-                <strong>⚠️ Security Notice:</strong> This code will expire in 10 minutes. If you didn't request this password reset, please ignore this email.
-              </p>
-            </div>
-            
-            <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              If you're having trouble, you can reply to this email or contact our support team.
-            </p>
-            
-            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
-              <p style="font-size: 12px; color: #6c757d; margin: 0;">
-                © ${new Date().getFullYear()} CeaserLK. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </div>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Password Reset</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased;">
+          <!-- Outer wrapper table for background -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5;">
+            <tr>
+              <td align="center" style="padding: 20px 10px;">
+                
+                <!-- Main content table -->
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px;">
+                  
+                  <!-- Header Image -->
+                  <tr>
+                    <td align="center" style="padding: 0; background-color: #000000;">
+                      <img src="https://www.inceasar.com/assets/mailheadertop.png" alt="CEASAR" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;" />
+                    </td>
+                  </tr>
+                  
+                  <!-- Title -->
+                  <tr>
+                    <td align="center" style="padding: 40px 30px 20px 30px;">
+                      <h1 style="font-size: 22px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; margin: 0; color: #000000;">Password Reset</h1>
+                    </td>
+                  </tr>
+                  
+                  <!-- Greeting -->
+                  <tr>
+                    <td style="padding: 0 30px;">
+                      <p style="font-size: 14px; color: #333333; line-height: 1.6; margin: 0 0 20px 0;">
+                        Hello <strong>${user.first_name}</strong>,
+                      </p>
+                      <p style="font-size: 14px; color: #666666; line-height: 1.6; margin: 0 0 30px 0;">
+                        We received a request to reset your password. Use the verification code below to continue:
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Verification Code Box -->
+                  <tr>
+                    <td align="center" style="padding: 0 30px 30px 30px;">
+                      <table cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td align="center" style="background-color: #000000; padding: 25px 50px; border-radius: 0;">
+                            <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: bold; letter-spacing: 10px; color: #ffffff;">
+                              ${verificationCode}
+                            </span>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Security Notice -->
+                  <tr>
+                    <td style="padding: 0 30px 30px 30px;">
+                      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f8f8; border-left: 4px solid #000000;">
+                        <tr>
+                          <td style="padding: 15px 20px;">
+                            <p style="font-size: 13px; color: #666666; margin: 0; line-height: 1.5;">
+                              <strong style="color: #000000;">⏱ Security Notice:</strong><br/>
+                              This code will expire in <strong>10 minutes</strong>. If you didn't request this password reset, please ignore this email.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Help Text -->
+                  <tr>
+                    <td style="padding: 0 30px 40px 30px;">
+                      <p style="font-size: 13px; color: #888888; line-height: 1.6; margin: 0;">
+                        If you're having trouble, you can reply to this email or contact our support team.
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #000000; padding: 30px; text-align: center;">
+                      <p style="font-size: 11px; color: #888888; margin: 0; letter-spacing: 1px;">
+                        © ${new Date().getFullYear()} CEASAR. All rights reserved.
+                      </p>
+                      <p style="font-size: 11px; color: #666666; margin: 10px 0 0 0;">
+                        <a href="https://www.inceasar.com" style="color: #888888; text-decoration: none;">www.inceasar.com</a>
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
       `,
       text: `
 Hello ${user.first_name},
