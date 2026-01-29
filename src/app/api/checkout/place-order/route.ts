@@ -173,8 +173,9 @@ export async function POST(request: NextRequest) {
         shipping_cost,
         total_amount,
         payment_intent_id,
-        status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NULL, $13)
+        status,
+        payment_method
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NULL, $13, $14)
       RETURNING id, order_number;
     `;
 
@@ -192,6 +193,7 @@ export async function POST(request: NextRequest) {
       shippingCost,
       totalAmount,
       'PENDING',
+      'COD', // Cash on Delivery
     ]);
 
     const orderId = orderResult.rows[0]?.id as string | undefined;

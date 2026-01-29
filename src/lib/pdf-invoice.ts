@@ -1,4 +1,6 @@
 import jsPDF from 'jspdf';
+import fs from 'fs';
+import path from 'path';
 
 export interface InvoiceData {
   orderId: string;
@@ -22,13 +24,51 @@ export interface InvoiceData {
   subtotal: number;
   shippingCost: number;
   totalAmount: number;
-  paymentMethod?: 'CARD' | 'COD';
+  paymentMethod?: 'CARD' | 'COD' | 'PAYHERE' | string;
+}
+
+// Load letterhead image as base64
+function getLetterheadBase64(): string | null {
+  try {
+    // Try multiple paths for different environments
+    const possiblePaths = [
+      path.join(process.cwd(), 'public', 'assets', 'invoice.png'),
+      path.join(process.cwd(), 'public/assets/invoice.png'),
+      './public/assets/invoice.png',
+    ];
+    
+    for (const imgPath of possiblePaths) {
+      if (fs.existsSync(imgPath)) {
+        const imageBuffer = fs.readFileSync(imgPath);
+        return imageBuffer.toString('base64');
+      }
+    }
+    console.warn('Invoice letterhead image not found');
+    return null;
+  } catch (error) {
+    console.error('Error loading letterhead:', error);
+    return null;
+  }
 }
 
 export function generateInvoicePDF(invoiceData: InvoiceData): Buffer {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
+  
+  // --- Add Letterhead Background ---
+  const letterheadBase64 = getLetterheadBase64();
+  if (letterheadBase64) {
+    // Add the letterhead as full-page background
+    doc.addImage(
+      `data:image/png;base64,${letterheadBase64}`,
+      'PNG',
+      0,
+      0,
+      pageWidth,
+      pageHeight
+    );
+  }
   
   // --- Reusable Layout Constants ---
   const leftMargin = 20;
@@ -40,24 +80,14 @@ export function generateInvoicePDF(invoiceData: InvoiceData): Buffer {
   const primaryColor = '#000000';
   const secondaryColor = '#666666';
   
-  let yPosition = 20;
+  // Start content below the letterhead header area (adjust based on your letterhead design)
+  // Assuming letterhead has ~50-60mm header space
+  let yPosition = 65;
   
-  // Header - Company Name
-  doc.setFontSize(24);
-  doc.setTextColor(primaryColor);
-  doc.text('CEASAR.COM', pageWidth / 2, yPosition, { align: 'center' });
-  
-  yPosition += 10;
-  doc.setFontSize(12);
-  doc.setTextColor(secondaryColor);
-  doc.text('Fashion & Lifestyle', pageWidth / 2, yPosition, { align: 'center' });
-  
-  yPosition += 20;
-  
-  // Invoice Title
+  // Invoice Title (no need for company name - it's in the letterhead)
   doc.setFontSize(18);
   doc.setTextColor(primaryColor);
-  doc.text('INVOICE', pageWidth / 2, yPosition, { align: 'center' });
+  
   
   yPosition += 15;
   
@@ -191,23 +221,25 @@ export function generateInvoicePDF(invoiceData: InvoiceData): Buffer {
   yPosition += 20;
   
   // Payment Status
-  const isPaid = invoiceData.paymentMethod === 'CARD';
-  const isCOD = invoiceData.paymentMethod === 'COD';
+  // Check for various payment method values
+  const paymentMethod = invoiceData.paymentMethod?.toUpperCase();
+  const isPaid = paymentMethod === 'CARD' || paymentMethod === 'PAYHERE';
+  const isCOD = paymentMethod === 'COD' || paymentMethod === 'CASH_ON_DELIVERY' || paymentMethod === 'CASH';
   
-  if (isPaid) {
+  if (isCOD) {
+    doc.setFillColor(239, 68, 68); // Red background for COD
+    doc.rect(leftMargin, yPosition, contentWidth, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYMENT METHOD: CASH ON DELIVERY', pageWidth / 2, yPosition + 7, { align: 'center' });
+  } else if (isPaid) {
     doc.setFillColor(34, 197, 94); // Green background for paid
     doc.rect(leftMargin, yPosition, contentWidth, 12, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('PAYMENT STATUS: PAID', pageWidth / 2, yPosition + 7, { align: 'center' });
-  } else if (isCOD) {
-    doc.setFillColor(239, 68, 68); // Red background for COD
-    doc.rect(leftMargin, yPosition, contentWidth, 12, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PAYMENT METHOD: PAY ON DELIVERY', pageWidth / 2, yPosition + 7, { align: 'center' });
   } else {
     // Fallback for older invoices without payment method
     doc.setFillColor(34, 197, 94);
@@ -220,26 +252,18 @@ export function generateInvoicePDF(invoiceData: InvoiceData): Buffer {
   
   yPosition += 25;
   
-  // Footer
+  // Footer - simplified since letterhead has company info
   doc.setTextColor(secondaryColor);
-  doc.setFontSize(8);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   
-  // Ensure footer is always at the bottom, even on short invoices
-  const footerY = pageHeight - 30;
-  if (yPosition > footerY) {
-    yPosition = footerY; // Prevent footer from overlapping content if page is full
-  } else {
-    yPosition = footerY; // Move to the bottom for short invoices
+  // Position footer above the letterhead footer area (adjust if your letterhead has a footer)
+  const footerY = pageHeight - 45;
+  if (yPosition < footerY - 10) {
+    yPosition = footerY;
   }
 
-  doc.text('Thank you for your business!', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 6;
-  doc.text('For any questions regarding this invoice, please contact us.', pageWidth / 2, yPosition, { align: 'center' });
-  
-  // Company info at bottom
-  yPosition = pageHeight - 15;
-  doc.text('CEASAR.COM | Fashion & Lifestyle | Sri Lanka', pageWidth / 2, yPosition, { align: 'center' });
+  doc.text('Thank you for shopping with CEASAR!', pageWidth / 2, yPosition, { align: 'center' });
   
   return Buffer.from(doc.output('arraybuffer'));
 }

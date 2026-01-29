@@ -19,9 +19,9 @@ export async function GET(
       // Fetch order details with items
       const orderQuery = `
         SELECT 
-          o.id, o.customer_email, o.full_name, o.phone_number,
+          o.id, o.order_number, o.customer_email, o.full_name, o.phone_number,
           o.shipping_address_line1, o.shipping_city, o.shipping_postal_code, o.shipping_country,
-          o.subtotal, o.shipping_cost, o.total_amount, o.created_at,
+          o.subtotal, o.shipping_cost, o.total_amount, o.created_at, o.payment_method,
           oi.product_name, oi.variant_color, oi.variant_size, oi.price_paid, oi.quantity
         FROM orders o
         LEFT JOIN order_items oi ON o.id = oi.order_id
@@ -44,8 +44,13 @@ export async function GET(
         pricePaid: parseFloat(row.price_paid)
       }));
 
+      // Format order ID - use order_number if available, otherwise use UUID
+      const displayOrderId = orderData.order_number 
+        ? `#${String(orderData.order_number).padStart(5, '0')}`
+        : orderData.id;
+
       const invoiceData: InvoiceData = {
-        orderId: orderData.id,
+        orderId: displayOrderId,
         orderDate: new Date(orderData.created_at),
         customerName: orderData.full_name,
         customerEmail: orderData.customer_email,
@@ -59,7 +64,8 @@ export async function GET(
         items,
         subtotal: parseFloat(orderData.subtotal),
         shippingCost: parseFloat(orderData.shipping_cost),
-        totalAmount: parseFloat(orderData.total_amount)
+        totalAmount: parseFloat(orderData.total_amount),
+        paymentMethod: orderData.payment_method as 'CARD' | 'COD' | undefined
       };
 
       // Generate PDF
