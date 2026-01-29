@@ -4,126 +4,153 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Order Confirmation | CEASAR - Preview</title>
-  <style>
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; width: 100% !important; background-color: #f5f5f5; color: #000000; }
-    .mono { font-family: 'Courier New', Courier, monospace; }
-    .uppercase { text-transform: uppercase; letter-spacing: 2px; }
-    a { text-decoration: none; color: #000000; }
-  </style>
 </head>
-<body style="background-color: #f5f5f5; padding: 40px 0;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 0 20px; background-color: #ffffff;">
-    
-    <!-- Header Image -->
-    <div style="text-align: center; padding: 0;">
-      <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" style="width: 100%; max-width: 600px; height: auto; display: block; margin: 0 auto;" />
-    </div>
-    
-    <div style="text-align: center; margin-bottom: 50px; padding-top: 40px;">
-      <h1 style="font-size: 24px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; margin: 0 0 10px 0;">Order Confirmed</h1>
-      <p style="font-size: 14px; color: #888888; line-height: 1.6; margin: 0 auto; max-width: 400px;">
-        Thank you, Kotalawalage Dasun. Your order has been received and is being processed.
-      </p>
-      <div style="margin-top: 20px; font-family: 'Courier New', monospace; font-size: 14px; background: #F5F5F5; display: inline-block; padding: 8px 16px;">
-        ORDER ID: #10023
-      </div>
-    </div>
-
-    <!-- Order Summary Grid -->
-    <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
-      <thead>
-        <tr>
-          <th style="text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888888; border-bottom: 2px solid #000000; padding-bottom: 12px;">Item</th>
-          <th style="text-align: center; width: 40px; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888888; border-bottom: 2px solid #000000; padding-bottom: 12px;">Qty</th>
-          <th style="text-align: right; width: 100px; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888888; border-bottom: 2px solid #000000; padding-bottom: 12px;">Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="padding: 20px 0; border-bottom: 1px solid #E5E5E5; vertical-align: top;">
-            <span style="font-weight: 600; font-size: 14px; letter-spacing: 0.5px;">Blacky</span>
-            <div style="margin-top: 6px; font-size: 12px; color: #888888; text-transform: uppercase;">
-              Black <span style="margin: 0 4px;">|</span> Size: M
-            </div>
-          </td>
-          <td style="padding: 20px 0; border-bottom: 1px solid #E5E5E5; text-align: center; vertical-align: top; font-family: 'Courier New', monospace; font-size: 14px;">1</td>
-          <td style="padding: 20px 0; border-bottom: 1px solid #E5E5E5; text-align: right; vertical-align: top; font-family: 'Courier New', monospace; font-size: 14px;">LKR 5,000.00</td>
-        </tr>
-        <tr>
-          <td style="padding: 20px 0; border-bottom: 1px solid #E5E5E5; vertical-align: top;">
-            <span style="font-weight: 600; font-size: 14px; letter-spacing: 0.5px;">Premium Hoodie</span>
-            <div style="margin-top: 6px; font-size: 12px; color: #888888; text-transform: uppercase;">
-              White <span style="margin: 0 4px;">|</span> Size: L
-            </div>
-          </td>
-          <td style="padding: 20px 0; border-bottom: 1px solid #E5E5E5; text-align: center; vertical-align: top; font-family: 'Courier New', monospace; font-size: 14px;">2</td>
-          <td style="padding: 20px 0; border-bottom: 1px solid #E5E5E5; text-align: right; vertical-align: top; font-family: 'Courier New', monospace; font-size: 14px;">LKR 14,000.00</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <!-- Financials -->
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 50px;">
-      <div style="width: 100%; max-width: 250px; margin-left: auto;">
-        <table style="width: 100%; border-collapse: collapse;">
+<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased;">
+  <!-- Outer wrapper table for background -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5;">
+    <tr>
+      <td align="center" style="padding: 20px 10px;">
+        
+        <!-- Main content table -->
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px;">
+          
+          <!-- Header Image -->
           <tr>
-            <td style="padding: 8px 0; color: #888888; font-size: 13px;">Subtotal</td>
-            <td style="padding: 8px 0; text-align: right; font-family: 'Courier New', monospace;">LKR 19,000.00</td>
+            <td align="center" style="padding: 0; background-color: #000000;">
+              <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;" />
+            </td>
           </tr>
+          
+          <!-- Order Confirmed Title -->
           <tr>
-            <td style="padding: 8px 0; color: #888888; font-size: 13px;">Shipping</td>
-            <td style="padding: 8px 0; text-align: right; font-family: 'Courier New', monospace;">LKR 350.00</td>
+            <td align="center" style="padding: 40px 30px 30px 30px;">
+              <h1 style="font-size: 24px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; margin: 0 0 15px 0; color: #000000;">Order Confirmed</h1>
+              <p style="font-size: 14px; color: #888888; line-height: 1.6; margin: 0;">
+                Thank you, Kotalawalage Dasun. Your order has been received and is being processed.
+              </p>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 20px;">
+                <tr>
+                  <td style="background-color: #f5f5f5; padding: 10px 20px; font-family: 'Courier New', Courier, monospace; font-size: 14px;">
+                    ORDER ID: #10023
+                  </td>
+                </tr>
+              </table>
+            </td>
           </tr>
+          
+          <!-- Order Items -->
           <tr>
-            <td style="padding: 16px 0; font-weight: 600; font-size: 13px; text-transform: uppercase; border-top: 1px solid #000000;">Total</td>
-            <td style="padding: 16px 0; text-align: right; font-weight: 600; font-family: 'Courier New', monospace; border-top: 1px solid #000000;">LKR 19,350.00</td>
+            <td style="padding: 0 30px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <th align="left" style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888888; border-bottom: 2px solid #000000; padding: 0 0 12px 0;">Item</th>
+                  <th align="center" width="50" style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888888; border-bottom: 2px solid #000000; padding: 0 0 12px 0;">Qty</th>
+                  <th align="right" width="100" style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888888; border-bottom: 2px solid #000000; padding: 0 0 12px 0;">Total</th>
+                </tr>
+                <tr>
+                  <td style="padding: 15px 0; border-bottom: 1px solid #e5e5e5;" valign="top">
+                    <span style="font-weight: 600; font-size: 14px; color: #000000;">Blacky</span><br>
+                    <span style="font-size: 12px; color: #888888; text-transform: uppercase;">Black | Size: M</span>
+                  </td>
+                  <td align="center" style="padding: 15px 0; border-bottom: 1px solid #e5e5e5; font-family: 'Courier New', Courier, monospace; font-size: 14px;" valign="top">1</td>
+                  <td align="right" style="padding: 15px 0; border-bottom: 1px solid #e5e5e5; font-family: 'Courier New', Courier, monospace; font-size: 14px;" valign="top">LKR 5,000.00</td>
+                </tr>
+                <tr>
+                  <td style="padding: 15px 0; border-bottom: 1px solid #e5e5e5;" valign="top">
+                    <span style="font-weight: 600; font-size: 14px; color: #000000;">Premium Hoodie</span><br>
+                    <span style="font-size: 12px; color: #888888; text-transform: uppercase;">White | Size: L</span>
+                  </td>
+                  <td align="center" style="padding: 15px 0; border-bottom: 1px solid #e5e5e5; font-family: 'Courier New', Courier, monospace; font-size: 14px;" valign="top">2</td>
+                  <td align="right" style="padding: 15px 0; border-bottom: 1px solid #e5e5e5; font-family: 'Courier New', Courier, monospace; font-size: 14px;" valign="top">LKR 14,000.00</td>
+                </tr>
+              </table>
+            </td>
           </tr>
+          
+          <!-- Totals -->
+          <tr>
+            <td style="padding: 30px 30px 40px 30px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="50%"></td>
+                  <td width="50%">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding: 8px 0; color: #888888; font-size: 13px;">Subtotal</td>
+                        <td align="right" style="padding: 8px 0; font-family: 'Courier New', Courier, monospace; font-size: 13px;">LKR 19,000.00</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #888888; font-size: 13px;">Shipping</td>
+                        <td align="right" style="padding: 8px 0; font-family: 'Courier New', Courier, monospace; font-size: 13px;">LKR 350.00</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 16px 0 0 0; font-weight: 600; font-size: 13px; text-transform: uppercase; border-top: 1px solid #000000;">Total</td>
+                        <td align="right" style="padding: 16px 0 0 0; font-weight: 600; font-family: 'Courier New', Courier, monospace; font-size: 14px; border-top: 1px solid #000000;">LKR 19,350.00</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Shipping & Payment Details -->
+          <tr>
+            <td style="padding: 0 30px 40px 30px; border-top: 1px solid #e5e5e5;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-top: 30px;">
+                <tr>
+                  <td width="50%" valign="top" style="padding-right: 15px;">
+                    <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 15px 0; color: #000000;">Shipping Address</h3>
+                    <p style="font-size: 13px; line-height: 1.8; color: #888888; margin: 0;">
+                      <span style="color: #000000;">123 Main Street, Colombo</span><br>
+                      Colombo<br>
+                      10100, Sri Lanka
+                    </p>
+                  </td>
+                  <td width="50%" valign="top" style="padding-left: 15px;">
+                    <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 15px 0; color: #000000;">Payment</h3>
+                    <p style="font-size: 13px; line-height: 1.8; color: #888888; margin: 0;">
+                      Method: <span style="color: #000000; text-transform: uppercase;">COD</span><br>
+                      Status: <span style="color: #000000;">Pending</span>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px; border-top: 1px solid #e5e5e5; background-color: #fafafa;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center">
+                    <p style="font-size: 11px; color: #888888; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 15px 0;">
+                      <a href="https://www.inceasar.com" style="color: #000000; font-weight: bold; text-decoration: none;">InCeasar.com</a>
+                    </p>
+                    <!-- Tri-Color Flag -->
+                    <table cellpadding="0" cellspacing="0" border="0" align="center">
+                      <tr>
+                        <td width="10" height="3" style="background-color: #107D3F;"></td>
+                        <td width="10" height="3" style="background-color: #ffffff; border-top: 1px solid #eee; border-bottom: 1px solid #eee;"></td>
+                        <td width="10" height="3" style="background-color: #EF3D4C;"></td>
+                      </tr>
+                    </table>
+                    <p style="font-size: 10px; color: #999999; margin: 15px 0 0 0; line-height: 1.6;">
+                      Need assistance? <a href="mailto:contactus@inceasar.com" style="color: #000000; text-decoration: underline;">Contact Support</a><br>
+                      &copy; 2026 CEASAR. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
         </table>
-      </div>
-    </div>
-
-    <!-- Details Grid -->
-    <div style="border-top: 1px solid #E5E5E5; padding-top: 40px;">
-      <table style="width: 100%; border-collapse: collapse;">
-        <tr>
-          <td style="width: 50%; vertical-align: top; padding-right: 20px;">
-            <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 15px 0;">Shipping Address</h3>
-            <div style="font-size: 13px; line-height: 1.8; color: #888888;">
-              <span style="color: #000000;">123 Main Street, Colombo</span><br>
-              Colombo<br>
-              10100, Sri Lanka
-            </div>
-          </td>
-          <td style="width: 50%; vertical-align: top; padding-left: 20px;">
-            <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 15px 0;">Payment</h3>
-            <div style="font-size: 13px; line-height: 1.8; color: #888888;">
-              Method: <span style="color: #000000; text-transform: uppercase;">COD</span><br>
-              Status: <span style="color: #000000;">Pending</span>
-            </div>
-          </td>
-        </tr>
-      </table>
-    </div>
-
-    <!-- Footer -->
-    <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid #E5E5E5; text-align: center; padding-bottom: 40px;">
-      <p style="font-size: 11px; color: #888888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px;">
-        <a href="https://www.inceasar.com" style="color: #000000; font-weight: bold;">InCeasar.com</a>
-      </p>
-      
-      <!-- Tri-Color Flag Accent -->
-      <div style="display: inline-flex; width: 30px; height: 3px; margin: 0 auto;">
-        <div style="flex: 1; background-color: #107D3F; width: 10px; height: 3px; display: inline-block;"></div>
-        <div style="flex: 1; background-color: #FFFFFF; border-top: 1px solid #eee; border-bottom: 1px solid #eee; width: 10px; height: 3px; display: inline-block;"></div>
-        <div style="flex: 1; background-color: #EF3D4C; width: 10px; height: 3px; display: inline-block;"></div>
-      </div>
-      
-      <p style="font-size: 10px; color: #999; margin-top: 20px; line-height: 1.6;">
-        Need assistance? <a href="mailto:contactus@inceasar.com" style="color: #000000; text-decoration: underline;">Contact Support</a><br>
-        &copy; 2026 CEASAR. All rights reserved.
-      </p>
-    </div>
-
-  </div>
+        <!-- End main content table -->
+        
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

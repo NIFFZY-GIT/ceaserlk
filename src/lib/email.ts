@@ -41,30 +41,39 @@ const COMMON_CSS = `
 `;
 
 const EMAIL_HEADER = `
-  <div style="text-align: center; padding: 40px 0 20px;">
-    <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" style="width: 180px; height: auto; display: block; margin: 0 auto;" />
-    <div style="margin-top: 20px; font-size: 10px; letter-spacing: 3px; color: ${BRAND_COLORS.darkGray}; text-transform: uppercase;">Luxury Streetwear</div>
-  </div>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #000000;">
+    <tr>
+      <td align="center" style="padding: 0;">
+        <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;" />
+      </td>
+    </tr>
+  </table>
 `;
 
 const EMAIL_FOOTER = `
-  <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid ${BRAND_COLORS.border}; text-align: center;">
-    <p style="font-size: 11px; color: ${BRAND_COLORS.darkGray}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px;">
-      <a href="https://www.inceasar.com" style="color: ${BRAND_COLORS.black}; font-weight: bold;">InCeasar.com</a>
-    </p>
-    
-    <!-- Tri-Color Flag Accent -->
-    <div style="display: flex; width: 30px; height: 3px; margin: 0 auto;">
-      <div style="flex: 1; background-color: ${BRAND_COLORS.green};"></div>
-      <div style="flex: 1; background-color: ${BRAND_COLORS.white}; border-top: 1px solid #eee; border-bottom: 1px solid #eee;"></div>
-      <div style="flex: 1; background-color: ${BRAND_COLORS.red};"></div>
-    </div>
-    
-    <p style="font-size: 10px; color: #999; margin-top: 20px; line-height: 1.6;">
-      Need assistance? <a href="mailto:contactus@inceasar.com" style="color: ${BRAND_COLORS.black}; text-decoration: underline;">Contact Support</a><br>
-      &copy; ${new Date().getFullYear()} CEASAR. All rights reserved.
-    </p>
-  </div>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 40px; border-top: 1px solid ${BRAND_COLORS.border};">
+    <tr>
+      <td align="center" style="padding: 30px 20px;">
+        <p style="font-size: 11px; color: ${BRAND_COLORS.darkGray}; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 20px 0;">
+          <a href="https://www.inceasar.com" style="color: ${BRAND_COLORS.black}; font-weight: bold; text-decoration: none;">InCeasar.com</a>
+        </p>
+        
+        <!-- Tri-Color Flag Accent -->
+        <table cellpadding="0" cellspacing="0" border="0" align="center">
+          <tr>
+            <td width="10" height="3" style="background-color: ${BRAND_COLORS.green};"></td>
+            <td width="10" height="3" style="background-color: ${BRAND_COLORS.white}; border-top: 1px solid #eee; border-bottom: 1px solid #eee;"></td>
+            <td width="10" height="3" style="background-color: ${BRAND_COLORS.red};"></td>
+          </tr>
+        </table>
+        
+        <p style="font-size: 10px; color: #999; margin: 20px 0 0 0; line-height: 1.6;">
+          Need assistance? <a href="mailto:contactus@inceasar.com" style="color: ${BRAND_COLORS.black}; text-decoration: underline;">Contact Support</a><br>
+          &copy; ${new Date().getFullYear()} CEASAR. All rights reserved.
+        </p>
+      </td>
+    </tr>
+  </table>
 `;
 
 // Create email transporter
@@ -145,14 +154,12 @@ export function generateOrderConfirmationEmail(orderData: {
     .map(
       (item) => `
     <tr>
-      <td style="padding: 20px 0; border-bottom: 1px solid ${BRAND_COLORS.border}; vertical-align: top;">
-        <span style="font-weight: 600; font-size: 14px; letter-spacing: 0.5px;">${item.productName}</span>
-        <div style="margin-top: 6px; font-size: 12px; color: ${BRAND_COLORS.darkGray}; text-transform: uppercase;">
-          ${item.variantColor} <span style="margin: 0 4px;">|</span> Size: ${item.variantSize}
-        </div>
+      <td style="padding: 15px 0; border-bottom: 1px solid #e5e5e5;" valign="top">
+        <span style="font-weight: 600; font-size: 14px; color: #000000;">${item.productName}</span><br>
+        <span style="font-size: 12px; color: #888888; text-transform: uppercase;">${item.variantColor} | Size: ${item.variantSize}</span>
       </td>
-      <td style="padding: 20px 0; border-bottom: 1px solid ${BRAND_COLORS.border}; text-align: center; vertical-align: top; font-family: 'Courier New', monospace; font-size: 14px;">${item.quantity}</td>
-      <td style="padding: 20px 0; border-bottom: 1px solid ${BRAND_COLORS.border}; text-align: right; vertical-align: top; font-family: 'Courier New', monospace; font-size: 14px;">LKR ${(item.pricePaid * item.quantity).toFixed(2)}</td>
+      <td align="center" style="padding: 15px 0; border-bottom: 1px solid #e5e5e5; font-family: 'Courier New', Courier, monospace; font-size: 14px;" valign="top">${item.quantity}</td>
+      <td align="right" style="padding: 15px 0; border-bottom: 1px solid #e5e5e5; font-family: 'Courier New', Courier, monospace; font-size: 14px;" valign="top">LKR ${(item.pricePaid * item.quantity).toFixed(2)}</td>
     </tr>
   `
     )
@@ -165,83 +172,139 @@ export function generateOrderConfirmationEmail(orderData: {
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Order Confirmation | CEASAR</title>
-      <style>${COMMON_CSS}</style>
     </head>
-    <body style="background-color: #ffffff; padding: 20px 0;">
-      <div style="max-width: 600px; margin: 0 auto; padding: 0 20px;">
-        
-        ${EMAIL_HEADER}
-        
-        <div style="text-align: center; margin-bottom: 50px;">
-          <h1 style="font-size: 24px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; margin: 0 0 10px 0;">Order Confirmed</h1>
-          <p style="font-size: 14px; color: ${BRAND_COLORS.darkGray}; line-height: 1.6; margin: 0 auto; max-width: 400px;">
-            Thank you, ${orderData.customerName}. Your order has been received and is being processed.
-          </p>
-          <div style="margin-top: 20px; font-family: 'Courier New', monospace; font-size: 14px; background: ${BRAND_COLORS.gray}; display: inline-block; padding: 8px 16px;">
-            ORDER ID: #${orderData.orderId}
-          </div>
-        </div>
-
-        <!-- Order Summary Grid -->
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
-          <thead>
-            <tr>
-              <th style="text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: ${BRAND_COLORS.darkGray}; border-bottom: 2px solid ${BRAND_COLORS.black}; padding-bottom: 12px;">Item</th>
-              <th style="text-align: center; width: 40px; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: ${BRAND_COLORS.darkGray}; border-bottom: 2px solid ${BRAND_COLORS.black}; padding-bottom: 12px;">Qty</th>
-              <th style="text-align: right; width: 100px; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: ${BRAND_COLORS.darkGray}; border-bottom: 2px solid ${BRAND_COLORS.black}; padding-bottom: 12px;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
-
-        <!-- Financials -->
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 50px;">
-          <div style="width: 100%; max-width: 250px;">
-            <table style="width: 100%; border-collapse: collapse;">
+    <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased;">
+      <!-- Outer wrapper table for background -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5;">
+        <tr>
+          <td align="center" style="padding: 20px 10px;">
+            
+            <!-- Main content table -->
+            <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; max-width: 600px;">
+              
+              <!-- Header Image -->
               <tr>
-                <td style="padding: 8px 0; color: ${BRAND_COLORS.darkGray}; font-size: 13px;">Subtotal</td>
-                <td style="padding: 8px 0; text-align: right; font-family: 'Courier New', monospace;">LKR ${orderData.subtotal.toFixed(2)}</td>
+                <td align="center" style="padding: 0; background-color: #000000;">
+                  <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;" />
+                </td>
               </tr>
+              
+              <!-- Order Confirmed Title -->
               <tr>
-                <td style="padding: 8px 0; color: ${BRAND_COLORS.darkGray}; font-size: 13px;">Shipping</td>
-                <td style="padding: 8px 0; text-align: right; font-family: 'Courier New', monospace;">LKR ${orderData.shippingCost.toFixed(2)}</td>
+                <td align="center" style="padding: 40px 30px 30px 30px;">
+                  <h1 style="font-size: 24px; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; margin: 0 0 15px 0; color: #000000;">Order Confirmed</h1>
+                  <p style="font-size: 14px; color: #888888; line-height: 1.6; margin: 0;">
+                    Thank you, ${orderData.customerName}. Your order has been received and is being processed.
+                  </p>
+                  <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 20px;">
+                    <tr>
+                      <td style="background-color: #f5f5f5; padding: 10px 20px; font-family: 'Courier New', Courier, monospace; font-size: 14px;">
+                        ORDER ID: #${orderData.orderId}
+                      </td>
+                    </tr>
+                  </table>
+                </td>
               </tr>
+              
+              <!-- Order Items -->
               <tr>
-                <td style="padding: 16px 0; font-weight: 600; font-size: 13px; text-transform: uppercase; border-top: 1px solid ${BRAND_COLORS.black};">Total</td>
-                <td style="padding: 16px 0; text-align: right; font-weight: 600; font-family: 'Courier New', monospace; border-top: 1px solid ${BRAND_COLORS.black};">LKR ${orderData.totalAmount.toFixed(2)}</td>
+                <td style="padding: 0 30px;">
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <th align="left" style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888888; border-bottom: 2px solid #000000; padding: 0 0 12px 0;">Item</th>
+                      <th align="center" width="50" style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888888; border-bottom: 2px solid #000000; padding: 0 0 12px 0;">Qty</th>
+                      <th align="right" width="100" style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888888; border-bottom: 2px solid #000000; padding: 0 0 12px 0;">Total</th>
+                    </tr>
+                    ${itemsHtml}
+                  </table>
+                </td>
               </tr>
+              
+              <!-- Totals -->
+              <tr>
+                <td style="padding: 30px 30px 40px 30px;">
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td width="50%"></td>
+                      <td width="50%">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                          <tr>
+                            <td style="padding: 8px 0; color: #888888; font-size: 13px;">Subtotal</td>
+                            <td align="right" style="padding: 8px 0; font-family: 'Courier New', Courier, monospace; font-size: 13px;">LKR ${orderData.subtotal.toFixed(2)}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #888888; font-size: 13px;">Shipping</td>
+                            <td align="right" style="padding: 8px 0; font-family: 'Courier New', Courier, monospace; font-size: 13px;">LKR ${orderData.shippingCost.toFixed(2)}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 16px 0 0 0; font-weight: 600; font-size: 13px; text-transform: uppercase; border-top: 1px solid #000000;">Total</td>
+                            <td align="right" style="padding: 16px 0 0 0; font-weight: 600; font-family: 'Courier New', Courier, monospace; font-size: 14px; border-top: 1px solid #000000;">LKR ${orderData.totalAmount.toFixed(2)}</td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Shipping & Payment Details -->
+              <tr>
+                <td style="padding: 0 30px 40px 30px; border-top: 1px solid #e5e5e5;">
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-top: 30px;">
+                    <tr>
+                      <td width="50%" valign="top" style="padding-right: 15px;">
+                        <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 15px 0; color: #000000;">Shipping Address</h3>
+                        <p style="font-size: 13px; line-height: 1.8; color: #888888; margin: 0;">
+                          <span style="color: #000000;">${orderData.shippingAddress.line1}</span><br>
+                          ${orderData.shippingAddress.city}<br>
+                          ${orderData.shippingAddress.postalCode}, ${orderData.shippingAddress.country}
+                        </p>
+                      </td>
+                      <td width="50%" valign="top" style="padding-left: 15px;">
+                        <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 15px 0; color: #000000;">Payment</h3>
+                        <p style="font-size: 13px; line-height: 1.8; color: #888888; margin: 0;">
+                          Method: <span style="color: #000000; text-transform: uppercase;">${orderData.paymentMethod || 'N/A'}</span><br>
+                          Status: <span style="color: #000000;">${orderData.paymentMethod === 'COD' ? 'Pending' : 'Paid'}</span>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 30px; border-top: 1px solid #e5e5e5; background-color: #fafafa;">
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td align="center">
+                        <p style="font-size: 11px; color: #888888; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 15px 0;">
+                          <a href="https://www.inceasar.com" style="color: #000000; font-weight: bold; text-decoration: none;">InCeasar.com</a>
+                        </p>
+                        <!-- Tri-Color Flag -->
+                        <table cellpadding="0" cellspacing="0" border="0" align="center">
+                          <tr>
+                            <td width="10" height="3" style="background-color: #107D3F;"></td>
+                            <td width="10" height="3" style="background-color: #ffffff; border-top: 1px solid #eee; border-bottom: 1px solid #eee;"></td>
+                            <td width="10" height="3" style="background-color: #EF3D4C;"></td>
+                          </tr>
+                        </table>
+                        <p style="font-size: 10px; color: #999999; margin: 15px 0 0 0; line-height: 1.6;">
+                          Need assistance? <a href="mailto:contactus@inceasar.com" style="color: #000000; text-decoration: underline;">Contact Support</a><br>
+                          &copy; ${new Date().getFullYear()} CEASAR. All rights reserved.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
             </table>
-          </div>
-        </div>
-
-        <!-- Details Grid -->
-        <div style="border-top: 1px solid ${BRAND_COLORS.border}; padding-top: 40px;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="width: 50%; vertical-align: top; padding-right: 20px;">
-                <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 15px 0;">Shipping Address</h3>
-                <div style="font-size: 13px; line-height: 1.8; color: ${BRAND_COLORS.darkGray};">
-                  <span style="color: ${BRAND_COLORS.black};">${orderData.shippingAddress.line1}</span><br>
-                  ${orderData.shippingAddress.city}<br>
-                  ${orderData.shippingAddress.postalCode}, ${orderData.shippingAddress.country}
-                </div>
-              </td>
-              <td style="width: 50%; vertical-align: top; padding-left: 20px;">
-                <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 15px 0;">Payment</h3>
-                <div style="font-size: 13px; line-height: 1.8; color: ${BRAND_COLORS.darkGray};">
-                  Method: <span style="color: ${BRAND_COLORS.black}; text-transform: uppercase;">${orderData.paymentMethod || 'N/A'}</span><br>
-                  Status: <span style="color: ${BRAND_COLORS.black};">${orderData.paymentMethod === 'COD' ? 'Pending' : 'Paid'}</span>
-                </div>
-              </td>
-            </tr>
-          </table>
-        </div>
-
-        ${EMAIL_FOOTER}
-
-      </div>
+            <!-- End main content table -->
+            
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
   `;
