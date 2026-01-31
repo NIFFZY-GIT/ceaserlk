@@ -17,20 +17,44 @@ async function getDashboardData(): Promise<DashboardData | null> {
     const baseUrl = await resolveServerBaseUrl();
     const serializedCookies = await serializeRequestCookies();
 
-    const res = await fetch(`${baseUrl}/api/admin/dashboard`, {
-      cache: 'no-store',
-      headers: {
-        ...(serializedCookies ? { cookie: serializedCookies } : {}),
-        'Accept': 'application/json',
-      },
-      credentials: 'include',
-    });
+    // Helper to fetch dashboard data
+    const fetchDashboard = async () => {
+      const res = await fetch(`${baseUrl}/api/admin/dashboard`, {
+        cache: 'no-store',
+        headers: {
+          ...(serializedCookies ? { cookie: serializedCookies } : {}),
+          'Accept': 'application/json',
+        },
+        credentials: 'include',
+      });
+      return res;
+    };
+
+    let res = await fetchDashboard();
+
+    // If unauthorized, try to refresh token and retry once
+    if (res.status === 401 || res.status === 403) {
+      const refreshRes = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (refreshRes.ok) {
+        // Try fetching dashboard again after refresh
+        res = await fetchDashboard();
+      }
+    }
 
     if (!res.ok) {
-        // Log the actual error from the API for better debugging
-        const errorBody = await res.json();
-        console.error("API Error Response:", errorBody);
-        throw new Error('Failed to fetch dashboard data');
+      // Log the actual error from the API for better debugging
+      let errorBody;
+      try {
+        errorBody = await res.json();
+      } catch {
+        errorBody = { error: 'Unknown error' };
+      }
+      console.error("API Error Response:", errorBody);
+      throw new Error('Failed to fetch dashboard data');
     }
     return res.json();
   } catch (error) {

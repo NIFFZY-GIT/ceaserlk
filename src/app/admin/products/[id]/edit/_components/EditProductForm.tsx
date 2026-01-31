@@ -823,6 +823,10 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Upload Limit Notice */}
+      <div className="w-full bg-yellow-50 border-b border-yellow-200 text-yellow-800 text-center py-2 text-sm font-medium">
+        ⚠️ Maximum allowed file size per upload is <b>100MB</b>. Larger files will be rejected.
+      </div>
       {/* Saving Overlay */}
       <SavingOverlay isVisible={isLoading} progress={saveProgress} message={saveMessage} />
       
@@ -830,7 +834,12 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
       <ErrorModal 
         isVisible={showErrorModal} 
         title="Error Updating Product" 
-        message={error || 'An unexpected error occurred'} 
+        message={
+          error?.includes('exceeds the') ? error :
+          error?.includes('Failed to update product') ?
+            error + ' (Check file size, file type, or server error details in the logs.)' :
+          error || 'An unexpected error occurred'
+        }
         onClose={() => setShowErrorModal(false)} 
       />
       
