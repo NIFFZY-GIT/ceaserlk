@@ -206,7 +206,7 @@ export default function ContactPage() {
 
   const contactInfo = [
     { icon: <Mail className="w-5 h-5" />, title: "Email", content: "info@inceasar.com", href: "mailto:info@inceasar.com" },
-    { icon: <Phone className="w-5 h-5" />, title: "Phone", content: "+94 12 345 6789", href: "tel:+94123456789" },
+    { icon: <Phone className="w-5 h-5" />, title: "Phone", content: "+94 70 212 4026", href: "tel:+94702124026" },
     { icon: <MapPin className="w-5 h-5" />, title: "Location", content: "Colombo, Sri Lanka" },
     { icon: <Clock className="w-5 h-5" />, title: "Hours", content: "Mon-Sat: 9am-6pm" }
   ];
