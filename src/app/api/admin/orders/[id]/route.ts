@@ -34,25 +34,28 @@ export async function GET(
     const query = `
       SELECT
         o.*,
-        (
-          SELECT json_agg(
-            json_build_object(
-              'id', oi.id, 
-              'product_name', oi.product_name, 
-              'variant_color', oi.variant_color,
-              'variant_size', oi.variant_size, 
-              'price_paid', oi.price_paid, 
-              'quantity', oi.quantity,
-              'product_id', oi.product_id,
-              'imageUrl', COALESCE(pv.thumbnail_url, '/images/image.jpg'),
-              'trading_card_image', p.trading_card_image
-            )
-          ) 
-          FROM order_items oi 
-          LEFT JOIN product_variants pv ON oi.product_id = pv.product_id 
-            AND oi.variant_color = pv.color_name
-          LEFT JOIN products p ON oi.product_id = p.id
-          WHERE oi.order_id = o.id
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', oi.id, 
+                'product_name', oi.product_name, 
+                'variant_color', oi.variant_color,
+                'variant_size', oi.variant_size, 
+                'price_paid', oi.price_paid, 
+                'quantity', oi.quantity,
+                'product_id', oi.product_id,
+                'imageUrl', COALESCE(pv.thumbnail_url, '/images/image.jpg'),
+                'trading_card_image', p.trading_card_image
+              )
+            ) FILTER (WHERE oi.id IS NOT NULL)
+            FROM order_items oi 
+            LEFT JOIN product_variants pv ON oi.product_id = pv.product_id 
+              AND oi.variant_color = pv.color_name
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = o.id
+          ),
+          '[]'::json
         ) as items
       FROM orders o
       WHERE o.id = $1::uuid;

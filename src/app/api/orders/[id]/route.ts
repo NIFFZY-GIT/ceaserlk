@@ -30,18 +30,21 @@ export async function GET(
       const orderQuery = `
         SELECT 
           o.*,
-          json_agg(
-            json_build_object(
-              'id', oi.id,
-              'product_id', oi.product_id,
-              'product_name', oi.product_name,
-              'variant_color', oi.variant_color,
-              'variant_size', oi.variant_size,
-              'price_paid', oi.price_paid,
-              'quantity', oi.quantity,
-              'sku_id', oi.sku_id,
-              'trading_card_image', p.trading_card_image
-            ) ORDER BY oi.id
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'id', oi.id,
+                'product_id', oi.product_id,
+                'product_name', oi.product_name,
+                'variant_color', oi.variant_color,
+                'variant_size', oi.variant_size,
+                'price_paid', oi.price_paid,
+                'quantity', oi.quantity,
+                'sku_id', oi.sku_id,
+                'trading_card_image', p.trading_card_image
+              ) ORDER BY oi.id
+            ) FILTER (WHERE oi.id IS NOT NULL),
+            '[]'::json
           ) as items
         FROM orders o
         LEFT JOIN order_items oi ON o.id = oi.order_id

@@ -55,6 +55,13 @@ function OrderConfirmationContent() {
           const data = await res.json();
           console.log('Order data fetched:', data);
           const order = data.order || data;
+          console.log('Extracted order:', order);
+          console.log('Order items:', order.items);
+          if (order.items) {
+            order.items.forEach((item: OrderItem, idx: number) => {
+              console.log(`Item ${idx}:`, item);
+            });
+          }
           setOrderData(order);
           setUserEmail(order.customer_email || '');
         }
@@ -208,7 +215,7 @@ function OrderConfirmationContent() {
             <div className="text-right">
               <p className="text-sm text-gray-400">Order ID</p>
               <p className="px-3 py-1 font-mono text-lg font-bold text-gray-100 bg-gray-800 rounded-lg">
-                  #{orderData ? formatPublicOrderId(orderData) : orderId}
+                  #{orderData ? formatPublicOrderId(orderData) : (orderId || 'Unknown')}
               </p>
             </div>
           </div>
