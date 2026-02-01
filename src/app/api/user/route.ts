@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db'; // Your existing pg pool connection
+import { verifyAuth, createUnauthorizedResponse } from '@/lib/auth';
 import { z } from 'zod'; // Your existing Zod v4 import
 import bcrypt from 'bcryptjs';
 
@@ -35,8 +36,12 @@ const updateUserSchema = z.object({
 
 export async function PATCH(request: NextRequest) {
     try {
-        // For now, use the hardcoded user ID
-        const userId = '722e9dc0-5b31-41b5-a791-2a8b46a2f062';
+        const authUser = await verifyAuth(request);
+        if (!authUser) {
+            return createUnauthorizedResponse('Authentication required to update profile');
+        }
+
+        const userId = String(authUser.userId);
         const body = await request.json();
 
         // Validate the incoming data with Zod

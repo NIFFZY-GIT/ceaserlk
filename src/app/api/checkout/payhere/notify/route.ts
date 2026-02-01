@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { sendEmail, generateOrderConfirmationEmail, generateAdminOrderNotificationEmail } from '@/lib/email';
-import { generateInvoicePDF, generateInvoiceFilename, InvoiceData } from '@/lib/pdf-invoice';
+import { sendOrderConfirmationIfNeeded } from '@/lib/order-confirmation-email';
 import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
 import crypto from 'crypto';
 
@@ -213,83 +212,13 @@ export async function POST(request: NextRequest) {
 
       // Send confirmation emails (async, don't block response)
       setImmediate(async () => {
+        const emailClient = await db.connect();
         try {
-          const items = cartResult.rows.map(item => ({
-            productName: item.product_name,
-            variantColor: item.color_name,
-            variantSize: item.size,
-            quantity: item.quantity,
-            pricePaid: parseFloat(item.variant_price)
-          }));
-
-          const shippingAddressObj = {
-            line1: pendingOrder.shipping_address || '',
-            city: pendingOrder.shipping_city || '',
-            postalCode: pendingOrder.shipping_postal_code || '',
-            country: 'Sri Lanka'
-          };
-
-          const invoiceData: InvoiceData = {
-            orderId: publicOrderId,
-            orderDate: new Date(),
-            customerName: pendingOrder.customer_name,
-            customerEmail: pendingOrder.customer_email,
-            phoneNumber: pendingOrder.phone,
-            shippingAddress: shippingAddressObj,
-            items,
-            subtotal: parseFloat(pendingOrder.subtotal),
-            shippingCost: parseFloat(pendingOrder.shipping_cost),
-            totalAmount: parseFloat(payhereAmount),
-            paymentMethod: 'CARD'
-          };
-
-          const pdfBuffer = await generateInvoicePDF(invoiceData);
-          const pdfFilename = generateInvoiceFilename(publicOrderId);
-
-          // Customer email
-          const customerEmailContent = generateOrderConfirmationEmail({
-            orderId: publicOrderId,
-            customerName: pendingOrder.customer_name,
-            customerEmail: pendingOrder.customer_email,
-            items,
-            subtotal: parseFloat(pendingOrder.subtotal),
-            shippingCost: parseFloat(pendingOrder.shipping_cost),
-            totalAmount: parseFloat(payhereAmount),
-            shippingAddress: shippingAddressObj,
-            paymentMethod: 'CARD'
-          });
-
-          await sendEmail({
-            to: pendingOrder.customer_email,
-            subject: `Order Confirmation #${publicOrderId} - CEASER`,
-            html: customerEmailContent,
-            attachments: [{
-              filename: pdfFilename,
-              content: pdfBuffer,
-              contentType: 'application/pdf'
-            }]
-          });
-
-          // Admin notification
-          const adminEmailContent = generateAdminOrderNotificationEmail({
-            orderId: publicOrderId,
-            customerName: pendingOrder.customer_name,
-            customerEmail: pendingOrder.customer_email,
-            items,
-            subtotal: parseFloat(pendingOrder.subtotal),
-            shippingCost: parseFloat(pendingOrder.shipping_cost),
-            totalAmount: parseFloat(payhereAmount),
-            shippingAddress: shippingAddressObj
-          });
-
-          await sendEmail({
-            to: process.env.ADMIN_EMAIL || 'admin@ceaserbrand.com',
-            subject: `New Order #${publicOrderId} - PayHere Payment`,
-            html: adminEmailContent
-          });
-
+          await sendOrderConfirmationIfNeeded(emailClient, newOrderId);
         } catch (emailError) {
           console.error('Failed to send order emails:', emailError);
+        } finally {
+          emailClient.release();
         }
       });
 

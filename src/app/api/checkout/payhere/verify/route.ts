@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
+import { sendOrderConfirmationIfNeeded } from '@/lib/order-confirmation-email';
 
 // This endpoint verifies PayHere payment status after user returns from PayHere
 export async function POST(request: NextRequest) {
@@ -24,11 +25,18 @@ export async function POST(request: NextRequest) {
       );
 
       if (orderResult.rows.length > 0) {
+        const existingOrder = orderResult.rows[0];
+        try {
+          await sendOrderConfirmationIfNeeded(client, existingOrder.id);
+        } catch (emailError) {
+          console.error('Verify: Failed to send order emails:', emailError);
+        }
+
         return NextResponse.json({
           success: true,
-          orderId: orderResult.rows[0].id,
-          publicOrderId: formatOrderNumber(orderResult.rows[0].order_number) || orderResult.rows[0].id,
-          status: orderResult.rows[0].status
+          orderId: existingOrder.id,
+          publicOrderId: formatOrderNumber(existingOrder.order_number) || existingOrder.id,
+          status: existingOrder.status
         });
       }
 
@@ -160,6 +168,18 @@ export async function POST(request: NextRequest) {
             await client.query('COMMIT');
 
             console.log(`FALLBACK: Order ${newOrderId} created successfully`);
+
+            // Send confirmation emails (async, don't block response)
+            setImmediate(async () => {
+              const emailClient = await db.connect();
+              try {
+                await sendOrderConfirmationIfNeeded(emailClient, newOrderId);
+              } catch (emailError) {
+                console.error('FALLBACK: Failed to send order emails:', emailError);
+              } finally {
+                emailClient.release();
+              }
+            });
 
             return NextResponse.json({
               success: true,
