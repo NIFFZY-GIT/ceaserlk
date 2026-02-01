@@ -17,6 +17,7 @@ interface PayHerePaymentHandlerProps {
     postalCode: string;
   };
   useFreeDelivery?: boolean;
+  guestId?: string | null;
 }
 
 // PayHere SDK types
@@ -51,7 +52,7 @@ interface PayHerePayment {
   country: string;
 }
 
-export default function PayHerePaymentHandler({ cart, shippingDetails, useFreeDelivery }: PayHerePaymentHandlerProps) {
+export default function PayHerePaymentHandler({ cart, shippingDetails, useFreeDelivery, guestId }: PayHerePaymentHandlerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sdkLoaded, setSdkLoaded] = useState(false);
@@ -88,7 +89,7 @@ export default function PayHerePaymentHandler({ cart, shippingDetails, useFreeDe
       const response = await fetch('/api/checkout/payhere/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cart, shippingDetails, useFreeDelivery }),
+        body: JSON.stringify({ cart, shippingDetails, useFreeDelivery, guestId }),
       });
 
       if (!response.ok) {

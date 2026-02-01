@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote, Wallet, Gift, Plus, Minus, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -11,6 +12,7 @@ import PayHerePaymentHandler from './PayHerePaymentHandler';
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, loading: cartLoading, cartCount, fetchCart, updateQuantity, removeFromCart } = useCart();
+  const { guestId } = useAuth();
 
   const [shippingDetails, setShippingDetails] = useState({
     email: '',
@@ -567,7 +569,7 @@ export default function CheckoutPage() {
 
                   {paymentMethod === 'payhere' ? (
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-blue-500/30 bg-blue-500/5">
-                      <PayHerePaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} />
+                      <PayHerePaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} guestId={guestId} />
                     </div>
                   ) : (
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-primary/40 bg-primary/5">

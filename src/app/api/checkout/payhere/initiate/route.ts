@@ -24,17 +24,17 @@ function generatePayHereHash(
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify user authentication
+    const body = await request.json();
+    const { cart, shippingDetails, useFreeDelivery, guestId } = body;
+
+    // Verify user authentication (optional for guests)
     const user = await verifyAuth(request);
-    if (!user) {
+    if (!user && !guestId) {
       return NextResponse.json(
-        { error: 'Authentication required to initiate payment.' },
+        { error: 'Guest session missing. Please start guest checkout again.' },
         { status: 401 }
       );
     }
-
-    const body = await request.json();
-    const { cart, shippingDetails, useFreeDelivery } = body;
 
     // Validate required fields
     if (!cart || !cart.id || !shippingDetails) {
@@ -64,19 +64,21 @@ export async function POST(request: NextRequest) {
     
     if (useFreeDelivery && actualShipping > 0) {
       // Check if user has free delivery available
-      const client = await db.connect();
-      try {
-        const freeDeliveryCheck = await client.query(
-          `SELECT has_free_delivery($1) as has_promo`,
-          [user.userId.toString()]
-        );
-        
-        if (freeDeliveryCheck.rows[0]?.has_promo) {
-          freeDeliveryApplied = true;
-          actualShipping = 0;
+      if (user) {
+        const client = await db.connect();
+        try {
+          const freeDeliveryCheck = await client.query(
+            `SELECT has_free_delivery($1) as has_promo`,
+            [user.userId.toString()]
+          );
+          
+          if (freeDeliveryCheck.rows[0]?.has_promo) {
+            freeDeliveryApplied = true;
+            actualShipping = 0;
+          }
+        } finally {
+          client.release();
         }
-      } finally {
-        client.release();
       }
     }
     
@@ -98,6 +100,7 @@ export async function POST(request: NextRequest) {
 
     // Store pending order in database for verification later
     const client2 = await db.connect();
+    const userIdValue = user ? user.userId.toString() : `guest:${guestId}`;
     try {
       await client2.query(`
         INSERT INTO pending_payhere_orders (
@@ -113,7 +116,7 @@ export async function POST(request: NextRequest) {
           created_at = NOW()
       `, [
         orderId,
-        user.userId,
+        userIdValue,
         cart.id.toString(),
         amount,
         currency,
