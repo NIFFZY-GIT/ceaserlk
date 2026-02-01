@@ -184,8 +184,14 @@ export async function middleware(request: NextRequest) {
   }
   
   // Protect specific order routes that require authentication (like order history)
-  // but allow guest orders through checkout/place-order
-  if (pathname.startsWith('/api/orders') && !pathname.includes('/api/checkout/place-order')) {
+  // but allow guest orders through:
+  // - checkout/place-order (guest checkout)
+  // - /api/orders/[id] GET (order confirmation for guests) 
+  // - /api/orders/track (guest order tracking)
+  if (pathname.startsWith('/api/orders') && 
+      !pathname.includes('/api/checkout/place-order') &&
+      !pathname.match(/^\/api\/orders\/[^/]+$/) && // Allow GET /api/orders/{id}
+      !pathname.includes('/api/orders/track')) {    // Allow /api/orders/track
     const sessionToken = request.cookies.get('session-token')?.value;
     
     if (!sessionToken) {
