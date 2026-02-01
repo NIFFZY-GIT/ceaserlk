@@ -50,7 +50,7 @@ function OrderConfirmationContent() {
 
       // Fetch full order details
       try {
-        const res = await fetch(`/api/admin/orders/${id}`);
+        const res = await fetch(`/api/orders/${id}`);
         if (res.ok) {
           const orderData = await res.json();
           console.log('Order data fetched:', orderData);

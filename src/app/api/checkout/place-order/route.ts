@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
 
       await sendEmail({
         to: normalizedDetails.email,
-        subject: `Order Confirmation #${publicOrderId} | Ceaser LK`,
+        subject: `Order Confirmation #${publicOrderId} | CEASAR`,
         html: emailHtml,
         attachments: [
           {
