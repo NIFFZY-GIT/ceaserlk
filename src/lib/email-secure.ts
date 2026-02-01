@@ -204,7 +204,7 @@ export async function sendSecureEmail(options: EmailOptions): Promise<void> {
       headers: {
         'X-Priority': '3',
         'X-MSMail-Priority': 'Normal',
-        'X-Mailer': 'CeaserLK-SecureMailer',
+        'X-Mailer': 'CEASAR-SecureMailer',
         'X-Auto-Response-Suppress': 'All',
       }
     };
@@ -370,7 +370,7 @@ export async function sendPasswordResetEmail(
   const textContent = `
 Hello ${firstName},
 
-We received a request to reset your password for your CeaserLK account.
+We received a request to reset your password for your CEASAR account.
 
 Your verification code is: ${verificationCode}
 
@@ -379,7 +379,7 @@ This code will expire in 10 minutes.
 SECURITY NOTICE: If you didn't request this password reset, please ignore this email and contact support immediately. Never share this code with anyone.
 
 Best regards,
-CeaserLK Security Team
+CEASAR Security Team
   `;
 
   await sendSecureEmail({
@@ -517,7 +517,7 @@ export function generateOrderConfirmationEmail(orderData: {
             <!-- Footer -->
             <div style="background: #f1f3f4; text-align: center; padding: 20px; border-radius: 0 0 10px 10px;">
                 <p style="margin: 0; font-size: 12px; color: #666;">
-                    © ${new Date().getFullYear()} CeaserLK. All rights reserved.
+                    © ${new Date().getFullYear()} CEASAR. All rights reserved.
                 </p>
             </div>
         </div>

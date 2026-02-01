@@ -138,7 +138,7 @@ export async function PUT(
 
         await sendEmail({
           to: updatedOrder.customer_email,
-          subject: `Your Ceaser LK Order #${publicOrderId} has been updated`,
+          subject: `Your CEASAR Order #${publicOrderId} has been updated`,
           html: emailHtml,
         });
         console.log(`Sent status update email to ${updatedOrder.customer_email} for order ${publicOrderId}`);
