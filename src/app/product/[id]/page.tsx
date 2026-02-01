@@ -1161,7 +1161,7 @@ export default function ProductPage() {
 
   // Cart and Auth contexts
   const { addToCart, openCart } = useCart();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
 
   // State
   const [product, setProduct] = useState<Product | null>(null);
@@ -1370,8 +1370,8 @@ export default function ProductPage() {
   const handleAddToCart = useCallback(async () => {
     if (!product || !selectedVariant || !selectedSize) return;
 
-    // Check if user is logged in
-    if (!user) {
+    // Check if user is logged in or guest - allow both
+    if (!user && !isGuest) {
       router.push(`/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
       return;
     }

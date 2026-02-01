@@ -40,7 +40,8 @@ export async function authenticatedFetch(
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       const isAuthEndpoint = url.includes('/api/auth/logout') || 
                             url.includes('/api/auth/login') || 
-                            url.includes('/api/auth/signup');
+                            url.includes('/api/auth/signup') ||
+                            url.includes('/api/auth/me'); // Don't redirect on /api/auth/me 401s
 
       // Only trigger logout if it's not an auth endpoint
       if (!isAuthEndpoint && globalLogoutCallback) {

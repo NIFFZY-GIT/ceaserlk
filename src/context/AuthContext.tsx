@@ -139,7 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = useCallback(async (isSessionExpired = false) => {
+  const logout = useCallback(async (isSessionExpired = false, shouldRedirect = true) => {
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
@@ -165,7 +165,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           sessionStorage.setItem('session_expired', 'true');
         }
       }
-      router.push('/login');
+      // Only redirect to login if this was a user-initiated logout or session expired
+      if (shouldRedirect) {
+        router.push('/login');
+      }
     }
   }, [router]);
 
@@ -185,7 +188,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const token = getSessionTokenFromCookie();
         if (token && isCurrentSessionExpired()) {
           console.warn('Client-side JWT check: Token expired');
-          await logout(true);
+          // Don't redirect, just clear the user
+          setUser(null);
+          sessionStorage.setItem('session_expired', 'true');
           return;
         }
       }
@@ -206,7 +211,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const token = getSessionTokenFromCookie();
         if (token && isCurrentSessionExpired()) {
           console.warn('Session expired detected - logging out');
-          logout(true);
+          // Don't redirect to login on automatic session expiry checks
+          // Just clear the user state
+          setUser(null);
+          sessionStorage.setItem('session_expired', 'true');
         }
       }
     }, 60 * 1000); // 1 minute
