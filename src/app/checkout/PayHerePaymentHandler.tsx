@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Loader2, CreditCard, AlertCircle } from 'lucide-react';
 import { Cart } from '@/context/CartContext';
 import Script from 'next/script';
@@ -56,6 +56,22 @@ export default function PayHerePaymentHandler({ cart, shippingDetails, useFreeDe
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sdkLoaded, setSdkLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.payhere && !sdkLoaded) {
+      setSdkLoaded(true);
+    }
+  }, [sdkLoaded]);
+
+  useEffect(() => {
+    if (sdkLoaded) return;
+    const timer = setTimeout(() => {
+      if (!sdkLoaded) {
+        setErrorMessage('Payment system is taking too long to load. Please refresh and try again.');
+      }
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [sdkLoaded]);
 
   // Validate shipping details
   const validateDetails = () => {
@@ -133,6 +149,7 @@ export default function PayHerePaymentHandler({ cart, shippingDetails, useFreeDe
       {/* PayHere SDK Script */}
       <Script
         src="https://www.payhere.lk/lib/payhere.js"
+        strategy="afterInteractive"
         onLoad={() => setSdkLoaded(true)}
         onError={() => setErrorMessage('Failed to load payment system')}
       />
@@ -198,6 +215,12 @@ export default function PayHerePaymentHandler({ cart, shippingDetails, useFreeDe
           </>
         )}
       </button>
+
+      {isLoading && (
+        <p className="text-[10px] sm:text-xs text-yellow-300 text-center">
+          Please do not close or reload this page while payment is processing.
+        </p>
+      )}
 
       {/* Security notice */}
       <p className="text-[10px] sm:text-xs text-center text-gray-500">
