@@ -33,6 +33,25 @@ const OutOfStockLine = () => (
   <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-400 rotate-[-25deg] transform"></div>
 );
 
+// Size sorting utility - orders sizes as XS, S, M, L, XL, XXL
+const sizeOrder: Record<string, number> = {
+  'XS': 0,
+  'S': 1,
+  'M': 2,
+  'L': 3,
+  'XL': 4,
+  'XXL': 5,
+};
+
+const sortStockItems = (items: StockInfo[]): StockInfo[] => {
+  const sorted = [...items].sort((a, b) => {
+    const orderA = sizeOrder[a.size.toUpperCase()] ?? 999;
+    const orderB = sizeOrder[b.size.toUpperCase()] ?? 999;
+    return orderA - orderB;
+  });
+  return sorted;
+};
+
 export const ProductCard = ({ product }: { product: Product }) => {
   const { addToCart } = useCart();
   const { user, isGuest } = useAuth();
@@ -134,7 +153,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
           )}
           {activeVariant.stock.length > 0 && (
             <div className="flex flex-wrap items-center gap-1 mt-3">
-              {activeVariant.stock.map(stockItem => (
+              {sortStockItems(activeVariant.stock).map(stockItem => (
                 <button 
                   key={stockItem.id} 
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (stockItem.stock > 0) setSelectedSize(stockItem.size); }} 

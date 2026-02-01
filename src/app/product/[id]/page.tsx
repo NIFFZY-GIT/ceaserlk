@@ -70,6 +70,33 @@ interface MediaItem {
 // Utility function to check if URL is a video
 const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov|m4v)$/i.test(url);
 
+// Size sorting utility - orders sizes as XS, S, M, L, XL, XXL
+const sizeOrder: Record<string, number> = {
+  'XS': 0,
+  'S': 1,
+  'M': 2,
+  'L': 3,
+  'XL': 4,
+  'XXL': 5,
+};
+
+const sortSizes = (sizes: string[]): string[] => {
+  return [...sizes].sort((a, b) => {
+    const orderA = sizeOrder[a.toUpperCase()] ?? 999;
+    const orderB = sizeOrder[b.toUpperCase()] ?? 999;
+    return orderA - orderB;
+  });
+};
+
+const sortStockItems = (items: StockItem[]): StockItem[] => {
+  const sorted = [...items].sort((a, b) => {
+    const orderA = sizeOrder[a.size.toUpperCase()] ?? 999;
+    const orderB = sizeOrder[b.size.toUpperCase()] ?? 999;
+    return orderA - orderB;
+  });
+  return sorted;
+};
+
 // Sri Lankan cities for fake purchase notifications
 const SRI_LANKAN_CITIES = [
   "Colombo", "Dehiwala", "Mount Lavinia", "Moratuwa", "Maharagama", "Kottawa",
@@ -869,6 +896,10 @@ function ProductDetailsPanel({
     return acc + getDisplayStockForSize(s.size, s.stock);
   }, 0) || 0;
 
+  const sortedStockItems = selectedVariant.stock
+    ? sortStockItems(selectedVariant.stock)
+    : [];
+
   return (
     <div className="bg-[#fafafa]">
       <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10 sm:px-6 lg:px-8 lg:py-14">
@@ -948,7 +979,7 @@ function ProductDetailsPanel({
                     </Link>
                   </div>
                   <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
-                    {selectedVariant.stock.map((stockItem) => {
+                    {sortedStockItems.map((stockItem) => {
                       const isAvailable = stockItem.stock > 0;
                       const isSelected = selectedSize === stockItem.size;
                       const sizeDisplayStock = getDisplayStockForSize(stockItem.size, stockItem.stock);
@@ -1207,6 +1238,7 @@ export default function ProductPage() {
       return acc + displayStock;
     }, 0);
   }, [selectedVariant, fakeStockReductions]);
+
 
   // Fetch product data
   useEffect(() => {
