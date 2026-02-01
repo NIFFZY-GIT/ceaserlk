@@ -9,6 +9,7 @@ import OrderStatusTimeline from './OrderStatusTimeline';
 
 interface OrderCardProps {
   order: Order;
+  userEmail: string;
 }
 
 const ProductImage = ({ item, compact = false }: { 
@@ -68,7 +69,7 @@ const getStatusBadge = (status: Order['status']) => {
   return `px-3 py-1 text-sm font-semibold rounded-full border ${statusColors[status] || 'bg-gray-700 text-gray-300 border-gray-600'}`;
 };
 
-const OrderCard = ({ order }: OrderCardProps) => {
+const OrderCard = ({ order, userEmail }: OrderCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showAllItems, setShowAllItems] = useState(false);
   const [isCompactView, setIsCompactView] = useState(order.items.length > 5);
@@ -185,7 +186,7 @@ const OrderCard = ({ order }: OrderCardProps) => {
                    ['PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED'].includes(order.status) && (
                     <div className="mt-4">
                       <TradingCardDownload
-                        userEmail={order.customerEmail || ''}
+                        userEmail={userEmail || order.customerEmail || ''}
                         productId={item.product_id}
                         productName={item.productName}
                         hasTrading={!!item.trading_card_image}
@@ -224,7 +225,7 @@ const OrderCard = ({ order }: OrderCardProps) => {
                     .map(item => (
                       <TradingCardDownload
                         key={`trading-${item.id}`}
-                        userEmail={order.customerEmail || ''}
+                        userEmail={userEmail || order.customerEmail || ''}
                         productId={item.product_id!}
                         productName={item.productName}
                         hasTrading={!!item.trading_card_image}
@@ -269,7 +270,7 @@ const OrderCard = ({ order }: OrderCardProps) => {
                 Monitor your order processing status from placement to delivery
               </p>
               <a
-                href="/track-order"
+                href="/profile?tab=track"
                 className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white transition-all duration-200 transform rounded-lg shadow-lg bg-purple-600 hover:bg-purple-700 hover:scale-105 hover:shadow-2xl"
               >
                 <Package className="w-4 h-4 mr-2"/>

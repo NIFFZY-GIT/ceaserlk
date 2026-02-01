@@ -5,9 +5,10 @@ import Link from 'next/link';
 
 interface OrderHistoryProps {
   orders: Order[];
+  userEmail: string;
 }
 
-const OrderHistory = ({ orders }: OrderHistoryProps) => {
+const OrderHistory = ({ orders, userEmail }: OrderHistoryProps) => {
   // Calculate order statistics
   const totalOrders = orders.length;
   const totalSpent = orders.reduce((sum, order) => sum + parseFloat(order.totalAmount), 0);
@@ -43,7 +44,7 @@ const OrderHistory = ({ orders }: OrderHistoryProps) => {
       {orders && orders.length > 0 ? (
         <div className="space-y-6">
           {orders.map((order) => (
-            <OrderCard key={order.id} order={order} />
+            <OrderCard key={order.id} order={order} userEmail={userEmail} />
           ))}
         </div>
       ) : (

@@ -96,7 +96,7 @@ export default function ProfileClient({ user: initialUser, orders }: ProfileClie
       {/* Main Content Area */}
       <main className="md:w-3/4">
         <div className="p-6 border border-gray-800 rounded-lg bg-gray-900/50 sm:p-8">
-          {activeTab === 'orders' && <OrderHistory orders={orders} />}
+          {activeTab === 'orders' && <OrderHistory orders={orders} userEmail={user.email} />}
           {activeTab === 'promo' && <PromoSection />}
           {activeTab === 'account' && <AccountDetails user={user} onSaveSuccess={handleUserUpdate} />}
           {activeTab === 'track' && <TrackOrder />}
