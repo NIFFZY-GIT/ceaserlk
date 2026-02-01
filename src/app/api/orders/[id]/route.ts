@@ -36,15 +36,17 @@ export async function GET(
               'id', oi.id,
               'product_id', oi.product_id,
               'product_name', oi.product_name,
-              'product_price', oi.product_price,
-              'product_shipping_cost', oi.product_shipping_cost,
+              'variant_color', oi.variant_color,
+              'variant_size', oi.variant_size,
+              'price_paid', oi.price_paid,
               'quantity', oi.quantity,
-              'unit_price', oi.unit_price,
-              'total_price', oi.total_price
-            ) ORDER BY oi.created_at
+              'sku_id', oi.sku_id,
+              'trading_card_image', p.trading_card_image
+            ) ORDER BY oi.id
           ) as items
         FROM orders o
         LEFT JOIN order_items oi ON o.id = oi.order_id
+        LEFT JOIN products p ON oi.product_id = p.id
         WHERE o.id = $1
         GROUP BY o.id
       `;
