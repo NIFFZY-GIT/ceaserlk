@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       JOIN products p ON oi.product_id = p.id
       WHERE o.customer_email = $1 
         AND p.id = $2::uuid 
-        AND o.status IN ('PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED')
+        AND o.status IN ('PENDING', 'PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED')
       LIMIT 1
     `;
     

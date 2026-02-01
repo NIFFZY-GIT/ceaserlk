@@ -52,10 +52,11 @@ function OrderConfirmationContent() {
       try {
         const res = await fetch(`/api/orders/${id}`);
         if (res.ok) {
-          const orderData = await res.json();
-          console.log('Order data fetched:', orderData);
-          setOrderData(orderData);
-          setUserEmail(orderData.customer_email || '');
+          const data = await res.json();
+          console.log('Order data fetched:', data);
+          const order = data.order || data;
+          setOrderData(order);
+          setUserEmail(order.customer_email || '');
         }
       } catch (e) { console.error("Could not fetch order details", e); }
     };
@@ -290,7 +291,7 @@ function OrderConfirmationContent() {
             </h3>
             <div className="space-y-4">
               {orderData.items
-                .filter((item: OrderItem) => item.trading_card_image)
+                .filter((item: OrderItem) => item.trading_card_image && item.trading_card_image !== null)
                 .map((item: OrderItem, index: number) => (
                   <TradingCardDownload
                     key={`${item.product_id}-${index}`}

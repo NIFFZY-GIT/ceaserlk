@@ -8,15 +8,14 @@ export async function GET(
 ) {
   const { id } = await params;
   
-  // Verify authentication
+  // Make authentication optional - allow anyone with valid order ID to view
+  // This is needed for order confirmation page (guests after checkout)
+  let authResult = null;
   try {
-    const authResult = await verifyAuth(request);
-    if (!authResult) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    authResult = await verifyAuth(request);
   } catch (authError) {
-    console.error("Auth error:", authError);
-    return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
+    // Auth failed, but that's okay - we'll allow access with just order ID
+    console.log("No auth token, allowing public order access");
   }
 
   try {
