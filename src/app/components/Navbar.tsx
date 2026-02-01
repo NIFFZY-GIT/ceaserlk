@@ -251,6 +251,7 @@ const Navbar = () => {
             )}
           </div>
           
+          {/* Desktop Cart Button - Show for all users including guests */}
           <button onClick={handleCartClick} className={`relative hidden p-2 transition-colors rounded-full md:block ${usesDarkText ? 'hover:bg-neutral-900/10 text-neutral-900' : 'hover:bg-white/10 text-white hover:text-white'}`} aria-label="Open shopping cart">
               <ShoppingCart size={26} />
               {hasItems && (
@@ -304,6 +305,16 @@ const Navbar = () => {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Cart button for guests and non-authenticated users */}
+                <button onClick={handleOpenCart} className="flex w-full items-center justify-between rounded-2xl bg-black/40 px-4 py-3 text-left transition hover:bg-primary/15 hover:text-white">
+                  <span className="relative flex items-center gap-3">
+                    <ShoppingCart size={18} /> Cart
+                    {hasItems && (
+                      <span className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white rounded-full -top-2 -right-6 bg-accent">{cartCount}</span>
+                    )}
+                  </span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
                 <Link href="/login" onClick={handleLinkClick} className="flex items-center justify-between rounded-2xl bg-black/40 px-4 py-3 transition hover:bg-primary/15 hover:text-white">
                   <span className="flex items-center gap-3"><User size={18} /> Sign in</span>
                   <ChevronRight className="w-4 h-4" />

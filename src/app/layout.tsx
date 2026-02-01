@@ -10,6 +10,8 @@ import { CartProvider } from '@/context/CartContext';
 import { CartDrawer } from '@/app/components/CartDrawer';
 import Navbar from '@/app/components/Navbar';
 import Footer from '@/app/components/Footer';
+import { SessionExpiryMonitor } from '@/components/SessionExpiryMonitor';
+import { SessionExpiredModal } from '@/components/SessionExpiredModal';
 
 // Optimize font loading with Next.js font system
 const montserrat = Montserrat({
@@ -64,6 +66,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         <AuthProvider>
           <CartProvider>
             {/* <MarqueeBar /> */}
+            <SessionExpiryMonitor />
+            <SessionExpiredModal />
             <Navbar />
             <CartDrawer />
             <main>{children}</main>

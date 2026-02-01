@@ -86,13 +86,15 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const handleAuthError = useCallback((error: { status: number }, action: string) => {
     if (error.status === 401) {
       setError(`Please log in to ${action}`);
-      // Redirect to login page with return URL
-      const currentPath = window.location.pathname;
-      routerRef.current.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      if (!isGuest) {
+        // Redirect to login page with return URL
+        const currentPath = window.location.pathname;
+        routerRef.current.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      }
       return true;
     }
     return false;
-  }, []); // No dependencies needed with ref
+  }, [isGuest]);
 
   const fetchCart = useCallback(async () => {
     // Don't fetch cart if user is not authenticated AND not a guest
@@ -119,7 +121,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const res = await fetch(`/api/cart?sessionId=${sessionId}`);
       if (!res.ok) {
         if (res.status === 401) {
-          handleAuthError({ status: 401 }, 'view cart');
+          // Only show error/redirect for authenticated users, not guests or anonymous users
+          if (user) {
+            handleAuthError({ status: 401 }, 'view cart');
+          }
           return;
         }
         throw new Error("Failed to fetch cart");
@@ -170,7 +175,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         
         if (!res.ok) {
           if (res.status === 401) {
-            handleAuthError({ status: 401 }, 'view cart');
+            // Only show error/redirect for authenticated users, not guests or anonymous users
+            if (user) {
+              handleAuthError({ status: 401 }, 'view cart');
+            }
             return;
           }
           throw new Error("Failed to fetch cart");
@@ -223,7 +231,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       if (!res.ok) {
         const errorData = await res.json();
         if (res.status === 401) {
-          handleAuthError({ status: 401 }, 'add items to cart');
+          // Only show error/redirect for authenticated users, not guests or anonymous users
+          if (user) {
+            handleAuthError({ status: 401 }, 'add items to cart');
+          }
           return false;
         }
         if (res.status === 409) {
@@ -268,16 +279,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
     
     try {
+      const sessionId = guestId || getSessionId();
       const res = await fetch('/api/cart', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cartItemId, newQuantity }),
+        body: JSON.stringify({ cartItemId, newQuantity, sessionId }),
       });
       
       if (!res.ok) {
         const errorData = await res.json();
         if (res.status === 401) {
-          handleAuthError({ status: 401 }, 'update cart');
+          // Only show error/redirect for authenticated users, not guests or anonymous users
+          if (user) {
+            handleAuthError({ status: 401 }, 'update cart');
+          }
           return false;
         }
         if (res.status === 500 && errorData.error?.includes('stock')) {
@@ -320,16 +335,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
     
     try {
+      const sessionId = guestId || getSessionId();
       const res = await fetch('/api/cart', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cartItemId }),
+        body: JSON.stringify({ cartItemId, sessionId }),
       });
       
       if (!res.ok) {
         const errorData = await res.json();
         if (res.status === 401) {
-          handleAuthError({ status: 401 }, 'remove items from cart');
+          // Only show error/redirect for authenticated users, not guests or anonymous users
+          if (user) {
+            handleAuthError({ status: 401 }, 'remove items from cart');
+          }
           return false;
         }
         await fetchCart(); // Revert optimistic update on error

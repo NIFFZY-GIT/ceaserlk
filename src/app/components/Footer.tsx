@@ -35,7 +35,7 @@ const Footer = () => {
                 Track Delivery
               </a>
               <Link
-                href="/track-order"
+                href="/profile?tab=track"
                 className="inline-flex items-center justify-center rounded-full border border-gray-800/80 bg-black/30 px-4 py-2 text-xs sm:text-sm font-semibold text-gray-200 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
               >
                 Track Order

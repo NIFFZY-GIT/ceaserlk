@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { registerLogoutCallback, unregisterLogoutCallback, authenticatedFetch } from '@/lib/fetch-interceptor';
+import { isCurrentSessionExpired, getTimeUntilExpiry, getSessionTokenFromCookie } from '@/lib/jwt-client';
 
 interface User {
   userId: number;
@@ -29,6 +31,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [guestId, setGuestId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const userRef = useRef<User | null>(null);
+  const isGuestRef = useRef(false);
 
   // Initialize guest ID from localStorage if exists
   useEffect(() => {
@@ -45,7 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkAuth = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await authenticatedFetch('/api/auth/me', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -62,8 +66,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
         }
       } else if (response.status === 401) {
-        // Token expired or invalid - this is normal, just set user to null
+        // Token expired or invalid - automatically logout
+        console.warn('Session expired during auth check');
         setUser(null);
+        // Don't call logout here to avoid infinite loop, just clear the user
       } else {
         // Other errors - log them for debugging
         const errorData = await response.json().catch(() => ({}));
@@ -78,9 +84,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  useEffect(() => {
+    userRef.current = user;
+    isGuestRef.current = isGuest;
+  }, [user, isGuest]);
+
   const refreshTokenIfNeeded = async () => {
     try {
-      const response = await fetch('/api/auth/refresh', {
+      const response = await authenticatedFetch('/api/auth/refresh', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -94,6 +105,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(data.user);
           console.log('Token refreshed successfully');
         }
+      } else if (response.status === 401) {
+        // Session expired, token can't be refreshed
+        console.warn('Session expired - cannot refresh token');
+        setUser(null);
       }
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -124,7 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = useCallback(async (isSessionExpired = false) => {
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
@@ -145,25 +160,64 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('guest_id');
         localStorage.removeItem('is_guest');
+        // Set flag to show session expired modal if this was an automatic logout
+        if (isSessionExpired) {
+          sessionStorage.setItem('session_expired', 'true');
+        }
       }
       router.push('/login');
     }
-  };
+  }, [router]);
 
   useEffect(() => {
+    // Register logout callback for automatic session expiry handling
+    registerLogoutCallback(logout);
+    
     checkAuth();
     
     // Set up periodic auth check every 5 minutes to keep session alive
     const authInterval = setInterval(async () => {
-      // First try to refresh the token if needed
-      await refreshTokenIfNeeded();
-      // Then check auth status
+      // Only check auth for authenticated users, not guests
+      if (!user && !userRef.current) return;
+      
+      // Check if token is expired on client side first (only for authenticated users)
+      if (userRef.current && !isGuestRef.current) {
+        const token = getSessionTokenFromCookie();
+        if (token && isCurrentSessionExpired()) {
+          console.warn('Client-side JWT check: Token expired');
+          await logout(true);
+          return;
+        }
+      }
+      
+      // First try to refresh the token if needed (only for authenticated users)
+      if (userRef.current && !isGuestRef.current) {
+        await refreshTokenIfNeeded();
+      }
+      
+      // Then check auth status (for all users)
       await checkAuth();
     }, 5 * 60 * 1000); // 5 minutes
 
-    // Cleanup interval on unmount
-    return () => clearInterval(authInterval);
-  }, []); // Empty dependency array - only run once on mount
+    // Set up a check for token expiration every minute (only for authenticated users)
+    const expiryCheckInterval = setInterval(() => {
+      // Only check expiry for authenticated users, not guests
+      if (userRef.current && !isGuestRef.current) {
+        const token = getSessionTokenFromCookie();
+        if (token && isCurrentSessionExpired()) {
+          console.warn('Session expired detected - logging out');
+          logout(true);
+        }
+      }
+    }, 60 * 1000); // 1 minute
+
+    // Cleanup interval and logout callback on unmount
+    return () => {
+      clearInterval(authInterval);
+      clearInterval(expiryCheckInterval);
+      unregisterLogoutCallback();
+    };
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{

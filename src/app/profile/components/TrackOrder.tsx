@@ -149,7 +149,7 @@ export default function TrackOrder() {
             <Search className="absolute left-3 top-3.5 w-5 h-5 text-gray-500" />
             <input
               type="text"
-              placeholder="Enter Order ID (e.g., 00001 or UUID)"
+              placeholder="Enter Order ID (e.g., #10065)"
               value={orderNumber}
               onChange={(e) => setOrderNumber(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"

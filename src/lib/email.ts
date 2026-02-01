@@ -553,7 +553,7 @@ export function generateOrderStatusUpdateEmail(updateData: {
                   <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 25px;">
                     <tr>
                       <td style="font-family: 'Courier New', Courier, monospace; font-size: 13px; border: 1px solid #e5e5e5; padding: 8px 16px;">
-                        Order #${updateData.orderId}
+                        Order ID #${updateData.orderId}
                       </td>
                     </tr>
                   </table>
@@ -567,7 +567,8 @@ export function generateOrderStatusUpdateEmail(updateData: {
                   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5;">
                     <tr>
                       <td align="center" style="padding: 30px;">
-                        <h3 style="margin: 0 0 15px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #000000;">Tracking Information</h3>
+                        <h1 style="margin: 0 0 15px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #000000;">Tracking Information</h1>
+                        <h1 style="margin: 0 0 15px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #000000;">KOOMBIYO Waybill Number</h1>
                         <p style="font-family: 'Courier New', Courier, monospace; font-size: 18px; font-weight: 600; letter-spacing: 1px; margin: 0 0 20px 0;">
                           ${updateData.deliveryId}
                         </p>
