@@ -147,18 +147,12 @@ export async function GET(request: NextRequest) {
       return total + (price * item.quantity);
     }, 0);
 
-    // Shipping is a flat fee per order, not per item
-    // Get unique products in cart and sum their shipping costs (once per product)
-    const shippingByProduct = new Map<string, number>();
-    items.forEach((item: { sku: { variant: { product: { id: string; shipping_cost: string } } } }) => {
-      const productId = item.sku.variant.product.id;
-      if (!shippingByProduct.has(productId)) {
-        const shippingCost = parseFloat(item.sku.variant.product.shipping_cost) || 0;
-        shippingByProduct.set(productId, shippingCost);
-      }
+    // Shipping is charged once per order at the highest product shipping cost
+    let totalShipping = 0;
+    items.forEach((item: { sku: { variant: { product: { shipping_cost: string } } } }) => {
+      const shippingCost = parseFloat(item.sku.variant.product.shipping_cost) || 0;
+      totalShipping = Math.max(totalShipping, shippingCost);
     });
-    
-    const totalShipping = Array.from(shippingByProduct.values()).reduce((total, cost) => total + cost, 0);
 
     const totalAmount = subtotal + totalShipping;
 
