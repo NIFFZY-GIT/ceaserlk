@@ -70,10 +70,16 @@ export default function CheckoutPage() {
       const response = await fetch('/api/promo/free-delivery');
       if (response.ok) {
         const data = await response.json();
-        setHasFreeDeliveryForLife(data.hasFreeDelivery && data.isLifetime);
+        const hasFreeDelivery = data.hasFreeDelivery && data.isLifetime;
+        console.log('Free delivery check result:', { hasFreeDelivery, data });
+        setHasFreeDeliveryForLife(hasFreeDelivery);
+      } else {
+        console.log('Free delivery check returned non-ok status:', response.status);
+        setHasFreeDeliveryForLife(false);
       }
     } catch (error) {
       console.error('Error checking free delivery:', error);
+      setHasFreeDeliveryForLife(false);
     }
   }, []);
 

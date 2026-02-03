@@ -22,7 +22,12 @@ export async function GET(request: NextRequest) {
       [userId]
     );
 
-    const hasFreeDelivery = result.rows[0]?.free_delivery_for_life || false;
+    // Safely extract the boolean value from the result
+    const hasFreeDelivery = result.rows && result.rows.length > 0 
+      ? Boolean(result.rows[0].free_delivery_for_life) 
+      : false;
+
+    console.log(`Free delivery check for user ${userId}: ${hasFreeDelivery}`);
 
     return NextResponse.json({ 
       hasFreeDelivery,

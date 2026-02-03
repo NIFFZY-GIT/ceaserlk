@@ -57,6 +57,10 @@ export default function PayHerePaymentHandler({ cart, shippingDetails, useFreeDe
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sdkLoaded, setSdkLoaded] = useState(false);
 
+  // Calculate the actual amount to show (with free delivery discount applied if applicable)
+  const actualShipping = useFreeDelivery ? 0 : (cart?.totalShipping || 0);
+  const actualTotal = (cart?.subtotal || 0) + actualShipping;
+
   useEffect(() => {
     if (typeof window !== 'undefined' && window.payhere && !sdkLoaded) {
       setSdkLoaded(true);
@@ -211,7 +215,7 @@ export default function PayHerePaymentHandler({ cart, shippingDetails, useFreeDe
         ) : (
           <>
             <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span>Pay LKR {cart.totalAmount.toLocaleString()}</span>
+            <span>Pay LKR {actualTotal.toLocaleString()}</span>
           </>
         )}
       </button>
