@@ -2,47 +2,22 @@
 
 type MeasurementRow = {
   size: string;
-  waist: string;
-  chest?: string;
-  hip?: string;
-  length?: string;
+  ukSize: string;
+  length: string;
+  width: string;
 };
 
 const measurements: { name: string; description: string; rows: MeasurementRow[] }[] = [
   {
-    name: 'Tops & T-Shirts',
-    description: 'Chest measured at fullest point, waist at natural waistline',
+    name: 'Shirts',
+    description: 'All measurements are in inches.',
     rows: [
-      { size: 'XS', chest: '34" - 36"', waist: '28" - 30"', length: '26"' },
-      { size: 'S', chest: '36" - 38"', waist: '30" - 32"', length: '27"' },
-      { size: 'M', chest: '38" - 40"', waist: '32" - 34"', length: '28"' },
-      { size: 'L', chest: '40" - 43"', waist: '34" - 37"', length: '29"' },
-      { size: 'XL', chest: '43" - 46"', waist: '37" - 40"', length: '30"' },
-      { size: 'XXL', chest: '46" - 49"', waist: '40" - 43"', length: '31"' },
-    ],
-  },
-  {
-    name: 'Hoodies & Jackets',
-    description: 'For a relaxed fit, size up one size',
-    rows: [
-      { size: 'XS', chest: '36" - 38"', waist: '30" - 32"', length: '25"' },
-      { size: 'S', chest: '38" - 40"', waist: '32" - 34"', length: '26"' },
-      { size: 'M', chest: '40" - 42"', waist: '34" - 36"', length: '27"' },
-      { size: 'L', chest: '42" - 45"', waist: '36" - 39"', length: '28"' },
-      { size: 'XL', chest: '45" - 48"', waist: '39" - 42"', length: '29"' },
-      { size: 'XXL', chest: '48" - 51"', waist: '42" - 45"', length: '30"' },
-    ],
-  },
-  {
-    name: 'Pants & Bottoms',
-    description: 'Waist measured at natural waistline, hip at fullest point',
-    rows: [
-      { size: '28', waist: '27" - 28"', hip: '34" - 35"', length: '30"' },
-      { size: '30', waist: '29" - 30"', hip: '36" - 37"', length: '31"' },
-      { size: '32', waist: '31" - 32"', hip: '38" - 39"', length: '32"' },
-      { size: '34', waist: '33" - 34"', hip: '40" - 41"', length: '32"' },
-      { size: '36', waist: '35" - 36"', hip: '42" - 43"', length: '33"' },
-      { size: '38', waist: '37" - 38"', hip: '44" - 45"', length: '33"' },
+      { size: 'XS', ukSize: '6', length: '27', width: '22' },
+      { size: 'S', ukSize: '8', length: '28', width: '23' },
+      { size: 'M', ukSize: '10', length: '29', width: '24' },
+      { size: 'L', ukSize: '12', length: '30', width: '25' },
+      { size: 'XL', ukSize: '14', length: '31', width: '26' },
+      { size: 'XXL', ukSize: '16', length: '32', width: '27' },
     ],
   },
 ];
@@ -152,24 +127,15 @@ export default function SizeGuidePage() {
                       <th className="px-6 py-4 text-left text-xs font-semibold text-[#1a1a1a] uppercase tracking-wider">
                         Size
                       </th>
-                      {rows[0]?.chest && (
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-[#1a1a1a] uppercase tracking-wider">
-                          Chest
-                        </th>
-                      )}
                       <th className="px-6 py-4 text-left text-xs font-semibold text-[#1a1a1a] uppercase tracking-wider">
-                        Waist
+                        UK Size
                       </th>
-                      {rows[0]?.hip && (
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-[#1a1a1a] uppercase tracking-wider">
-                          Hip
-                        </th>
-                      )}
-                      {rows[0]?.length && (
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-[#1a1a1a] uppercase tracking-wider">
-                          Length
-                        </th>
-                      )}
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-[#1a1a1a] uppercase tracking-wider">
+                        Length
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-[#1a1a1a] uppercase tracking-wider">
+                        Width
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e5e5e5]">
@@ -181,16 +147,9 @@ export default function SizeGuidePage() {
                         <td className="px-6 py-4 text-sm font-semibold text-[#1a1a1a]">
                           {row.size}
                         </td>
-                        {row.chest && (
-                          <td className="px-6 py-4 text-sm text-[#444]">{row.chest}</td>
-                        )}
-                        <td className="px-6 py-4 text-sm text-[#444]">{row.waist}</td>
-                        {row.hip && (
-                          <td className="px-6 py-4 text-sm text-[#444]">{row.hip}</td>
-                        )}
-                        {row.length && (
-                          <td className="px-6 py-4 text-sm text-[#444]">{row.length}</td>
-                        )}
+                        <td className="px-6 py-4 text-sm text-[#444]">{row.ukSize}</td>
+                        <td className="px-6 py-4 text-sm text-[#444]">{row.length}</td>
+                        <td className="px-6 py-4 text-sm text-[#444]">{row.width}</td>
                       </tr>
                     ))}
                   </tbody>
