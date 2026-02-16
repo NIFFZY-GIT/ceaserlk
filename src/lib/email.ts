@@ -315,6 +315,7 @@ export function generateAdminOrderNotificationEmail(notificationData: {
   customerName: string;
   customerEmail: string;
   phoneNumber?: string | null;
+  paymentMethod?: string | null;
   items: Array<{
     productName: string;
     variantColor: string;
@@ -332,6 +333,16 @@ export function generateAdminOrderNotificationEmail(notificationData: {
     country: string;
   };
 }): string {
+  const normalizedPaymentMethod = (notificationData.paymentMethod || '').trim().toUpperCase();
+  const paymentMethodLabel = (() => {
+    if (['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalizedPaymentMethod)) return 'Cash on Delivery';
+    if (normalizedPaymentMethod === 'PAYHERE') return 'PayHere';
+    if (normalizedPaymentMethod === 'CARD') return 'Card';
+    if (normalizedPaymentMethod === 'PAID') return 'Paid';
+    if (!normalizedPaymentMethod) return 'Unknown';
+    return normalizedPaymentMethod.replace(/_/g, ' ');
+  })();
+  const paymentStatusLabel = ['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalizedPaymentMethod) ? 'Pending' : 'Paid';
   const itemsHtml = notificationData.items
     .map(
       (item) => `
@@ -393,7 +404,8 @@ export function generateAdminOrderNotificationEmail(notificationData: {
                       <td style="padding: 20px;">
                         <p style="margin: 0 0 10px 0; font-size: 13px;"><strong style="color: #000000;">Customer:</strong> <span style="color: #333333;">${notificationData.customerName}</span></p>
                         <p style="margin: 0 0 10px 0; font-size: 13px;"><strong style="color: #000000;">Email:</strong> <a href="mailto:${notificationData.customerEmail}" style="color: #107D3F; text-decoration: none;">${notificationData.customerEmail}</a></p>
-                        ${notificationData.phoneNumber ? `<p style="margin: 0; font-size: 13px;"><strong style="color: #000000;">Phone:</strong> <span style="color: #333333;">${notificationData.phoneNumber}</span></p>` : ''}
+                        ${notificationData.phoneNumber ? `<p style="margin: 0 0 10px 0; font-size: 13px;"><strong style="color: #000000;">Phone:</strong> <span style="color: #333333;">${notificationData.phoneNumber}</span></p>` : ''}
+                        <p style="margin: 0; font-size: 13px;"><strong style="color: #000000;">Payment:</strong> <span style="color: #333333;">${paymentMethodLabel}</span> <span style="color: #888888;">(${paymentStatusLabel})</span></p>
                       </td>
                     </tr>
                   </table>

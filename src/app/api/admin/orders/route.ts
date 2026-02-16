@@ -16,6 +16,7 @@ export async function GET() {
         o.full_name,
         o.total_amount,
         o.status,
+        o.payment_method,
         COUNT(oi.id) AS item_count
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id

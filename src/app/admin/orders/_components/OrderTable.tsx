@@ -12,6 +12,7 @@ export interface OrderSummary {
   total_amount: string;
   status: 'PENDING' | 'PAID' | 'PROCESSING' | 'PACKED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
   item_count: string;
+  payment_method?: string | null;
 }
 
 const formatPublicOrderId = (order: Pick<OrderSummary, 'order_number' | 'id'>) => {
@@ -32,6 +33,29 @@ const statusColors: { [key in OrderSummary['status']]: string } = {
   PENDING: 'bg-yellow-100 text-yellow-800',
 };
 // --- END OF UPDATE ---
+
+const normalizePaymentMethod = (method?: string | null) => (method || '').trim().toUpperCase();
+
+const getPaymentMethodLabel = (method?: string | null) => {
+  const normalized = normalizePaymentMethod(method);
+  if (['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalized)) return 'Cash on Delivery';
+  if (normalized === 'PAYHERE') return 'PayHere';
+  if (normalized === 'CARD') return 'Card';
+  if (normalized === 'PAID') return 'Paid';
+  if (!normalized) return 'Unknown';
+  return normalized.replace(/_/g, ' ');
+};
+
+const getPaymentMethodClasses = (method?: string | null) => {
+  const normalized = normalizePaymentMethod(method);
+  if (['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalized)) {
+    return 'bg-amber-100 text-amber-800';
+  }
+  if (['PAYHERE', 'CARD', 'PAID'].includes(normalized)) {
+    return 'bg-emerald-100 text-emerald-800';
+  }
+  return 'bg-slate-100 text-slate-800';
+};
 
 export default function OrderTable({ orders, onOrderDeleted }: { 
   orders: OrderSummary[]; 
@@ -123,6 +147,14 @@ export default function OrderTable({ orders, onOrderDeleted }: {
                     <dt className="text-xs uppercase tracking-wide text-slate-400">Items</dt>
                     <dd className="text-base font-semibold text-slate-900">{order.item_count}</dd>
                   </div>
+                  <div className="col-span-2">
+                    <dt className="text-xs uppercase tracking-wide text-slate-400">Payment</dt>
+                    <dd>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getPaymentMethodClasses(order.payment_method)}`}>
+                        {getPaymentMethodLabel(order.payment_method)}
+                      </span>
+                    </dd>
+                  </div>
                 </dl>
               </div>
             </div>
@@ -156,6 +188,7 @@ export default function OrderTable({ orders, onOrderDeleted }: {
               <th className="px-4 py-3 font-medium text-gray-500">Date</th>
               <th className="px-4 py-3 font-medium text-gray-500">Total</th>
               <th className="px-4 py-3 font-medium text-gray-500">Status</th>
+              <th className="px-4 py-3 font-medium text-gray-500">Payment</th>
               <th className="px-4 py-3 font-medium text-center text-gray-500">Items</th>
               <th className="px-4 py-3 font-medium text-gray-500">Actions</th>
             </tr>
@@ -174,6 +207,11 @@ export default function OrderTable({ orders, onOrderDeleted }: {
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusColors[order.status]}`}>
                     {order.status}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPaymentMethodClasses(order.payment_method)}`}>
+                    {getPaymentMethodLabel(order.payment_method)}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center text-gray-600">{order.item_count}</td>

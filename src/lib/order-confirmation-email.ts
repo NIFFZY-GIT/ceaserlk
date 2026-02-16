@@ -41,6 +41,15 @@ export async function sendOrderConfirmationIfNeeded(client: PoolClient, orderId:
 
   const order = orderResult.rows[0];
   const publicOrderId = formatOrderNumber(order.order_number) || order.id;
+  const normalizedPaymentMethod = (order.payment_method || '').trim().toUpperCase();
+  const paymentMethodLabel = (() => {
+    if (['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalizedPaymentMethod)) return 'Cash on Delivery';
+    if (normalizedPaymentMethod === 'PAYHERE') return 'PayHere';
+    if (normalizedPaymentMethod === 'CARD') return 'Card';
+    if (normalizedPaymentMethod === 'PAID') return 'Paid';
+    if (!normalizedPaymentMethod) return 'Unknown';
+    return normalizedPaymentMethod.replace(/_/g, ' ');
+  })();
 
   if (order.confirmation_email_sent_at) {
     return { sent: false, reason: 'already_sent' as const, publicOrderId };
@@ -116,12 +125,13 @@ export async function sendOrderConfirmationIfNeeded(client: PoolClient, orderId:
     subtotal: parseFloat(order.subtotal),
     shippingCost: parseFloat(order.shipping_cost),
     totalAmount: parseFloat(order.total_amount),
-    shippingAddress: shippingAddressObj
+    shippingAddress: shippingAddressObj,
+    paymentMethod: order.payment_method
   });
 
   await sendEmail({
     to: process.env.ADMIN_EMAIL || 'admin@ceaserbrand.com',
-    subject: `New Order #${publicOrderId} - PayHere Payment`,
+    subject: `New Order #${publicOrderId} - ${paymentMethodLabel}`,
     html: adminEmailContent
   });
 

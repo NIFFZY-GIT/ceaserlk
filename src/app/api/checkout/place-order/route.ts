@@ -349,11 +349,12 @@ export async function POST(request: NextRequest) {
               postalCode: normalizedDetails.postalCode,
               country: normalizedDetails.country,
             },
+            paymentMethod: 'COD',
           });
 
           await sendEmail({
             to: adminEmails.join(','),
-            subject: `New Order #${publicOrderId} | Ceaser LK`,
+            subject: `New Order #${publicOrderId} - Cash on Delivery`,
             html: adminEmailHtml,
           });
         }
