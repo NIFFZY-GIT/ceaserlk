@@ -93,7 +93,11 @@ export default function CheckoutPage() {
 
   const validateShippingDetails = () => {
     return Object.entries(shippingDetails)
-      .filter(([, value]) => value.trim() === '')
+      .filter(([, value]) => {
+        // Defensive check: ensure value is a string before calling trim()
+        if (typeof value !== 'string') return true; // Mark as invalid if not a string
+        return value.trim() === '';
+      })
       .map(([key]) => key);
   };
 
@@ -102,7 +106,7 @@ export default function CheckoutPage() {
 
     const missingFields = validateShippingDetails();
     if (missingFields.length > 0) {
-      setCodError('Please fill out all contact and shipping details before placing your order.');
+      setCodError(`Please fill out all contact and shipping details before placing your order (missing: ${missingFields.join(', ')}).`);
       return;
     }
 
@@ -113,34 +117,54 @@ export default function CheckoutPage() {
 
     try {
       setCodSubmitting(true);
+      
+      // Ensure all shipping details are properly formatted
+      const requestBody = {
+        cartId: cart.id,
+        shippingDetails: Object.fromEntries(
+          Object.entries(shippingDetails).map(([key, value]) => [
+            key,
+            typeof value === 'string' ? value.trim() : value,
+          ])
+        ),
+        useFreeDelivery: hasFreeDeliveryForLife,
+      };
+
+      console.log('Sending COD order request:', { cartId: cart.id, fields: Object.keys(shippingDetails) });
+
       const response = await fetch('/api/checkout/place-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cartId: cart.id,
-          shippingDetails,
-          paymentMethod: 'PAY_ON_DELIVERY',
-          useFreeDelivery: hasFreeDeliveryForLife,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const message = errorData.error || 'Failed to place order. Please try again.';
-        setCodError(message);
+        let errorMessage = 'Failed to place order. Please try again.';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          console.error('COD order API error:', { status: response.status, error: errorData });
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+        }
+        setCodError(errorMessage);
         return;
       }
 
       const data = await response.json();
+      console.log('COD order created successfully:', data);
+
       if (data?.orderId) {
         await fetchCart();
         router.push(`/order-confirmation?orderId=${data.orderId}`);
       } else {
-        setCodError('Order was created but no confirmation was returned.');
+        console.error('API response missing orderId:', data);
+        setCodError('Order was created but no confirmation was returned. Please contact support.');
       }
     } catch (error) {
       console.error('Pay on delivery order error:', error);
-      setCodError('Unexpected error while placing order. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unexpected error while placing order. Please try again.';
+      setCodError(errorMessage);
     } finally {
       setCodSubmitting(false);
     }

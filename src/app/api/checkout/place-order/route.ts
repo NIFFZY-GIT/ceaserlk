@@ -38,14 +38,20 @@ export async function POST(request: NextRequest) {
   }
 
   const { cartId, shippingDetails, useFreeDelivery } = body;
+  
+  // Validate cartId
   if (typeof cartId !== 'string' || cartId.trim() === '') {
+    console.error('Invalid cartId received:', { cartId, type: typeof cartId });
     return NextResponse.json({ error: 'A valid cart ID is required to place an order.' }, { status: 400 });
   }
 
+  // Validate shippingDetails object
   if (!shippingDetails || typeof shippingDetails !== 'object') {
+    console.error('Invalid shippingDetails received:', { shippingDetails, type: typeof shippingDetails });
     return NextResponse.json({ error: 'Shipping details are required.' }, { status: 400 });
   }
 
+  // Normalize and validate shipping details
   const normalizedDetails: NormalizedShippingDetails = {
     email: (shippingDetails.email ?? '').trim(),
     firstName: (shippingDetails.firstName ?? '').trim(),
@@ -57,12 +63,16 @@ export async function POST(request: NextRequest) {
     country: ((shippingDetails.country ?? 'Sri Lanka').trim() || 'Sri Lanka'),
   };
 
+  // Check for missing required fields
   const missingField = (Object.entries(normalizedDetails) as Array<[keyof NormalizedShippingDetails, string]>).find(
     ([, value]) => value === ''
   );
+  
   if (missingField) {
+    const [fieldName] = missingField;
+    console.error('Missing required shipping field:', fieldName);
     return NextResponse.json(
-      { error: 'Please complete all required contact and delivery details before placing your order.' },
+      { error: `Please complete the ${fieldName} field before placing your order.` },
       { status: 400 }
     );
   }
@@ -80,6 +90,7 @@ export async function POST(request: NextRequest) {
 
     if (cartCheck.rows.length === 0) {
       await client.query('ROLLBACK');
+      console.error('Cart not found:', cartId);
       return NextResponse.json(
         { error: 'Your cart session has expired or was not found. Please add items to your cart again.' },
         { status: 400 }
@@ -91,6 +102,7 @@ export async function POST(request: NextRequest) {
       // Cart has expired - clean it up
       await client.query('DELETE FROM carts WHERE id = $1', [cartId]);
       await client.query('COMMIT');
+      console.error('Cart expired:', { cartId, expiresAt: cartExpiresAt });
       return NextResponse.json(
         { error: 'Your cart session has expired. Please add items to your cart again and try checking out.' },
         { status: 400 }
@@ -122,6 +134,7 @@ export async function POST(request: NextRequest) {
 
     if (cartItemsResult.rows.length === 0) {
       await client.query('ROLLBACK');
+      console.error('Cart items not found:', cartId);
       return NextResponse.json(
         { error: 'Your cart is empty. Please add items before placing an order.' },
         { status: 400 }
@@ -200,8 +213,11 @@ export async function POST(request: NextRequest) {
 
     const orderId = orderResult.rows[0]?.id as string | undefined;
     const orderNumber = orderResult.rows[0]?.order_number as number | null | undefined;
+    
     if (!orderId) {
-      throw new Error('Failed to create order record.');
+      await client.query('ROLLBACK');
+      console.error('Order creation failed - no ID returned');
+      throw new Error('Failed to create order record - no ID returned.');
     }
 
     // Mark free delivery promo as used if applied (only for authenticated users)
@@ -363,9 +379,16 @@ export async function POST(request: NextRequest) {
       }
     } catch (emailError) {
       console.error('Failed to send confirmation email:', emailError);
+      // Don't fail the order if email fails - it's already created
     }
 
-    return NextResponse.json({ success: true, orderId });
+    // Ensure we always return orderId for successful orders
+    console.log('COD order created successfully:', { orderId, orderNumber, status: 'PENDING', paymentMethod: 'COD' });
+    return NextResponse.json({ 
+      success: true, 
+      orderId,
+      message: 'Order placed successfully. Check your email for confirmation.'
+    });
   } catch (error) {
     try {
       await client.query('ROLLBACK');
@@ -373,8 +396,19 @@ export async function POST(request: NextRequest) {
       console.error('Rollback failed after place-order error:', rollbackError);
     }
 
-    console.error('Place order error:', error);
-    return NextResponse.json({ error: 'Failed to place order. Please try again.' }, { status: 500 });
+    console.error('Place order error:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Failed to place order. Please try again.';
+    
+    return NextResponse.json(
+      { error: errorMessage }, 
+      { status: 500 }
+    );
   } finally {
     client.release();
   }
