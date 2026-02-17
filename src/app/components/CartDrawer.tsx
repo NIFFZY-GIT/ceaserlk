@@ -241,6 +241,7 @@ export const CartDrawer = () => {
   }, [isCartOpen, cart?.items.length]);
 
   const hasItems = cart && cart.items.length > 0;
+  const showLoadingOverlay = loading && !cart;
 
   return (
     <>
@@ -278,7 +279,11 @@ export const CartDrawer = () => {
             </div>
           ) : (
             <>
-              {loading && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm"><Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-primary"/></div>}
+              {showLoadingOverlay && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                  <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-primary" />
+                </div>
+              )}
               {hasItems ? (
                 <div className="flex-grow p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 overflow-y-auto">
                   {cart.items.map(item => <CartItemCard key={item.id} item={item} />)}

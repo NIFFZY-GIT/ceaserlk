@@ -161,7 +161,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setError(null);
       }
       
-      const sessionId = getSessionId();
+      const sessionId = guestId || getSessionId();
       if (!sessionId) { 
         if (isMounted) setLoading(false); 
         return; 
