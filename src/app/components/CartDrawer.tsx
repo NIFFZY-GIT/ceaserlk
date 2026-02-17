@@ -124,6 +124,14 @@ const CountdownTimer = ({ expiresAt }: { expiresAt: string | null }) => {
   const [isExpired, setIsExpired] = useState<boolean>(false);
   const [isClearing, setIsClearing] = useState<boolean>(false);
   const { fetchCart, closeCart } = useCart();
+  const fetchCartRef = useRef(fetchCart);
+  const closeCartRef = useRef(closeCart);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    fetchCartRef.current = fetchCart;
+    closeCartRef.current = closeCart;
+  }, [fetchCart, closeCart]);
 
   useEffect(() => {
     if (!expiresAt) return;
@@ -145,10 +153,10 @@ const CountdownTimer = ({ expiresAt }: { expiresAt: string | null }) => {
           
           // Clear the cart after showing expired state
           setTimeout(async () => {
-            await fetchCart(); // This will trigger the backend cleanup and clear the UI
+            await fetchCartRef.current(); // This will trigger the backend cleanup and clear the UI
             // Close the cart drawer after clearing
             setTimeout(() => {
-              closeCart();
+              closeCartRef.current();
             }, 500); // Small delay to allow UI to update
           }, 2000); // 2 second delay to show "EXPIRED" state
         }
@@ -162,7 +170,7 @@ const CountdownTimer = ({ expiresAt }: { expiresAt: string | null }) => {
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [expiresAt, isExpired, isClearing, fetchCart, closeCart]);
+  }, [expiresAt, isExpired, isClearing]);
 
   if (!expiresAt) return null;
 

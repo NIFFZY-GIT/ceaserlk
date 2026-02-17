@@ -140,71 +140,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, isGuest, guestId, handleAuthError]);
 
-  // Separate effect for initial load and user changes
-  
+  // Effect for initial load and user changes - calls the consolidated fetchCart callback
   useEffect(() => {
-    let isMounted = true;
-    
-    // Load cart for both authenticated users and guests
-    const loadCart = async () => {
-      // If not logged in and not a guest, skip cart loading
-      if (!user && !isGuest) {
-        if (isMounted) {
-          setCart(null);
-          setLoading(false);
-        }
-        return;
-      }
-
-      if (isMounted) {
-        setLoading(true);
-        setError(null);
-      }
-      
-      const sessionId = guestId || getSessionId();
-      if (!sessionId) { 
-        if (isMounted) setLoading(false); 
-        return; 
-      }
-      
-      console.log('Loading cart with sessionId:', sessionId, 'isGuest:', isGuest);
-      
-      try {
-        const res = await fetch(`/api/cart?sessionId=${sessionId}`);
-        if (!isMounted) return; // Component unmounted
-        
-        if (!res.ok) {
-          if (res.status === 401) {
-            // Only show error/redirect for authenticated users, not guests or anonymous users
-            if (user) {
-              handleAuthError({ status: 401 }, 'view cart');
-            }
-            return;
-          }
-          throw new Error("Failed to fetch cart");
-        }
-        const data: Cart = await res.json();
-        if (isMounted) {
-          setCart(data);
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error("Cart fetch error:", error);
-          setError("Failed to load cart");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadCart();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [user, isGuest, guestId, handleAuthError]); // Include guestId in dependencies
+    fetchCart();
+  }, [user, isGuest, guestId, fetchCart]);
 
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);

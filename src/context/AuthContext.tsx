@@ -181,7 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up periodic auth check every 5 minutes to keep session alive
     const authInterval = setInterval(async () => {
       // Only check auth for authenticated users, not guests
-      if (!user && !userRef.current) return;
+      if (!userRef.current) return;
       
       // Check if token is expired on client side first (only for authenticated users)
       if (userRef.current && !isGuestRef.current) {
@@ -225,7 +225,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       clearInterval(expiryCheckInterval);
       unregisterLogoutCallback();
     };
-  }, [logout, user]);
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{

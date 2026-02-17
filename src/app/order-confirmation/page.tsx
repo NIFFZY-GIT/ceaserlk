@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, Loader2, Package, Download, ShoppingBag, User, Sparkles, Gift, Mail, Search } from 'lucide-react';
 import Link from 'next/link';
@@ -41,12 +41,18 @@ function OrderConfirmationContent() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
+  const fetchCartRef = useRef(fetchCart);
+
+  // Keep fetchCartRef in sync with fetchCart
+  useEffect(() => {
+    fetchCartRef.current = fetchCart;
+  }, [fetchCart]);
 
   useEffect(() => {
     const processOrder = async (id: string) => {
       setOrderId(id);
       setStatus('success');
-      fetchCart(); // Clear the client-side cart
+      fetchCartRef.current(); // Clear the client-side cart
 
       // Fetch full order details
       try {
@@ -123,7 +129,7 @@ function OrderConfirmationContent() {
       setErrorMessage("No order information found.");
       setStatus('error');
     }
-  }, [searchParams, router, fetchCart]);
+  }, [searchParams, router]);
 
   if (status === 'loading') {
     return (

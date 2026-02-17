@@ -36,6 +36,9 @@ export default function CheckoutPage() {
   // Free delivery promo state (lifetime if earned)
   const [hasFreeDeliveryForLife, setHasFreeDeliveryForLife] = useState(false);
 
+  // Flag to prevent continuous fetches on mount
+  const [cartLoaded, setCartLoaded] = useState(false);
+
   // Cart expiration timer effect
   useEffect(() => {
     if (!cart?.expiresAt) return;
@@ -56,13 +59,12 @@ export default function CheckoutPage() {
     return () => clearInterval(interval);
   }, [cart?.expiresAt]);
 
-  // Refresh cart when it's about to expire (within 5 minutes)
+  // Mark cart as loaded once it finishes loading
   useEffect(() => {
-    if (cartTimeRemaining !== null && cartTimeRemaining > 0 && cartTimeRemaining <= 300 && !cartExpired) {
-      // Refresh cart to extend expiration
-      fetchCart();
+    if (!cartLoading && cart) {
+      setCartLoaded(true);
     }
-  }, [cartTimeRemaining, cartExpired, fetchCart]);
+  }, [cartLoading, cart]);
 
   // Check for free delivery promo on mount
   const checkFreeDelivery = useCallback(async () => {
@@ -85,7 +87,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     checkFreeDelivery();
-  }, [checkFreeDelivery]);
+  }, []); // Only run once on mount
 
   // Calculate actual shipping with free delivery applied (automatic if lifetime)
   const actualShipping = hasFreeDeliveryForLife ? 0 : (cart?.totalShipping || 0);
@@ -410,6 +412,7 @@ export default function CheckoutPage() {
                       type="email"
                       id="email"
                       name="email"
+                      value={shippingDetails.email}
                       onChange={handleInputChange}
                       placeholder="you@example.com"
                       required
@@ -431,6 +434,7 @@ export default function CheckoutPage() {
                         type="tel"
                         id="phone"
                         name="phone"
+                        value={shippingDetails.phone}
                         onChange={handleInputChange}
                         placeholder="71 234 5678"
                         required
@@ -448,6 +452,7 @@ export default function CheckoutPage() {
                         <input
                           type="text"
                           name="firstName"
+                          value={shippingDetails.firstName}
                           onChange={handleInputChange}
                           placeholder="First name"
                           required
@@ -459,6 +464,7 @@ export default function CheckoutPage() {
                         <input
                           type="text"
                           name="lastName"
+                          value={shippingDetails.lastName}
                           onChange={handleInputChange}
                           placeholder="Last name"
                           required
@@ -492,6 +498,7 @@ export default function CheckoutPage() {
                       type="text"
                       id="address"
                       name="address"
+                      value={shippingDetails.address}
                       onChange={handleInputChange}
                       placeholder="House number and street"
                       required
@@ -508,6 +515,7 @@ export default function CheckoutPage() {
                       type="text"
                       id="city"
                       name="city"
+                      value={shippingDetails.city}
                       onChange={handleInputChange}
                       placeholder="City / Town"
                       required
@@ -536,6 +544,7 @@ export default function CheckoutPage() {
                         type="text"
                         id="postalCode"
                         name="postalCode"
+                        value={shippingDetails.postalCode}
                         onChange={handleInputChange}
                         placeholder="Postal code"
                         required
