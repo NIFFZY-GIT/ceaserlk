@@ -28,6 +28,12 @@ function verifyPayHereSignature(
   return localSig === md5sig.toUpperCase();
 }
 
+const resolveOrderUserId = (rawUserId: string | null | undefined) => {
+  if (!rawUserId) return null;
+  if (rawUserId.startsWith('guest:')) return null;
+  return rawUserId;
+};
+
 export async function POST(request: NextRequest) {
   try {
     // Parse form data from PayHere
@@ -142,8 +148,10 @@ export async function POST(request: NextRequest) {
         RETURNING id, order_number
       `;
 
+      const orderUserId = resolveOrderUserId(pendingOrder.user_id);
+
       const orderResult = await client.query(orderQuery, [
-        pendingOrder.user_id,
+        orderUserId,
         pendingOrder.customer_email,
         pendingOrder.customer_name,
         pendingOrder.phone,
@@ -194,11 +202,11 @@ export async function POST(request: NextRequest) {
       );
 
       // Mark free delivery promo as used if it was applied
-      if (pendingOrder.free_delivery_applied) {
+      if (pendingOrder.free_delivery_applied && orderUserId) {
         try {
           await client.query(
             `SELECT use_free_delivery($1, $2)`,
-            [pendingOrder.user_id.toString(), newOrderId]
+            [orderUserId.toString(), newOrderId]
           );
         } catch (promoErr) {
           console.error('Error marking free delivery as used:', promoErr);

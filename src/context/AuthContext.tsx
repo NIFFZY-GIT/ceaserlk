@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { registerLogoutCallback, unregisterLogoutCallback, authenticatedFetch } from '@/lib/fetch-interceptor';
-import { isCurrentSessionExpired, getTimeUntilExpiry, getSessionTokenFromCookie } from '@/lib/jwt-client';
+import { isCurrentSessionExpired, getSessionTokenFromCookie } from '@/lib/jwt-client';
 
 interface User {
   userId: number;
@@ -225,7 +225,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       clearInterval(expiryCheckInterval);
       unregisterLogoutCallback();
     };
-  }, [logout]);
+  }, [logout, user]);
 
   return (
     <AuthContext.Provider value={{

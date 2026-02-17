@@ -13,10 +13,21 @@ export function isSessionInvalid(response: Response): boolean {
 /**
  * Check if the error indicates a session expiration
  */
-export function isSessionError(error: any): boolean {
-  if (error?.status === 401) return true;
-  if (error?.response?.status === 401) return true;
-  if (error?.code === 'UNAUTHORIZED') return true;
+type SessionErrorLike = {
+  status?: number;
+  response?: { status?: number };
+  code?: string;
+};
+
+const isSessionErrorLike = (error: unknown): error is SessionErrorLike => {
+  return typeof error === 'object' && error !== null;
+};
+
+export function isSessionError(error: unknown): boolean {
+  if (!isSessionErrorLike(error)) return false;
+  if (error.status === 401) return true;
+  if (error.response?.status === 401) return true;
+  if (error.code === 'UNAUTHORIZED') return true;
   return false;
 }
 

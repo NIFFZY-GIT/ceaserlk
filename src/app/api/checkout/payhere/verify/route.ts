@@ -4,6 +4,12 @@ import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
 import { sendOrderConfirmationIfNeeded } from '@/lib/order-confirmation-email';
 
 // This endpoint verifies PayHere payment status after user returns from PayHere
+const resolveOrderUserId = (rawUserId: string | null | undefined) => {
+  if (!rawUserId) return null;
+  if (rawUserId.startsWith('guest:')) return null;
+  return rawUserId;
+};
+
 export async function POST(request: NextRequest) {
   try {
     const { orderId } = await request.json();
@@ -108,6 +114,8 @@ export async function POST(request: NextRequest) {
             }
 
             // Create order
+            const orderUserId = resolveOrderUserId(pendingOrder.user_id);
+
             const orderInsertResult = await client.query(`
               INSERT INTO orders (
                 user_id, customer_email, full_name, phone_number,
@@ -117,7 +125,7 @@ export async function POST(request: NextRequest) {
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'PAID')
               RETURNING id, order_number
             `, [
-              pendingOrder.user_id,
+              orderUserId,
               pendingOrder.customer_email,
               pendingOrder.customer_name,
               pendingOrder.phone,

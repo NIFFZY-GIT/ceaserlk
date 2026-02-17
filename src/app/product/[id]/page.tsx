@@ -80,14 +80,6 @@ const sizeOrder: Record<string, number> = {
   'XXL': 5,
 };
 
-const sortSizes = (sizes: string[]): string[] => {
-  return [...sizes].sort((a, b) => {
-    const orderA = sizeOrder[a.toUpperCase()] ?? 999;
-    const orderB = sizeOrder[b.toUpperCase()] ?? 999;
-    return orderA - orderB;
-  });
-};
-
 const sortStockItems = (items: StockItem[]): StockItem[] => {
   const sorted = [...items].sort((a, b) => {
     const orderA = sizeOrder[a.size.toUpperCase()] ?? 999;
@@ -1437,7 +1429,7 @@ export default function ProductPage() {
     } finally {
       setIsAddingToCart(false);
     }
-  }, [product, selectedVariant, selectedSize, quantity, user, router, addToCart, openCart]);
+  }, [product, selectedVariant, selectedSize, quantity, user, isGuest, router, addToCart, openCart]);
 
   // Loading state
   if (isLoading) {

@@ -23,59 +23,6 @@ export interface EmailData {
 }
 
 // --- SHARED STYLES & COMPONENTS ---
-const BRAND_COLORS = {
-  black: '#000000',
-  white: '#FFFFFF',
-  green: '#107D3F',
-  red: '#EF3D4C',
-  gray: '#F5F5F5',
-  darkGray: '#888888',
-  border: '#E5E5E5'
-};
-
-const COMMON_CSS = `
-  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; margin: 0; padding: 0; width: 100% !important; background-color: ${BRAND_COLORS.white}; color: ${BRAND_COLORS.black}; }
-  .mono { font-family: 'Courier New', Courier, monospace; }
-  .uppercase { text-transform: uppercase; letter-spacing: 2px; }
-  a { text-decoration: none; color: ${BRAND_COLORS.black}; }
-`;
-
-const EMAIL_HEADER = `
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #000000;">
-    <tr>
-      <td align="center" style="padding: 0;">
-        <img src="https://www.inceasar.com/assets/mailheader.png" alt="CEASAR" width="600" style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;" />
-      </td>
-    </tr>
-  </table>
-`;
-
-const EMAIL_FOOTER = `
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 40px; border-top: 1px solid ${BRAND_COLORS.border};">
-    <tr>
-      <td align="center" style="padding: 30px 20px;">
-        <p style="font-size: 11px; color: ${BRAND_COLORS.darkGray}; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 20px 0;">
-          <a href="https://www.inceasar.com" style="color: ${BRAND_COLORS.black}; font-weight: bold; text-decoration: none;">InCeasar.com</a>
-        </p>
-        
-        <!-- Tri-Color Flag Accent -->
-        <table cellpadding="0" cellspacing="0" border="0" align="center">
-          <tr>
-            <td width="10" height="3" style="background-color: ${BRAND_COLORS.green};"></td>
-            <td width="10" height="3" style="background-color: ${BRAND_COLORS.white}; border-top: 1px solid #eee; border-bottom: 1px solid #eee;"></td>
-            <td width="10" height="3" style="background-color: ${BRAND_COLORS.red};"></td>
-          </tr>
-        </table>
-        
-        <p style="font-size: 10px; color: #999; margin: 20px 0 0 0; line-height: 1.6;">
-          Need assistance? <a href="mailto:contactus@inceasar.com" style="color: ${BRAND_COLORS.black}; text-decoration: underline;">Contact Support</a><br>
-          &copy; ${new Date().getFullYear()} CEASAR. All rights reserved.
-        </p>
-      </td>
-    </tr>
-  </table>
-`;
-
 // Create email transporter
 export function createEmailTransporter(): nodemailer.Transporter {
   const config: EmailConfig = {

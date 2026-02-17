@@ -10,10 +10,9 @@ export async function GET(
   
   // Make authentication optional - allow anyone with valid order ID to view
   // This is needed for order confirmation page (guests after checkout)
-  let authResult = null;
   try {
-    authResult = await verifyAuth(request);
-  } catch (authError) {
+    await verifyAuth(request);
+  } catch {
     // Auth failed, but that's okay - we'll allow access with just order ID
     console.log("No auth token, allowing public order access");
   }
