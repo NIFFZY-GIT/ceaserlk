@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
@@ -1180,6 +1180,7 @@ function ProductDetailsPanel({
 export default function ProductPage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const productId = params.id as string;
 
   // Cart and Auth contexts
@@ -1396,7 +1397,18 @@ export default function ProductPage() {
 
     // Check if user is logged in or guest - allow both
     if (!user && !isGuest) {
-      router.push(`/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
+      // Store cart intent before redirecting to login
+      const selectedSku = selectedVariant.stock?.find(
+        (s) => s.size === selectedSize
+      );
+      if (selectedSku && selectedSku.stock > 0) {
+        sessionStorage.setItem('addToCartAfterLogin', JSON.stringify({
+          skuId: selectedSku.id,
+          quantity: quantity,
+          timestamp: Date.now()
+        }));
+      }
+      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 

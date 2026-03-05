@@ -79,6 +79,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const cartIntentProcessedRef = useRef(false); // Track if cart intent has been processed
 
   const clearError = () => setError(null);
 
@@ -311,6 +312,43 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     if (!cart || !cart.items) return 0;
     return cart.items.reduce((total, item) => total + item.quantity, 0);
   }, [cart]);
+
+  // Effect to process pending cart intent after authentication
+  useEffect(() => {
+    const processCartIntent = async () => {
+      // Only process once, when user/guest is available, cart is loaded, and we haven't processed yet
+      if ((user || isGuest) && !loading && cart && !cartIntentProcessedRef.current) {
+        try {
+          const cartIntent = sessionStorage.getItem('addToCartAfterLogin');
+          if (cartIntent) {
+            const { skuId, quantity, timestamp } = JSON.parse(cartIntent);
+            // Check if intent is not too old (5 minutes)
+            const intentAge = Date.now() - timestamp;
+            if (intentAge < 5 * 60 * 1000) {
+              console.log('Processing pending cart intent:', { skuId, quantity });
+              cartIntentProcessedRef.current = true; // Mark as processed
+              sessionStorage.removeItem('addToCartAfterLogin');
+              // Add item to cart
+              const success = await addToCart(skuId, quantity);
+              if (success) {
+                // Open cart drawer to show the item was added
+                setTimeout(() => setIsCartOpen(true), 500);
+              }
+            } else {
+              // Intent expired, remove it
+              console.log('Cart intent expired, removing');
+              sessionStorage.removeItem('addToCartAfterLogin');
+            }
+          }
+        } catch (error) {
+          console.error('Failed to process cart intent:', error);
+          sessionStorage.removeItem('addToCartAfterLogin');
+        }
+      }
+    };
+
+    processCartIntent();
+  }, [user, isGuest, loading, cart, addToCart]); // Run when auth state changes and cart is ready
 
   const value = { 
     cart, 

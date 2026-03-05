@@ -253,7 +253,7 @@ const LoginPage = () => {
             type="button"
             onClick={() => {
               startGuestMode();
-              router.push('/');
+              router.push(redirectUrl || '/');
             }}
             className="w-full px-4 py-3 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors border border-slate-200 hover:border-slate-300"
           >

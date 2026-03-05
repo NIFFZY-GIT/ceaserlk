@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { useAuth } from "@/context/AuthContext";
+import { usePathname } from 'next/navigation';
 
 // const FREE_SHIPPING_THRESHOLD = 10000;
 
@@ -234,6 +235,7 @@ export const CartDrawer = () => {
   const { isCartOpen, closeCart, cart, cartCount, loading } = useCart();
   const { user, isGuest } = useAuth();
   const [isClient, setIsClient] = useState(false);
+  const pathname = usePathname();
   
   // --- UPDATED SUBTOTAL CALCULATION ---
   const subtotal = cart?.items.reduce((total, item) => total + Number(item.sku.variant.price) * item.quantity, 0) || 0;
@@ -277,7 +279,7 @@ export const CartDrawer = () => {
                 You need to be logged in to view your cart.
               </p>
               <div className="flex flex-col w-full gap-2 sm:gap-3 mt-6 sm:mt-8">
-                <Link href="/login" onClick={closeCart} className="w-full px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors rounded-md bg-primary hover:bg-opacity-90">
+                <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} onClick={closeCart} className="w-full px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors rounded-md bg-primary hover:bg-opacity-90">
                   Login
                 </Link>
                 <Link href="/signup" onClick={closeCart} className="w-full px-6 sm:px-8 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-white transition-colors border border-gray-700 rounded-md hover:bg-gray-800">

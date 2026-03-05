@@ -224,7 +224,7 @@ const Navbar = () => {
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-semibold uppercase tracking-wider ${usesDarkText ? 'text-neutral-900' : 'text-white/70'}`}>Guest</span>
                 <Link 
-                  href="/login" 
+                  href={`/login?redirect=${encodeURIComponent(pathname)}`}
                   className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 border group ${
                     usesDarkText 
                       ? 'bg-neutral-900/5 text-neutral-900 border-neutral-900/10 hover:bg-neutral-900 hover:text-white hover:border-neutral-900'
@@ -238,7 +238,7 @@ const Navbar = () => {
               </div>
             ) : (
               <Link 
-                href="/login" 
+                href={`/login?redirect=${encodeURIComponent(pathname)}`}
                 className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 border group ${
                   usesDarkText 
                     ? 'bg-neutral-900/5 text-neutral-900 border-neutral-900/10 hover:bg-neutral-900 hover:text-white hover:border-neutral-900'
@@ -315,7 +315,7 @@ const Navbar = () => {
                   </span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
-                <Link href="/login" onClick={handleLinkClick} className="flex items-center justify-between rounded-2xl bg-black/40 px-4 py-3 transition hover:bg-primary/15 hover:text-white">
+                <Link href={`/login?redirect=${encodeURIComponent(pathname)}`} onClick={handleLinkClick} className="flex items-center justify-between rounded-2xl bg-black/40 px-4 py-3 transition hover:bg-primary/15 hover:text-white">
                   <span className="flex items-center gap-3"><User size={18} /> Sign in</span>
                   <ChevronRight className="w-4 h-4" />
                 </Link>

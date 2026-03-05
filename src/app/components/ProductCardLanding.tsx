@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Clapperboard, Loader2, Check, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 // --- Type Definitions ---
 type StockInfo = { id: string; size: string; stock: number };
@@ -53,6 +53,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
   const { addToCart } = useCart();
   const { user, isGuest } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [activeVariantIndex, setActiveVariantIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
@@ -110,7 +111,18 @@ export const ProductCard = ({ product }: { product: Product }) => {
     e.preventDefault();
     e.stopPropagation();
     if (!user && !isGuest) {
-      router.push(`/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
+      // Store cart intent before redirecting to login
+      if (selectedSize) {
+        const selectedSku = activeVariant.stock.find(s => s.size === selectedSize);
+        if (selectedSku && selectedSku.stock > 0) {
+          sessionStorage.setItem('addToCartAfterLogin', JSON.stringify({
+            skuId: selectedSku.id,
+            quantity: 1,
+            timestamp: Date.now()
+          }));
+        }
+      }
+      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
     if (!selectedSize) { alert("Please select a size."); return; }
