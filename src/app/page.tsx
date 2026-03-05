@@ -6,10 +6,12 @@ import BrandEthos from "@/app/components/landing/BrandEthos";
 import FreeDeliveryPopup from "@/app/components/FreeDeliveryPopup";
 
 
+
 export default function HomePage() {
   return (
     <main>
             <VideoShowcase /> 
+          
 
       <FeaturedProducts />
   {/* 2. Add it right after featured products */}
