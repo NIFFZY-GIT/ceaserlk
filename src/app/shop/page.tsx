@@ -213,7 +213,7 @@ const ShopPage = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4 lg:gap-12">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4 lg:items-start lg:gap-12">
           <FilterSidebar
             showDesktop={isDesktopFilterVisible}
             isOpen={isMobileFilterOpen}
