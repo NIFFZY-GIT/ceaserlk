@@ -44,6 +44,9 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
 }) => {
   const desktopPanelRef = useRef<HTMLDivElement>(null);
   const [desktopTopOffset, setDesktopTopOffset] = useState<number | null>(null);
+  const desktopTargetTopRef = useRef<number | null>(null);
+  const desktopCurrentTopRef = useRef<number | null>(null);
+  const desktopSmoothFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -66,8 +69,51 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
     let frameId: number | null = null;
 
+    const stopSmoothAnimation = () => {
+      if (desktopSmoothFrameRef.current !== null) {
+        window.cancelAnimationFrame(desktopSmoothFrameRef.current);
+        desktopSmoothFrameRef.current = null;
+      }
+    };
+
+    const animateTowardsTarget = () => {
+      const target = desktopTargetTopRef.current;
+      if (target === null) {
+        desktopSmoothFrameRef.current = null;
+        return;
+      }
+
+      const current = desktopCurrentTopRef.current ?? target;
+      const next = current + (target - current) * 0.18;
+      const settled = Math.abs(target - next) < 0.35;
+      const resolvedTop = settled ? target : next;
+
+      desktopCurrentTopRef.current = resolvedTop;
+      setDesktopTopOffset((prev) => {
+        if (prev !== null && Math.abs(prev - resolvedTop) < 0.1) {
+          return prev;
+        }
+        return resolvedTop;
+      });
+
+      if (settled) {
+        desktopSmoothFrameRef.current = null;
+        return;
+      }
+
+      desktopSmoothFrameRef.current = window.requestAnimationFrame(animateTowardsTarget);
+    };
+
+    const startSmoothAnimation = () => {
+      if (desktopSmoothFrameRef.current !== null) return;
+      desktopSmoothFrameRef.current = window.requestAnimationFrame(animateTowardsTarget);
+    };
+
     const updateDesktopPosition = () => {
       if (!showDesktop || window.innerWidth < 1024) {
+        stopSmoothAnimation();
+        desktopTargetTopRef.current = null;
+        desktopCurrentTopRef.current = null;
         setDesktopTopOffset(null);
         return;
       }
@@ -85,12 +131,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       const maxTop = boundaryRect.bottom - panelHeight;
       const nextTop = Math.min(Math.max(centeredTop, minTop), maxTop);
 
-      setDesktopTopOffset((prev) => {
-        if (prev !== null && Math.abs(prev - nextTop) < 0.5) {
-          return prev;
-        }
-        return nextTop;
-      });
+      if (desktopCurrentTopRef.current === null) {
+        desktopCurrentTopRef.current = nextTop;
+        setDesktopTopOffset(nextTop);
+      }
+
+      desktopTargetTopRef.current = nextTop;
+      startSmoothAnimation();
     };
 
     const requestUpdate = () => {
@@ -109,6 +156,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       if (frameId !== null) {
         window.cancelAnimationFrame(frameId);
       }
+      stopSmoothAnimation();
       window.removeEventListener('scroll', requestUpdate);
       window.removeEventListener('resize', requestUpdate);
     };
@@ -252,8 +300,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       <aside className={`${showDesktop ? 'hidden lg:block' : 'hidden'}`}>
         <div
           ref={desktopPanelRef}
-          style={desktopTopOffset !== null ? { top: `${desktopTopOffset}px` } : undefined}
-          className="lg:fixed lg:top-0 lg:left-[max(2rem,calc((100vw-80rem)/2+2rem))] lg:w-[clamp(14rem,22vw,17.5rem)] lg:z-20 lg:transition-[top] lg:duration-200 lg:ease-out"
+          style={desktopTopOffset !== null ? { top: `${desktopTopOffset}px`, willChange: 'top' } : undefined}
+          className="lg:fixed lg:top-0 lg:left-[max(2rem,calc((100vw-80rem)/2+2rem))] lg:w-[clamp(14rem,22vw,17.5rem)] lg:z-20"
         >
           <div className="bg-white border border-[#e5e5e5] p-6 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto modern-scrollbar">
             <div className="flex items-center justify-between pb-4 mb-6 border-b border-[#e5e5e5]">
