@@ -193,8 +193,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className={`${showDesktop ? 'hidden lg:block lg:col-span-1 lg:self-start lg:h-fit lg:sticky lg:top-[max(8rem,calc(50vh-170px))]' : 'hidden'}`}>
-        <div>
+      <aside className={`${showDesktop ? 'hidden lg:block lg:col-span-1' : 'hidden'}`}>
+        <div className="lg:sticky lg:top-[max(8rem,calc(50vh-170px))]">
           <div className="bg-white border border-[#e5e5e5] p-6">
             <div className="flex items-center justify-between pb-4 mb-6 border-b border-[#e5e5e5]">
               <h2 className="flex items-center gap-3 text-xs font-semibold tracking-widest uppercase text-[#1a1a1a]">
