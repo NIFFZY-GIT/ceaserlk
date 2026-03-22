@@ -47,6 +47,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   const desktopTargetTopRef = useRef<number | null>(null);
   const desktopCurrentTopRef = useRef<number | null>(null);
   const desktopSmoothFrameRef = useRef<number | null>(null);
+  const desktopBoundsRef = useRef<{ min: number; max: number } | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -68,6 +69,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     if (typeof window === 'undefined') return;
 
     let frameId: number | null = null;
+    const animationSpeed = 0.1;
+    const settleThreshold = 0.35;
 
     const stopSmoothAnimation = () => {
       if (desktopSmoothFrameRef.current !== null) {
@@ -83,10 +86,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         return;
       }
 
-      const current = desktopCurrentTopRef.current ?? target;
-      const next = current + (target - current) * 0.18;
-      const settled = Math.abs(target - next) < 0.35;
-      const resolvedTop = settled ? target : next;
+      const bounds = desktopBoundsRef.current;
+      const currentRaw = desktopCurrentTopRef.current ?? target;
+      const current = bounds ? Math.min(Math.max(currentRaw, bounds.min), bounds.max) : currentRaw;
+      const next = current + (target - current) * animationSpeed;
+      const settled = Math.abs(target - next) < settleThreshold;
+      const resolvedRaw = settled ? target : next;
+      const resolvedTop = bounds ? Math.min(Math.max(resolvedRaw, bounds.min), bounds.max) : resolvedRaw;
 
       desktopCurrentTopRef.current = resolvedTop;
       setDesktopTopOffset((prev) => {
@@ -114,6 +120,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         stopSmoothAnimation();
         desktopTargetTopRef.current = null;
         desktopCurrentTopRef.current = null;
+        desktopBoundsRef.current = null;
         setDesktopTopOffset(null);
         return;
       }
@@ -128,10 +135,16 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
       // Clamp the panel's viewport top between content start and content end.
       const minTop = boundaryRect.top;
-      const maxTop = boundaryRect.bottom - panelHeight;
+      const maxTop = Math.max(minTop, boundaryRect.bottom - panelHeight);
       const nextTop = Math.min(Math.max(centeredTop, minTop), maxTop);
 
+      desktopBoundsRef.current = { min: minTop, max: maxTop };
+
       if (desktopCurrentTopRef.current === null) {
+        desktopCurrentTopRef.current = nextTop;
+        setDesktopTopOffset(nextTop);
+      } else if (desktopCurrentTopRef.current < minTop || desktopCurrentTopRef.current > maxTop) {
+        // Hard-clamp immediately if bounds changed, so it never enters hero/footer sections.
         desktopCurrentTopRef.current = nextTop;
         setDesktopTopOffset(nextTop);
       }
