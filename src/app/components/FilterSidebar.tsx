@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from 'lucide-react';
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 
 // Define the shape of the filters object that will be passed around
 export interface Filters {
@@ -42,6 +42,9 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   maxPrice,
   showDesktop,
 }) => {
+  const desktopPanelRef = useRef<HTMLDivElement>(null);
+  const [desktopTopOffset, setDesktopTopOffset] = useState<number | null>(null);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const previousOverflow = document.body.style.overflow;
@@ -57,6 +60,59 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       document.body.style.overflow = previousOverflow;
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let frameId: number | null = null;
+
+    const updateDesktopPosition = () => {
+      if (!showDesktop || window.innerWidth < 1024) {
+        setDesktopTopOffset(null);
+        return;
+      }
+
+      const boundary = document.getElementById('shop-content-boundary');
+      const panel = desktopPanelRef.current;
+      if (!boundary || !panel) return;
+
+      const boundaryRect = boundary.getBoundingClientRect();
+      const panelHeight = panel.offsetHeight;
+      const centeredTop = (window.innerHeight - panelHeight) / 2;
+
+      // Clamp the panel's viewport top between content start and content end.
+      const minTop = boundaryRect.top;
+      const maxTop = boundaryRect.bottom - panelHeight;
+      const nextTop = Math.min(Math.max(centeredTop, minTop), maxTop);
+
+      setDesktopTopOffset((prev) => {
+        if (prev !== null && Math.abs(prev - nextTop) < 0.5) {
+          return prev;
+        }
+        return nextTop;
+      });
+    };
+
+    const requestUpdate = () => {
+      if (frameId !== null) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null;
+        updateDesktopPosition();
+      });
+    };
+
+    requestUpdate();
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate);
+
+    return () => {
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      window.removeEventListener('scroll', requestUpdate);
+      window.removeEventListener('resize', requestUpdate);
+    };
+  }, [showDesktop]);
 
   // Helper function to handle toggling array filters (sizes, colors)
   const handleToggle = (filterType: 'sizes' | 'colors', value: string) => {
@@ -193,9 +249,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className={`${showDesktop ? 'hidden lg:block lg:col-span-1' : 'hidden'}`}>
-        <div className="lg:sticky lg:top-[max(8rem,calc(50vh-170px))]">
-          <div className="bg-white border border-[#e5e5e5] p-6">
+      <aside className={`${showDesktop ? 'hidden lg:block' : 'hidden'}`}>
+        <div
+          ref={desktopPanelRef}
+          style={desktopTopOffset !== null ? { top: `${desktopTopOffset}px` } : undefined}
+          className="lg:fixed lg:top-0 lg:left-[max(2rem,calc((100vw-80rem)/2+2rem))] lg:w-[clamp(14rem,22vw,17.5rem)] lg:z-20 lg:transition-[top] lg:duration-200 lg:ease-out"
+        >
+          <div className="bg-white border border-[#e5e5e5] p-6 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto modern-scrollbar">
             <div className="flex items-center justify-between pb-4 mb-6 border-b border-[#e5e5e5]">
               <h2 className="flex items-center gap-3 text-xs font-semibold tracking-widest uppercase text-[#1a1a1a]">
                 Filters

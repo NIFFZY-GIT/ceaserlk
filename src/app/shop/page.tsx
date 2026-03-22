@@ -213,7 +213,7 @@ const ShopPage = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4 lg:gap-12">
+        <div id="shop-content-boundary" className="relative">
           <FilterSidebar
             showDesktop={isDesktopFilterVisible}
             isOpen={isMobileFilterOpen}
@@ -226,7 +226,7 @@ const ShopPage = () => {
             minPrice={priceRange.minPrice}
             maxPrice={priceRange.maxPrice}
           />
-          <section className={`flex flex-col gap-8 transition-all duration-300 ${isDesktopFilterVisible ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
+          <section className={`flex flex-col gap-8 transition-all duration-300 ${isDesktopFilterVisible ? 'lg:pl-[calc(clamp(14rem,22vw,17.5rem)+3rem)]' : ''}`}>
             {/* Toolbar */}
             <div className="flex flex-col gap-4 border-b border-[#e5e5e5] pb-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-3">
