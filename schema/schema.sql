@@ -1569,6 +1569,9 @@ CREATE TABLE IF NOT EXISTS public.launch_settings (
     CONSTRAINT launch_settings_background_mode_valid CHECK (background_mode IN ('video', 'slider'))
 );
 
+ALTER TABLE public.launch_settings
+    ADD COLUMN IF NOT EXISTS background_audio_url character varying(500);
+
 INSERT INTO public.launch_settings (
     id,
     upcoming_enabled,
