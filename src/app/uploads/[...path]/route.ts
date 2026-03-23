@@ -26,22 +26,6 @@ function sanitizePath(segments: string[] = []): string[] {
     .map(segment => segment.replace(/[^a-zA-Z0-9._-]/g, ''));
 }
 
-// Helper to find the uploads directory in standalone mode
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function _getUploadsBasePath(): string {
-  // In standalone mode, try multiple paths
-  const possiblePaths = [
-    path.join(process.cwd(), 'public', 'uploads'),           // Standard development
-    path.join(process.cwd(), 'uploads'),                      // Standalone without public
-    path.join(process.cwd(), '..', 'public', 'uploads'),      // One level up
-    '/app/public/uploads',                                     // Docker absolute path
-    path.join(process.cwd(), '.next', 'standalone', 'public', 'uploads'), // Inside .next
-  ];
-  
-  // Return first path or default
-  return possiblePaths[0];
-}
-
 export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path: paramSegments } = await context.params;
   const safeSegments = sanitizePath(paramSegments);
@@ -52,16 +36,15 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
 
   // Try multiple base paths for standalone compatibility
   const basePaths = [
-    path.join(process.cwd(), 'public', 'uploads'),
-    path.join(process.cwd(), 'uploads'),
-    path.join(process.cwd(), '..', 'public', 'uploads'),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'uploads'),
+    path.join(/*turbopackIgnore: true*/ process.cwd(), 'uploads'),
   ];
 
   let fileBuffer: Buffer | null = null;
   let foundPath = '';
 
   for (const basePath of basePaths) {
-    const filePath = path.join(basePath, ...safeSegments);
+    const filePath = path.join(/*turbopackIgnore: true*/ basePath, ...safeSegments);
     try {
       fileBuffer = await fs.readFile(filePath);
       foundPath = filePath;
@@ -73,13 +56,12 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
   }
 
   if (!fileBuffer) {
-    console.error('File not found in any path:', safeSegments.join('/'));
-    console.error('Searched paths:', basePaths.map(p => path.join(p, ...safeSegments)));
-    console.error('Current working directory:', process.cwd());
+    const searchedPaths = basePaths.map((basePath) => path.join(/*turbopackIgnore: true*/ basePath, ...safeSegments));
+    console.error('File not found in any uploads path:', safeSegments.join('/'));
+    console.error('Searched paths:', searchedPaths);
     return NextResponse.json({ 
       error: 'File not found',
-      searched: basePaths.map(p => path.join(p, ...safeSegments)),
-      cwd: process.cwd()
+      searched: searchedPaths,
     }, { status: 404 });
   }
 

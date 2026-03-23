@@ -30,19 +30,12 @@ export interface InvoiceData {
 // Load letterhead image as base64
 function getLetterheadBase64(): string | null {
   try {
-    // Try multiple paths for different environments
-    const possiblePaths = [
-      path.join(process.cwd(), 'public', 'assets', 'invoice.png'),
-      path.join(process.cwd(), 'public/assets/invoice.png'),
-      './public/assets/invoice.png',
-    ];
-    
-    for (const imgPath of possiblePaths) {
-      if (fs.existsSync(imgPath)) {
-        const imageBuffer = fs.readFileSync(imgPath);
-        return imageBuffer.toString('base64');
-      }
+    const imagePath = path.join(process.cwd(), 'public', 'assets', 'invoice.png');
+    if (fs.existsSync(imagePath)) {
+      const imageBuffer = fs.readFileSync(imagePath);
+      return imageBuffer.toString('base64');
     }
+
     console.warn('Invoice letterhead image not found');
     return null;
   } catch (error) {
