@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
-import { LayoutDashboard, ShoppingBag, Users, PackagePlus, Shield, Mail } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, PackagePlus, Shield, Mail, Clock3 } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
@@ -12,6 +12,7 @@ const navItems = [
   { name: 'Customers', href: '/admin/customers', icon: Users },
   { name: 'Admins', href: '/admin/admins', icon: Shield },
   { name: 'Send Email', href: '/admin/send-email', icon: Mail },
+  { name: 'Upcoming', href: '/admin/upcoming', icon: Clock3 },
 ];
 
 type SidebarProps = {

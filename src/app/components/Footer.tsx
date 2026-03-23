@@ -128,7 +128,7 @@ const Footer = () => {
             className="inline-flex items-center gap-2 rounded-full border border-gray-800/80 bg-black/30 px-3 py-1.5 text-[10px] sm:text-xs text-gray-300 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             aria-label="Designed and Developed by ZEVARONE"
           >
-            <span className="text-gray-400">Designed &amp; Developed by</span>
+            <span className="text-gray-400">Powered by</span>
             <span className="font-semibold tracking-wide text-white">ZEVARONE</span>
           </a>
         </div>

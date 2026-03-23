@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -12,7 +12,9 @@ import { useAuth } from '@/context/AuthContext';
 
 const navLinks = [
   { href: '/', label: 'Home' },
+
   { href: '/shop', label: 'Shop' },
+    { href: '/upcoming', label: 'Upcoming' },
   { href: '/about', label: 'Our Mission' },
   { href: '/contact', label: 'Contact Us' },
 ];
@@ -24,6 +26,7 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isUpcomingEnabled, setIsUpcomingEnabled] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Check if we're on a product page
@@ -56,6 +59,24 @@ const Navbar = () => {
       document.body.style.overflow = 'auto';
     };
   }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    const checkUpcomingEnabled = async () => {
+      try {
+        const response = await fetch('/api/waiting-list', { cache: 'no-store' });
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as { upcomingEnabled?: boolean };
+        setIsUpcomingEnabled(data.upcomingEnabled !== false);
+      } catch {
+        // Keep default nav state if this request fails.
+      }
+    };
+
+    checkUpcomingEnabled();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -98,6 +119,10 @@ const Navbar = () => {
   };
 
   const hasItems = cartCount > 0;
+  const visibleNavLinks = useMemo(
+    () => navLinks.filter((link) => link.href !== '/upcoming' || isUpcomingEnabled),
+    [isUpcomingEnabled]
+  );
 
   // Check if navbar should use dark text (transparent on product page)
   const usesDarkText = isProductPage && !isScrolled;
@@ -115,17 +140,20 @@ const Navbar = () => {
 
   return (
     <header className={`${positionClass} top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${navbarBgClass} ${textColorClass}`}>
-      <nav className="container mx-auto flex w-full max-w-6xl items-center justify-between px-3 py-3 sm:px-5 md:px-6 md:py-5">
-        <Link href="/" onClick={handleLinkClick} className="flex items-center gap-2 rounded-md transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent hover:opacity-90">
+      <nav className="container mx-auto flex w-full max-w-7xl items-center justify-between px-3 py-3 sm:px-5 md:px-6 md:py-5">
+        <div className="flex shrink-0 items-center md:basis-56 lg:basis-64">
+          <Link href="/" onClick={handleLinkClick} className="flex items-center gap-2 rounded-md transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-accent hover:opacity-90">
           <Image src="/images/logo1.png" alt="CEASAR Brand Logo" width={150} height={63} priority className="h-9 w-auto sm:h-10 md:h-12" />
-        </Link>
+          </Link>
+        </div>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center space-x-6 lg:space-x-10">
-          {navLinks.map((link) => {
+        <div className="hidden flex-1 items-center justify-center px-8 md:flex lg:px-12">
+          <div className="flex items-center gap-7 lg:gap-11">
+          {visibleNavLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
-              <Link key={link.label} href={link.href} className={`group relative flex flex-col items-center gap-1 uppercase text-[13px] tracking-[0.25em] transition-all duration-200 ${isActive ? (usesDarkText ? 'text-neutral-900 font-semibold' : 'text-white font-semibold') : (usesDarkText ? 'text-neutral-900/60 font-medium hover:text-neutral-900 hover:font-semibold' : 'text-white/50 font-medium hover:text-white hover:font-semibold')}`}>
+              <Link key={link.label} href={link.href} className={`group relative flex flex-col items-center gap-1 whitespace-nowrap uppercase text-[12px] tracking-[0.2em] transition-all duration-200 ${isActive ? (usesDarkText ? 'text-neutral-900 font-semibold' : 'text-white font-semibold') : (usesDarkText ? 'text-neutral-900/60 font-medium hover:text-neutral-900 hover:font-semibold' : 'text-white/50 font-medium hover:text-white hover:font-semibold')}`}>
                 <span>{link.label}</span>
                 <span className={`absolute -bottom-5 left-1/2 flex h-[3px] w-14 -translate-x-1/2 transform overflow-hidden rounded-full transition-all duration-200 ${isActive ? 'scale-100 opacity-100' : 'scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100'}`}>
                   <span className="flex-1 bg-[#009246]"></span>
@@ -135,9 +163,10 @@ const Navbar = () => {
               </Link>
             );
           })}
+          </div>
         </div>
         
-        <div className="flex items-center space-x-2 sm:space-x-4">
+        <div className="flex shrink-0 items-center justify-end space-x-2 sm:space-x-4 md:basis-56 lg:basis-64">
           {/* Desktop Profile Icon */}
           <div className="hidden md:block">
             {user ? (
@@ -269,7 +298,7 @@ const Navbar = () => {
       {/* Mobile Menu */}
       <div className={`absolute top-full left-0 w-full bg-[rgba(10,10,12,0.96)] md:hidden transition-all duration-300 ease-in-out overflow-hidden ${isMobileMenuOpen ? 'max-h-screen' : 'max-h-0'}`}>
         <div className="flex flex-col px-5 py-8 space-y-4">
-          {navLinks.map((link) => (
+          {visibleNavLinks.map((link) => (
             <Link key={link.label} href={link.href} onClick={handleLinkClick} className={`flex items-center justify-between rounded-2xl border px-4 py-4 text-base font-semibold uppercase tracking-[0.08em] transition ${pathname === link.href ? 'border-primary/60 bg-primary/10 text-white' : 'border-white/10 text-gray-200 hover:border-primary/40 hover:bg-primary/5 hover:text-white'}`}>
               <span>{link.label}</span>
               <ChevronRight className="w-4 h-4" />
