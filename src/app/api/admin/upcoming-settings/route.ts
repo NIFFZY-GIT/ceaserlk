@@ -81,6 +81,7 @@ export async function PUT(request: NextRequest) {
     let payload: Record<string, unknown> = {};
     let logoImageUrl = existing.logoImageUrl;
     let backgroundVideoUrl = existing.backgroundVideoUrl;
+    let backgroundAudioUrl = existing.backgroundAudioUrl;
     let backgroundSliderImages = existing.backgroundSliderImages;
 
     if (contentType.includes('multipart/form-data')) {
@@ -102,6 +103,11 @@ export async function PUT(request: NextRequest) {
       const backgroundVideoFile = formData.get('backgroundVideoFile');
       if (backgroundVideoFile instanceof File && backgroundVideoFile.size > 0) {
         backgroundVideoUrl = await saveUpcomingMedia(backgroundVideoFile, 'background');
+      }
+
+      const backgroundAudioFile = formData.get('backgroundAudioFile');
+      if (backgroundAudioFile instanceof File && backgroundAudioFile.size > 0) {
+        backgroundAudioUrl = await saveUpcomingMedia(backgroundAudioFile, 'audio');
       }
 
       const sliderFiles = formData.getAll('backgroundSliderImages').filter(
@@ -126,6 +132,10 @@ export async function PUT(request: NextRequest) {
 
       if (typeof payload.backgroundVideoUrl === 'string') {
         backgroundVideoUrl = payload.backgroundVideoUrl.trim() || null;
+      }
+
+      if (typeof payload.backgroundAudioUrl === 'string') {
+        backgroundAudioUrl = payload.backgroundAudioUrl.trim() || null;
       }
 
       if (Array.isArray(payload.backgroundSliderImages)) {
@@ -159,6 +169,7 @@ export async function PUT(request: NextRequest) {
       ...settings,
       logoImageUrl,
       backgroundVideoUrl,
+      backgroundAudioUrl,
       backgroundSliderImages,
     });
     const snapshot = await getUpcomingSnapshot();

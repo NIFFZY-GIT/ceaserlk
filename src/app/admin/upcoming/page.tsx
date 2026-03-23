@@ -13,6 +13,7 @@ type AdminSettingsResponse = {
   logoImageUrl: string;
   backgroundMode: 'video' | 'slider';
   backgroundVideoUrl: string | null;
+  backgroundAudioUrl: string | null;
   backgroundSliderImages: string[];
   waitingListEntries?: Array<{
     id: number;
@@ -49,11 +50,13 @@ export default function AdminUpcomingPage() {
   const [logoImageUrl, setLogoImageUrl] = useState('');
   const [backgroundMode, setBackgroundMode] = useState<'video' | 'slider'>('slider');
   const [backgroundVideoUrl, setBackgroundVideoUrl] = useState<string | null>(null);
+  const [backgroundAudioUrl, setBackgroundAudioUrl] = useState<string | null>(null);
   const [backgroundSliderImages, setBackgroundSliderImages] = useState<string[]>([]);
   const [waitingListEntries, setWaitingListEntries] = useState<Array<{ id: number; phoneNumber: string; createdAt: string }>>([]);
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [backgroundVideoFile, setBackgroundVideoFile] = useState<File | null>(null);
+  const [backgroundAudioFile, setBackgroundAudioFile] = useState<File | null>(null);
   const [sliderImageFiles, setSliderImageFiles] = useState<File[]>([]);
 
   const totalCount = useMemo(() => baseCount + dbCount, [baseCount, dbCount]);
@@ -81,6 +84,7 @@ export default function AdminUpcomingPage() {
         setLogoImageUrl(data.logoImageUrl || '');
         setBackgroundMode(data.backgroundMode || 'slider');
         setBackgroundVideoUrl(data.backgroundVideoUrl || null);
+        setBackgroundAudioUrl(data.backgroundAudioUrl || null);
         setBackgroundSliderImages(Array.isArray(data.backgroundSliderImages) ? data.backgroundSliderImages : []);
         setWaitingListEntries(Array.isArray(data.waitingListEntries) ? data.waitingListEntries : []);
       } catch (fetchError) {
@@ -117,6 +121,10 @@ export default function AdminUpcomingPage() {
         formData.append('backgroundVideoFile', backgroundVideoFile);
       }
 
+      if (backgroundAudioFile) {
+        formData.append('backgroundAudioFile', backgroundAudioFile);
+      }
+
       sliderImageFiles.forEach((file) => {
         formData.append('backgroundSliderImages', file);
       });
@@ -141,11 +149,13 @@ export default function AdminUpcomingPage() {
       setLogoImageUrl(data.logoImageUrl || '');
       setBackgroundMode(data.backgroundMode || 'slider');
       setBackgroundVideoUrl(data.backgroundVideoUrl || null);
+      setBackgroundAudioUrl(data.backgroundAudioUrl || null);
       setBackgroundSliderImages(Array.isArray(data.backgroundSliderImages) ? data.backgroundSliderImages : []);
       setWaitingListEntries(Array.isArray(data.waitingListEntries) ? data.waitingListEntries : []);
 
       setLogoFile(null);
       setBackgroundVideoFile(null);
+      setBackgroundAudioFile(null);
       setSliderImageFiles([]);
       setSuccessMessage(data.message || 'Settings saved');
     } catch (saveError) {
@@ -192,11 +202,13 @@ export default function AdminUpcomingPage() {
       setLogoImageUrl(data.logoImageUrl || '');
       setBackgroundMode(data.backgroundMode || 'slider');
       setBackgroundVideoUrl(data.backgroundVideoUrl || null);
+      setBackgroundAudioUrl(data.backgroundAudioUrl || null);
       setBackgroundSliderImages(Array.isArray(data.backgroundSliderImages) ? data.backgroundSliderImages : []);
       setWaitingListEntries(Array.isArray(data.waitingListEntries) ? data.waitingListEntries : []);
 
       setLogoFile(null);
       setBackgroundVideoFile(null);
+      setBackgroundAudioFile(null);
       setSliderImageFiles([]);
       setSuccessMessage(data.message || 'Action completed');
     } catch (actionError) {
@@ -337,6 +349,27 @@ export default function AdminUpcomingPage() {
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
           />
           {backgroundVideoUrl ? <p className="mt-2 text-xs text-gray-600">Current video: {backgroundVideoUrl}</p> : null}
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">Background Music (optional)</label>
+          <input
+            type="file"
+            accept="audio/*"
+            onChange={(event) => {
+              const file = event.target.files?.[0] || null;
+              setBackgroundAudioFile(file);
+            }}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+          />
+          {backgroundAudioUrl ? (
+            <div className="mt-2 space-y-2">
+              <p className="text-xs text-gray-600">Current audio: {backgroundAudioUrl}</p>
+              <audio controls className="w-full">
+                <source src={backgroundAudioUrl} />
+              </audio>
+            </div>
+          ) : null}
         </div>
 
         <div>

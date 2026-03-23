@@ -18,6 +18,7 @@ const CREATE_UPCOMING_TABLES_SQL = `
     logo_image_url VARCHAR(500) NOT NULL DEFAULT '/images/michale copy2.png',
     background_mode VARCHAR(16) NOT NULL DEFAULT 'slider',
     background_video_url VARCHAR(500),
+    background_audio_url VARCHAR(500),
     background_slider_images JSONB NOT NULL DEFAULT '["/images/h123.JPG"]'::jsonb,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
@@ -33,6 +34,9 @@ const CREATE_UPCOMING_TABLES_SQL = `
 
   ALTER TABLE launch_settings
     ADD COLUMN IF NOT EXISTS background_video_url VARCHAR(500);
+
+  ALTER TABLE launch_settings
+    ADD COLUMN IF NOT EXISTS background_audio_url VARCHAR(500);
 
   ALTER TABLE launch_settings
     ADD COLUMN IF NOT EXISTS background_slider_images JSONB NOT NULL DEFAULT '["/images/h123.JPG"]'::jsonb;
@@ -83,6 +87,7 @@ export interface UpcomingSnapshot {
   logoImageUrl: string;
   backgroundMode: 'video' | 'slider';
   backgroundVideoUrl: string | null;
+  backgroundAudioUrl: string | null;
   backgroundSliderImages: string[];
 }
 
@@ -94,6 +99,7 @@ export interface UpcomingSettingsInput {
   logoImageUrl: string;
   backgroundMode: 'video' | 'slider';
   backgroundVideoUrl: string | null;
+  backgroundAudioUrl: string | null;
   backgroundSliderImages: string[];
 }
 
@@ -140,9 +146,9 @@ function sanitizeFilename(filename: string): string {
   return `${safeBase || 'file'}${ext.toLowerCase()}`;
 }
 
-export async function saveUpcomingMedia(file: File, category: 'logo' | 'background'): Promise<string> {
+export async function saveUpcomingMedia(file: File, category: 'logo' | 'background' | 'audio'): Promise<string> {
   const safeName = `${Date.now()}-${sanitizeFilename(file.name)}`;
-  const subFolder = category === 'logo' ? 'logo' : 'background';
+  const subFolder = category === 'logo' ? 'logo' : category === 'audio' ? 'audio' : 'background';
   const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'upcoming', subFolder);
 
   await fs.mkdir(uploadDir, { recursive: true });
@@ -181,6 +187,7 @@ export async function getUpcomingSnapshot(): Promise<UpcomingSnapshot> {
       s.logo_image_url,
       s.background_mode,
       s.background_video_url,
+      s.background_audio_url,
       s.background_slider_images,
       (SELECT COUNT(*)::INT FROM waiting_list_entries) AS db_count
     FROM launch_settings s
@@ -203,6 +210,7 @@ export async function getUpcomingSnapshot(): Promise<UpcomingSnapshot> {
     logoImageUrl: row?.logo_image_url || '/images/michale copy2.png',
     backgroundMode,
     backgroundVideoUrl: row?.background_video_url || null,
+    backgroundAudioUrl: row?.background_audio_url || null,
     backgroundSliderImages,
   };
 }
@@ -258,6 +266,7 @@ export async function resetUpcomingSettings(): Promise<void> {
          logo_image_url = '/images/michale copy2.png',
          background_mode = 'slider',
          background_video_url = NULL,
+         background_audio_url = NULL,
          background_slider_images = '["/images/h123.JPG"]'::jsonb,
          updated_at = NOW()
      WHERE id = 1`
@@ -278,7 +287,8 @@ export async function updateUpcomingSettings(input: UpcomingSettingsInput): Prom
          logo_image_url = $5,
          background_mode = $6,
          background_video_url = $7,
-         background_slider_images = $8::jsonb,
+         background_audio_url = $8,
+         background_slider_images = $9::jsonb,
          updated_at = NOW()
      WHERE id = 1`,
     [
@@ -289,6 +299,7 @@ export async function updateUpcomingSettings(input: UpcomingSettingsInput): Prom
       input.logoImageUrl,
       input.backgroundMode,
       input.backgroundVideoUrl,
+      input.backgroundAudioUrl,
       JSON.stringify(backgroundSliderImages),
     ]
   );

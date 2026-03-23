@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 // --- Types ---
 type WaitingListResponse = {
   success: boolean;
+  joined?: boolean;
   totalCount: number;
   upcomingEnabled: boolean;
   tshirtReleaseAt: string;
@@ -14,6 +15,7 @@ type WaitingListResponse = {
   logoImageUrl: string;
   backgroundMode: 'video' | 'slider';
   backgroundVideoUrl: string | null;
+  backgroundAudioUrl: string | null;
   backgroundSliderImages: string[];
   message?: string;
   error?: string;
@@ -163,8 +165,12 @@ export default function LuxModernPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [data, setData] = useState<WaitingListResponse | null>(null);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formMessage, setFormMessage] = useState<string | null>(null);
+  const [showJoinSuccessAlert, setShowJoinSuccessAlert] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const formattedCount = useMemo(() => {
     return new Intl.NumberFormat("en-US").format(data?.totalCount ?? 0);
@@ -214,11 +220,60 @@ export default function LuxModernPage() {
     return getCountdownRemainingMs(data?.movieReleaseAt ?? null) > 0;
   }, [data?.movieReleaseAt]);
 
+  const useVideoAudio = backgroundMode === 'video' && Boolean(data?.backgroundVideoUrl);
+  const useSliderAudio = backgroundMode === 'slider' && Boolean(data?.backgroundAudioUrl);
+  const hasAnyAudioSource = useVideoAudio || useSliderAudio;
+
+  useEffect(() => {
+    const audioElement = audioRef.current;
+    const audioUrl = useSliderAudio ? data?.backgroundAudioUrl : null;
+
+    if (!audioElement || !audioUrl) {
+      return;
+    }
+
+    audioElement.muted = isAudioMuted;
+    const playPromise = audioElement.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        // Ignore autoplay blocks; users can unmute/play with the control button.
+      });
+    }
+  }, [data?.backgroundAudioUrl, isAudioMuted, useSliderAudio]);
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
+
+    if (!videoElement || !useVideoAudio) {
+      return;
+    }
+
+    videoElement.muted = isAudioMuted;
+    const playPromise = videoElement.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        // Ignore autoplay blocks; users can toggle audio after interaction.
+      });
+    }
+  }, [isAudioMuted, useVideoAudio, data?.backgroundVideoUrl]);
+
   useEffect(() => {
     if (!isLoading && data && data.upcomingEnabled === false) {
       router.replace('/');
     }
   }, [isLoading, data, router]);
+
+  useEffect(() => {
+    if (!showJoinSuccessAlert) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowJoinSuccessAlert(false);
+    }, 5500);
+
+    return () => window.clearTimeout(timer);
+  }, [showJoinSuccessAlert]);
 
   if (!isLoading && data?.upcomingEnabled === false) {
     return null;
@@ -260,7 +315,12 @@ export default function LuxModernPage() {
 
       if (updated.success) setData(updated);
 
-      setFormMessage(updated.message || "You're on the list!");
+      if (updated.joined) {
+        setShowJoinSuccessAlert(true);
+        setFormMessage(null);
+      } else {
+        setFormMessage(updated.message || "This phone number is already on the waiting list.");
+      }
       setPhoneNumber("");
     } finally {
       setIsSubmitting(false);
@@ -269,16 +329,70 @@ export default function LuxModernPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-black px-4 pb-16 pt-16 text-white sm:px-6 lg:px-8">
+      {useSliderAudio ? (
+        <>
+          <audio
+            ref={audioRef}
+            src={data?.backgroundAudioUrl || undefined}
+            autoPlay
+            loop
+            playsInline
+            muted={isAudioMuted}
+          />
+        </>
+      ) : null}
+
+      {hasAnyAudioSource ? (
+        <button
+          type="button"
+          onClick={() => setIsAudioMuted((previous) => !previous)}
+          className="fixed bottom-5 left-4 z-[80] rounded-full border border-white/25 bg-black/60 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-md transition hover:border-white/40 hover:bg-black/75 sm:bottom-6 sm:left-6"
+          aria-label={isAudioMuted ? 'Unmute page audio' : 'Mute page audio'}
+        >
+          {isAudioMuted ? 'Unmute Audio' : 'Mute Audio'}
+        </button>
+      ) : null}
+
+      {showJoinSuccessAlert ? (
+        <div
+          className="fixed right-4 top-20 z-[80] w-[92vw] max-w-md overflow-hidden rounded-2xl border border-emerald-300/40 bg-black/85 shadow-[0_22px_60px_rgba(16,185,129,0.32)] backdrop-blur-xl sm:right-6 sm:top-24"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="h-1 w-full bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-500" />
+          <div className="flex items-start gap-3 p-4 sm:p-5">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-300/40 bg-emerald-400/15 text-emerald-200">
+              <span className="text-sm font-bold">OK</span>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-emerald-200/90">Waiting List Confirmed</p>
+              <p className="mt-1 text-base font-semibold text-white">You joined the waiting list.</p>
+              <p className="mt-1 text-sm leading-relaxed text-emerald-100/90">We will contact you once the tee is dropped.</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowJoinSuccessAlert(false)}
+              className="rounded-lg border border-white/20 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/85 transition hover:border-white/40 hover:bg-white/10 hover:text-white"
+              aria-label="Dismiss success alert"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ) : null}
       
       {/* 🔥 Background Glow */}
       <div className="absolute inset-0 pointer-events-none">
         {backgroundMode === 'video' && data?.backgroundVideoUrl ? (
           <video
+            ref={videoRef}
             key={data.backgroundVideoUrl}
             className="absolute inset-0 h-full w-full object-cover opacity-40"
             autoPlay
             loop
-            muted
+            muted={isAudioMuted}
             playsInline
           >
             <source src={data.backgroundVideoUrl} />
