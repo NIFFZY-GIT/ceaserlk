@@ -52,16 +52,6 @@ function normalizeCountryCode(input: string): string {
   return digitsOnly ? `+${digitsOnly}` : "+";
 }
 
-function detectCountryCodeFromLocale(): string {
-  if (typeof navigator === "undefined") return "+94";
-
-  const locale = navigator.language || "";
-  const region = locale.split("-")[1]?.toUpperCase();
-  if (!region) return "+94";
-
-  return REGION_TO_DIAL_CODE[region] || "+94";
-}
-
 type CountdownParts = {
   days: string;
   hours: string;
@@ -173,6 +163,16 @@ export default function LuxModernPage() {
   const [showJoinSuccessAlert, setShowJoinSuccessAlert] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const countryCodeInputRef = useRef<HTMLInputElement | null>(null);
+  const phoneInputRef = useRef<HTMLInputElement | null>(null);
+
+  const dialCodeDigits = useMemo(
+    () =>
+      Array.from(new Set(COUNTRY_CODES.map((item) => item.code.replace(/\D/g, "")))).sort(
+        (a, b) => b.length - a.length
+      ),
+    []
+  );
 
   const formattedCount = useMemo(() => {
     return new Intl.NumberFormat("en-US").format(data?.totalCount ?? 0);
@@ -186,10 +186,6 @@ export default function LuxModernPage() {
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    setCountryCode(detectCountryCodeFromLocale());
   }, []);
 
   const backgroundMode = data?.backgroundMode === 'video' ? 'video' : 'slider';
@@ -215,8 +211,38 @@ export default function LuxModernPage() {
 
   const selectedCountryLabel = useMemo(() => {
     const match = COUNTRY_CODES.find((item) => item.code === normalizeCountryCode(countryCode));
-    return match?.label || "Detected from your browser locale";
+    return match?.label || "Custom country code";
   }, [countryCode]);
+
+  const handleCountryCodeChange = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+
+    if (!digits) {
+      setCountryCode("+");
+      return;
+    }
+
+    let codeDigits = digits;
+    let overflowDigits = "";
+    const matchedDialCode = dialCodeDigits.find((dialCode) => digits.startsWith(dialCode));
+
+    if (matchedDialCode) {
+      codeDigits = matchedDialCode;
+      overflowDigits = digits.slice(matchedDialCode.length);
+    } else if (digits.length > 4) {
+      codeDigits = digits.slice(0, 4);
+      overflowDigits = digits.slice(4);
+    }
+
+    setCountryCode(`+${codeDigits}`);
+
+    if (overflowDigits) {
+      setPhoneNumber((prev) => `${overflowDigits}${prev}`.slice(0, 15));
+      window.requestAnimationFrame(() => {
+        phoneInputRef.current?.focus();
+      });
+    }
+  };
 
   const showMovieCountdown = useMemo(() => {
     return getCountdownRemainingMs(data?.movieReleaseAt ?? null) > 0;
@@ -521,22 +547,26 @@ export default function LuxModernPage() {
 
             <div className="grid gap-3 sm:grid-cols-[100px_1fr_auto]">
               <input
+                ref={countryCodeInputRef}
                 type="tel"
                 value={countryCode}
-                onChange={(e) => setCountryCode(normalizeCountryCode(e.target.value))}
+                onChange={(e) => handleCountryCodeChange(e.target.value)}
                 placeholder="+94"
                 className="h-12 rounded-xl border border-white/15 bg-black/70 px-3 text-base text-white outline-none transition placeholder:text-white/35 focus:border-white/40 focus:ring-2 focus:ring-white/35"
                 inputMode="numeric"
+                maxLength={5}
                 aria-label="Country code"
               />
 
               <input
+                ref={phoneInputRef}
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="Phone number"
                 className="h-12 rounded-xl border border-white/15 bg-black/70 px-4 text-base text-white outline-none transition placeholder:text-white/35 focus:border-white/40 focus:ring-2 focus:ring-white/35"
                 inputMode="numeric"
+                maxLength={15}
                 aria-label="Phone number"
               />
 
@@ -548,9 +578,7 @@ export default function LuxModernPage() {
               </button>
             </div>
 
-            <p className="text-xs text-white/60">
-              Auto-detected country: {selectedCountryLabel}
-            </p>
+            <p className="text-xs text-white/60">Country: {selectedCountryLabel}</p>
             <p className="text-xs text-white/60">
               Preview: {normalizeCountryCode(countryCode)} {phoneNumber || "••••••••"}
             </p>
