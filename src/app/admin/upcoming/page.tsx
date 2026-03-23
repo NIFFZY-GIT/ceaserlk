@@ -6,6 +6,7 @@ type AdminSettingsResponse = {
   success: boolean;
   upcomingEnabled: boolean;
   baseCount: number;
+  subtitleText: string;
   dbCount: number;
   totalCount: number;
   tshirtReleaseAt: string;
@@ -43,6 +44,7 @@ export default function AdminUpcomingPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [baseCount, setBaseCount] = useState(0);
+  const [subtitleText, setSubtitleText] = useState('Tribute Edition');
   const [upcomingEnabled, setUpcomingEnabled] = useState(true);
   const [dbCount, setDbCount] = useState(0);
   const [tshirtReleaseAt, setTshirtReleaseAt] = useState('');
@@ -77,6 +79,7 @@ export default function AdminUpcomingPage() {
         }
 
         setBaseCount(Number(data.baseCount ?? 0));
+        setSubtitleText(data.subtitleText || 'Tribute Edition');
         setUpcomingEnabled(data.upcomingEnabled !== false);
         setDbCount(Number(data.dbCount ?? 0));
         setTshirtReleaseAt(toDateTimeInputValue(data.tshirtReleaseAt));
@@ -108,6 +111,7 @@ export default function AdminUpcomingPage() {
 
       const formData = new FormData();
       formData.append('baseCount', String(baseCount));
+      formData.append('subtitleText', subtitleText.trim() || 'Tribute Edition');
       formData.append('upcomingEnabled', String(upcomingEnabled));
       formData.append('tshirtReleaseAt', toIsoFromDateTimeInput(tshirtReleaseAt));
       formData.append('movieReleaseAt', toIsoFromDateTimeInput(movieReleaseAt));
@@ -143,6 +147,7 @@ export default function AdminUpcomingPage() {
 
       setDbCount(Number(data.dbCount ?? 0));
       setBaseCount(Number(data.baseCount ?? 0));
+      setSubtitleText(data.subtitleText || 'Tribute Edition');
       setUpcomingEnabled(data.upcomingEnabled !== false);
       setTshirtReleaseAt(toDateTimeInputValue(data.tshirtReleaseAt));
       setMovieReleaseAt(toDateTimeInputValue(data.movieReleaseAt));
@@ -196,6 +201,7 @@ export default function AdminUpcomingPage() {
 
       setDbCount(Number(data.dbCount ?? 0));
       setBaseCount(Number(data.baseCount ?? 0));
+      setSubtitleText(data.subtitleText || 'Tribute Edition');
       setUpcomingEnabled(data.upcomingEnabled !== false);
       setTshirtReleaseAt(toDateTimeInputValue(data.tshirtReleaseAt));
       setMovieReleaseAt(toDateTimeInputValue(data.movieReleaseAt));
@@ -278,6 +284,19 @@ export default function AdminUpcomingPage() {
             value={baseCount}
             onChange={(event) => setBaseCount(Math.max(0, Number(event.target.value) || 0))}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-primary"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="subtitleText" className="mb-2 block text-sm font-medium text-gray-700">Header Subtitle Text</label>
+          <input
+            id="subtitleText"
+            type="text"
+            maxLength={120}
+            value={subtitleText}
+            onChange={(event) => setSubtitleText(event.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-primary"
+            placeholder="Tribute Edition"
           />
         </div>
 

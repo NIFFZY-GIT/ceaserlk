@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic';
 function parseAndValidateSettings(payload: unknown): {
   upcomingEnabled: boolean;
   baseCount: number;
+  subtitleText: string;
   tshirtReleaseAt: string;
   movieReleaseAt: string;
   backgroundMode: 'video' | 'slider';
@@ -28,6 +29,8 @@ function parseAndValidateSettings(payload: unknown): {
       ? true
       : data.upcomingEnabled === true || data.upcomingEnabled === 'true';
   const baseCount = Number(data.baseCount);
+  const subtitleTextRaw = typeof data.subtitleText === 'string' ? data.subtitleText.trim() : '';
+  const subtitleText = subtitleTextRaw.length > 0 ? subtitleTextRaw.slice(0, 120) : 'Tribute Edition';
   const tshirtReleaseAt = typeof data.tshirtReleaseAt === 'string' ? data.tshirtReleaseAt : '';
   const movieReleaseAt = typeof data.movieReleaseAt === 'string' ? data.movieReleaseAt : '';
   const backgroundMode = data.backgroundMode === 'video' ? 'video' : 'slider';
@@ -46,6 +49,7 @@ function parseAndValidateSettings(payload: unknown): {
   return {
     upcomingEnabled,
     baseCount,
+    subtitleText,
     tshirtReleaseAt: tshirtDate.toISOString(),
     movieReleaseAt: movieDate.toISOString(),
     backgroundMode,
@@ -90,6 +94,7 @@ export async function PUT(request: NextRequest) {
       payload = {
         upcomingEnabled: formData.get('upcomingEnabled'),
         baseCount: formData.get('baseCount'),
+        subtitleText: formData.get('subtitleText'),
         tshirtReleaseAt: formData.get('tshirtReleaseAt'),
         movieReleaseAt: formData.get('movieReleaseAt'),
         backgroundMode: formData.get('backgroundMode'),

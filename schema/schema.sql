@@ -1558,6 +1558,7 @@ CREATE TABLE IF NOT EXISTS public.launch_settings (
     base_count integer DEFAULT 0 NOT NULL,
     tshirt_release_at timestamp with time zone NOT NULL,
     movie_release_at timestamp with time zone NOT NULL,
+    subtitle_text character varying(120) DEFAULT 'Tribute Edition' NOT NULL,
     logo_image_url character varying(500) DEFAULT '/images/michale copy2.png' NOT NULL,
     background_mode character varying(16) DEFAULT 'slider' NOT NULL,
     background_video_url character varying(500),
@@ -1572,12 +1573,16 @@ CREATE TABLE IF NOT EXISTS public.launch_settings (
 ALTER TABLE public.launch_settings
     ADD COLUMN IF NOT EXISTS background_audio_url character varying(500);
 
+ALTER TABLE public.launch_settings
+    ADD COLUMN IF NOT EXISTS subtitle_text character varying(120) DEFAULT 'Tribute Edition' NOT NULL;
+
 INSERT INTO public.launch_settings (
     id,
     upcoming_enabled,
     base_count,
     tshirt_release_at,
     movie_release_at,
+    subtitle_text,
     logo_image_url,
     background_mode,
     background_audio_url,
@@ -1589,6 +1594,7 @@ VALUES (
     0,
     NOW() + INTERVAL '30 days',
     NOW() + INTERVAL '60 days',
+    'Tribute Edition',
     '/images/michale copy2.png',
     'slider',
     NULL,

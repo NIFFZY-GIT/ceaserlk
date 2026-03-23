@@ -15,6 +15,7 @@ const CREATE_UPCOMING_TABLES_SQL = `
     base_count INTEGER NOT NULL DEFAULT 0 CHECK (base_count >= 0),
     tshirt_release_at TIMESTAMPTZ NOT NULL,
     movie_release_at TIMESTAMPTZ NOT NULL,
+    subtitle_text VARCHAR(120) NOT NULL DEFAULT 'Tribute Edition',
     logo_image_url VARCHAR(500) NOT NULL DEFAULT '/images/michale copy2.png',
     background_mode VARCHAR(16) NOT NULL DEFAULT 'slider',
     background_video_url VARCHAR(500),
@@ -25,6 +26,9 @@ const CREATE_UPCOMING_TABLES_SQL = `
 
   ALTER TABLE launch_settings
     ADD COLUMN IF NOT EXISTS upcoming_enabled BOOLEAN NOT NULL DEFAULT true;
+
+  ALTER TABLE launch_settings
+    ADD COLUMN IF NOT EXISTS subtitle_text VARCHAR(120) NOT NULL DEFAULT 'Tribute Edition';
 
   ALTER TABLE launch_settings
     ADD COLUMN IF NOT EXISTS logo_image_url VARCHAR(500) NOT NULL DEFAULT '/images/michale copy2.png';
@@ -44,6 +48,7 @@ const CREATE_UPCOMING_TABLES_SQL = `
   UPDATE launch_settings
   SET
     upcoming_enabled = COALESCE(upcoming_enabled, true),
+    subtitle_text = COALESCE(NULLIF(subtitle_text, ''), 'Tribute Edition'),
     logo_image_url = COALESCE(NULLIF(logo_image_url, ''), '/images/michale copy2.png'),
     background_mode = CASE
       WHEN background_mode IN ('video', 'slider') THEN background_mode
@@ -60,6 +65,7 @@ const CREATE_UPCOMING_TABLES_SQL = `
     base_count,
     tshirt_release_at,
     movie_release_at,
+    subtitle_text,
     logo_image_url,
     background_mode,
     background_slider_images
@@ -70,6 +76,7 @@ const CREATE_UPCOMING_TABLES_SQL = `
     0,
     NOW() + INTERVAL '30 days',
     NOW() + INTERVAL '60 days',
+    'Tribute Edition',
     '/images/michale copy2.png',
     'slider',
     '[]'::jsonb
@@ -82,6 +89,7 @@ export interface UpcomingSnapshot {
   baseCount: number;
   dbCount: number;
   totalCount: number;
+  subtitleText: string;
   tshirtReleaseAt: string;
   movieReleaseAt: string;
   logoImageUrl: string;
@@ -94,6 +102,7 @@ export interface UpcomingSnapshot {
 export interface UpcomingSettingsInput {
   upcomingEnabled: boolean;
   baseCount: number;
+  subtitleText: string;
   tshirtReleaseAt: string;
   movieReleaseAt: string;
   logoImageUrl: string;
@@ -184,6 +193,7 @@ export async function getUpcomingSnapshot(): Promise<UpcomingSnapshot> {
       s.base_count,
       s.tshirt_release_at,
       s.movie_release_at,
+      s.subtitle_text,
       s.logo_image_url,
       s.background_mode,
       s.background_video_url,
@@ -205,6 +215,7 @@ export async function getUpcomingSnapshot(): Promise<UpcomingSnapshot> {
     baseCount,
     dbCount,
     totalCount: baseCount + dbCount,
+    subtitleText: row?.subtitle_text || 'Tribute Edition',
     tshirtReleaseAt: new Date(row.tshirt_release_at).toISOString(),
     movieReleaseAt: new Date(row.movie_release_at).toISOString(),
     logoImageUrl: row?.logo_image_url || '/images/michale copy2.png',
@@ -260,7 +271,8 @@ export async function resetUpcomingSettings(): Promise<void> {
   await db.query(
     `UPDATE launch_settings
      SET base_count = 0,
-       upcoming_enabled = true,
+         upcoming_enabled = true,
+         subtitle_text = 'Tribute Edition',
          tshirt_release_at = NOW() + INTERVAL '30 days',
          movie_release_at = NOW() + INTERVAL '60 days',
          logo_image_url = '/images/michale copy2.png',
@@ -282,18 +294,20 @@ export async function updateUpcomingSettings(input: UpcomingSettingsInput): Prom
     `UPDATE launch_settings
      SET upcoming_enabled = $1,
          base_count = $2,
-         tshirt_release_at = $3,
-         movie_release_at = $4,
-         logo_image_url = $5,
-         background_mode = $6,
-         background_video_url = $7,
-         background_audio_url = $8,
-         background_slider_images = $9::jsonb,
+         subtitle_text = $3,
+         tshirt_release_at = $4,
+         movie_release_at = $5,
+         logo_image_url = $6,
+         background_mode = $7,
+         background_video_url = $8,
+         background_audio_url = $9,
+         background_slider_images = $10::jsonb,
          updated_at = NOW()
      WHERE id = 1`,
     [
       input.upcomingEnabled,
       input.baseCount,
+      input.subtitleText,
       input.tshirtReleaseAt,
       input.movieReleaseAt,
       input.logoImageUrl,

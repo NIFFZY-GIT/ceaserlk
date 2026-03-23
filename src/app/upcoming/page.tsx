@@ -10,6 +10,7 @@ type WaitingListResponse = {
   joined?: boolean;
   totalCount: number;
   upcomingEnabled: boolean;
+  subtitleText: string;
   tshirtReleaseAt: string;
   movieReleaseAt: string;
   logoImageUrl: string;
@@ -165,7 +166,7 @@ export default function LuxModernPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [data, setData] = useState<WaitingListResponse | null>(null);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
-  const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [isAudioMuted, setIsAudioMuted] = useState(true);
   const [needsInteractionToPlay, setNeedsInteractionToPlay] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formMessage, setFormMessage] = useState<string | null>(null);
@@ -236,14 +237,27 @@ export default function LuxModernPage() {
       return;
     }
 
-    mediaElement.muted = isAudioMuted;
+    // Keep autoplay resilient on refresh by starting muted first, then syncing target mute state.
+    mediaElement.muted = true;
     const playPromise = mediaElement.play();
     if (playPromise && typeof playPromise.catch === 'function') {
       playPromise
-        .then(() => setNeedsInteractionToPlay(false))
+        .then(() => {
+          mediaElement.muted = isAudioMuted;
+          setNeedsInteractionToPlay(false);
+        })
         .catch(() => setNeedsInteractionToPlay(true));
     }
   }, [isAudioMuted, useSliderAudio, useVideoAudio]);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = isAudioMuted;
+    }
+    if (audioRef.current) {
+      audioRef.current.muted = isAudioMuted;
+    }
+  }, [isAudioMuted]);
 
   useEffect(() => {
     const audioElement = audioRef.current;
@@ -498,7 +512,7 @@ export default function LuxModernPage() {
           />
 
           <p className="mt-1 text-[11px] tracking-[0.38em] text-white/70 uppercase">
-            Tribute Edition
+            {(data?.subtitleText || 'Tribute Edition').trim() || 'Tribute Edition'}
           </p>
 
         </header>
