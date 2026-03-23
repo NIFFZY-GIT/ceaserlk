@@ -166,7 +166,7 @@ export default function LuxModernPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [data, setData] = useState<WaitingListResponse | null>(null);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
-  const [isAudioMuted, setIsAudioMuted] = useState(true);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [needsInteractionToPlay, setNeedsInteractionToPlay] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formMessage, setFormMessage] = useState<string | null>(null);
@@ -237,13 +237,11 @@ export default function LuxModernPage() {
       return;
     }
 
-    // Keep autoplay resilient on refresh by starting muted first, then syncing target mute state.
-    mediaElement.muted = true;
+    mediaElement.muted = isAudioMuted;
     const playPromise = mediaElement.play();
     if (playPromise && typeof playPromise.catch === 'function') {
       playPromise
         .then(() => {
-          mediaElement.muted = isAudioMuted;
           setNeedsInteractionToPlay(false);
         })
         .catch(() => setNeedsInteractionToPlay(true));
