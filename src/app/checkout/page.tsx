@@ -36,9 +36,6 @@ export default function CheckoutPage() {
   // Free delivery promo state (lifetime if earned)
   const [hasFreeDeliveryForLife, setHasFreeDeliveryForLife] = useState(false);
 
-  // Flag to prevent continuous fetches on mount
-  const [cartLoaded, setCartLoaded] = useState(false);
-
   // Cart expiration timer effect
   useEffect(() => {
     if (!cart?.expiresAt) return;
@@ -58,13 +55,6 @@ export default function CheckoutPage() {
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [cart?.expiresAt]);
-
-  // Mark cart as loaded once it finishes loading
-  useEffect(() => {
-    if (!cartLoading && cart) {
-      setCartLoaded(true);
-    }
-  }, [cartLoading, cart]);
 
   // Check for free delivery promo on mount
   const checkFreeDelivery = useCallback(async () => {
@@ -87,7 +77,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     checkFreeDelivery();
-  }, []); // Only run once on mount
+  }, [checkFreeDelivery]);
 
   // Calculate actual shipping with free delivery applied (automatic if lifetime)
   const actualShipping = hasFreeDeliveryForLife ? 0 : (cart?.totalShipping || 0);

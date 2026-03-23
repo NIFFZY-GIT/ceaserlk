@@ -150,7 +150,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const closeCart = () => setIsCartOpen(false);
 
   // --- ENHANCED MUTATION FUNCTIONS WITH STOCK VALIDATION ---
-  const addToCart = async (skuId: string, quantity: number): Promise<boolean> => {
+  const addToCart = useCallback(async (skuId: string, quantity: number): Promise<boolean> => {
     // Check authentication first - allow both authenticated users and guests
     if (!user && !isGuest) {
       handleAuthError({ status: 401 }, 'add items to cart');
@@ -193,7 +193,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, isGuest, handleAuthError, guestId, fetchCart]);
   
   const updateQuantity = async (cartItemId: string, newQuantity: number): Promise<boolean> => {
     // Check authentication first - allow both authenticated users and guests

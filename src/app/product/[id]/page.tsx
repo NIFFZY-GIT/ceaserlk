@@ -1441,7 +1441,7 @@ export default function ProductPage() {
     } finally {
       setIsAddingToCart(false);
     }
-  }, [product, selectedVariant, selectedSize, quantity, user, isGuest, router, addToCart, openCart]);
+  }, [product, selectedVariant, selectedSize, quantity, user, isGuest, router, pathname, addToCart, openCart]);
 
   // Loading state
   if (isLoading) {

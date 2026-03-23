@@ -166,6 +166,7 @@ export default function LuxModernPage() {
   const [data, setData] = useState<WaitingListResponse | null>(null);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [needsInteractionToPlay, setNeedsInteractionToPlay] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formMessage, setFormMessage] = useState<string | null>(null);
   const [showJoinSuccessAlert, setShowJoinSuccessAlert] = useState(false);
@@ -229,14 +230,18 @@ export default function LuxModernPage() {
     const audioUrl = useSliderAudio ? data?.backgroundAudioUrl : null;
 
     if (!audioElement || !audioUrl) {
+      if (audioElement) {
+        audioElement.pause();
+      }
       return;
     }
 
     audioElement.muted = isAudioMuted;
     const playPromise = audioElement.play();
     if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.then(() => setNeedsInteractionToPlay(false));
       playPromise.catch(() => {
-        // Ignore autoplay blocks; users can unmute/play with the control button.
+        setNeedsInteractionToPlay(true);
       });
     }
   }, [data?.backgroundAudioUrl, isAudioMuted, useSliderAudio]);
@@ -245,17 +250,50 @@ export default function LuxModernPage() {
     const videoElement = videoRef.current;
 
     if (!videoElement || !useVideoAudio) {
+      if (videoElement) {
+        videoElement.pause();
+      }
       return;
     }
 
     videoElement.muted = isAudioMuted;
     const playPromise = videoElement.play();
     if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.then(() => setNeedsInteractionToPlay(false));
       playPromise.catch(() => {
-        // Ignore autoplay blocks; users can toggle audio after interaction.
+        setNeedsInteractionToPlay(true);
       });
     }
   }, [isAudioMuted, useVideoAudio, data?.backgroundVideoUrl]);
+
+  useEffect(() => {
+    if (!needsInteractionToPlay || !hasAnyAudioSource) {
+      return;
+    }
+
+    const tryPlay = () => {
+      const mediaElement: HTMLMediaElement | null = useVideoAudio ? videoRef.current : audioRef.current;
+      if (!mediaElement) {
+        return;
+      }
+
+      mediaElement.muted = isAudioMuted;
+      const playPromise = mediaElement.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.then(() => setNeedsInteractionToPlay(false)).catch(() => {
+          // Keep waiting for another interaction.
+        });
+      }
+    };
+
+    window.addEventListener('pointerdown', tryPlay, { once: true });
+    window.addEventListener('keydown', tryPlay, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', tryPlay);
+      window.removeEventListener('keydown', tryPlay);
+    };
+  }, [needsInteractionToPlay, hasAnyAudioSource, useVideoAudio, isAudioMuted]);
 
   useEffect(() => {
     if (!isLoading && data && data.upcomingEnabled === false) {
@@ -327,6 +365,26 @@ export default function LuxModernPage() {
     }
   };
 
+  const handleToggleAudioMute = async () => {
+    const nextMuted = !isAudioMuted;
+    setIsAudioMuted(nextMuted);
+
+    const mediaElement: HTMLMediaElement | null = useVideoAudio ? videoRef.current : audioRef.current;
+    if (!mediaElement) {
+      return;
+    }
+
+    mediaElement.muted = nextMuted;
+    if (!nextMuted) {
+      const playPromise = mediaElement.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.then(() => setNeedsInteractionToPlay(false)).catch(() => {
+          setNeedsInteractionToPlay(true);
+        });
+      }
+    }
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-black px-4 pb-16 pt-16 text-white sm:px-6 lg:px-8">
       {useSliderAudio ? (
@@ -345,7 +403,7 @@ export default function LuxModernPage() {
       {hasAnyAudioSource ? (
         <button
           type="button"
-          onClick={() => setIsAudioMuted((previous) => !previous)}
+          onClick={handleToggleAudioMute}
           className="fixed bottom-5 left-4 z-[80] rounded-full border border-white/25 bg-black/60 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-md transition hover:border-white/40 hover:bg-black/75 sm:bottom-6 sm:left-6"
           aria-label={isAudioMuted ? 'Unmute page audio' : 'Mute page audio'}
         >
