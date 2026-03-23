@@ -237,7 +237,6 @@ export default function LuxModernPage() {
       return;
     }
 
-    mediaElement.muted = isAudioMuted;
     const playPromise = mediaElement.play();
     if (playPromise && typeof playPromise.catch === 'function') {
       playPromise
@@ -246,7 +245,7 @@ export default function LuxModernPage() {
         })
         .catch(() => setNeedsInteractionToPlay(true));
     }
-  }, [isAudioMuted, useSliderAudio, useVideoAudio]);
+  }, [useSliderAudio, useVideoAudio]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -390,23 +389,8 @@ export default function LuxModernPage() {
     }
   };
 
-  const handleToggleAudioMute = async () => {
-    const nextMuted = !isAudioMuted;
-    setIsAudioMuted(nextMuted);
-
-    const mediaElement: HTMLMediaElement | null = useVideoAudio
-      ? videoRef.current
-      : useSliderAudio
-        ? audioRef.current
-        : null;
-    if (!mediaElement) {
-      return;
-    }
-
-    mediaElement.muted = nextMuted;
-    if (!nextMuted) {
-      tryStartActiveMedia();
-    }
+  const handleToggleAudioMute = () => {
+    setIsAudioMuted((prev) => !prev);
   };
 
   return (
