@@ -157,10 +157,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid settings payload' }, { status: 400 });
     }
 
-    if (settings.backgroundMode === 'slider' && backgroundSliderImages.length === 0) {
-      backgroundSliderImages = ['/images/h123.JPG'];
-    }
-
     if (settings.backgroundMode === 'video' && !backgroundVideoUrl) {
       return NextResponse.json({ error: 'Please upload/select a background video for video mode.' }, { status: 400 });
     }

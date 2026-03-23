@@ -19,7 +19,7 @@ const CREATE_UPCOMING_TABLES_SQL = `
     background_mode VARCHAR(16) NOT NULL DEFAULT 'slider',
     background_video_url VARCHAR(500),
     background_audio_url VARCHAR(500),
-    background_slider_images JSONB NOT NULL DEFAULT '["/images/h123.JPG"]'::jsonb,
+    background_slider_images JSONB NOT NULL DEFAULT '[]'::jsonb,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
 
@@ -39,7 +39,7 @@ const CREATE_UPCOMING_TABLES_SQL = `
     ADD COLUMN IF NOT EXISTS background_audio_url VARCHAR(500);
 
   ALTER TABLE launch_settings
-    ADD COLUMN IF NOT EXISTS background_slider_images JSONB NOT NULL DEFAULT '["/images/h123.JPG"]'::jsonb;
+    ADD COLUMN IF NOT EXISTS background_slider_images JSONB NOT NULL DEFAULT '[]'::jsonb;
 
   UPDATE launch_settings
   SET
@@ -51,7 +51,7 @@ const CREATE_UPCOMING_TABLES_SQL = `
     END,
     background_slider_images = CASE
       WHEN jsonb_typeof(background_slider_images) = 'array' THEN background_slider_images
-      ELSE '["/images/h123.JPG"]'::jsonb
+      ELSE '[]'::jsonb
     END;
 
   INSERT INTO launch_settings (
@@ -72,7 +72,7 @@ const CREATE_UPCOMING_TABLES_SQL = `
     NOW() + INTERVAL '60 days',
     '/images/michale copy2.png',
     'slider',
-    '["/images/h123.JPG"]'::jsonb
+    '[]'::jsonb
   )
   ON CONFLICT (id) DO NOTHING;
 `;
@@ -121,7 +121,7 @@ function normalizeSliderImages(value: unknown): string[] {
   }
 
   if (!Array.isArray(parsed)) {
-    return ['/images/h123.JPG'];
+    return [];
   }
 
   const cleaned = parsed
@@ -130,7 +130,7 @@ function normalizeSliderImages(value: unknown): string[] {
     .filter(Boolean)
     .slice(0, 5);
 
-  return cleaned.length > 0 ? cleaned : ['/images/h123.JPG'];
+  return cleaned;
 }
 
 function sanitizeFilename(filename: string): string {
@@ -267,7 +267,7 @@ export async function resetUpcomingSettings(): Promise<void> {
          background_mode = 'slider',
          background_video_url = NULL,
          background_audio_url = NULL,
-         background_slider_images = '["/images/h123.JPG"]'::jsonb,
+         background_slider_images = '[]'::jsonb,
          updated_at = NOW()
      WHERE id = 1`
   );

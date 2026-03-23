@@ -1562,7 +1562,7 @@ CREATE TABLE IF NOT EXISTS public.launch_settings (
     background_mode character varying(16) DEFAULT 'slider' NOT NULL,
     background_video_url character varying(500),
     background_audio_url character varying(500),
-    background_slider_images jsonb DEFAULT '["/images/h123.JPG"]'::jsonb NOT NULL,
+    background_slider_images jsonb DEFAULT '[]'::jsonb NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT launch_settings_singleton CHECK (id = 1),
     CONSTRAINT launch_settings_base_count_non_negative CHECK (base_count >= 0),
@@ -1592,7 +1592,7 @@ VALUES (
     '/images/michale copy2.png',
     'slider',
     NULL,
-    '["/images/h123.JPG"]'::jsonb
+    '[]'::jsonb
 )
 ON CONFLICT (id) DO NOTHING;
 
