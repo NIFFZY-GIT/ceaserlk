@@ -6,7 +6,8 @@ export async function GET(request: NextRequest) {
   const status = incoming.searchParams.get('status') || '';
   const trnId = incoming.searchParams.get('trnId') || '';
 
-  const redirectUrl = new URL('/order-confirmation', incoming.origin);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || incoming.origin;
+  const redirectUrl = new URL('/order-confirmation', appUrl);
 
   if (orderId) {
     redirectUrl.searchParams.set('koko_order', orderId);
