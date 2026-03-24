@@ -65,7 +65,7 @@ export async function GET(
         subtotal: parseFloat(orderData.subtotal),
         shippingCost: parseFloat(orderData.shipping_cost),
         totalAmount: parseFloat(orderData.total_amount),
-        paymentMethod: orderData.payment_method as 'CARD' | 'COD' | undefined
+        paymentMethod: orderData.payment_method as 'CARD' | 'COD' | 'KOKO' | undefined
       };
 
       // Generate PDF

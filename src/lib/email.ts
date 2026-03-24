@@ -95,8 +95,10 @@ export function generateOrderConfirmationEmail(orderData: {
     postalCode: string;
     country: string;
   };
-  paymentMethod?: 'CARD' | 'COD';
+  paymentMethod?: 'CARD' | 'COD' | 'KOKO' | string;
 }): string {
+  const normalizedPaymentMethod = (orderData.paymentMethod || '').trim().toUpperCase();
+  const isPendingPayment = ['COD', 'CASH', 'CASH_ON_DELIVERY', 'KOKO'].includes(normalizedPaymentMethod);
   const itemsHtml = orderData.items
     .map(
       (item) => `
@@ -211,7 +213,7 @@ export function generateOrderConfirmationEmail(orderData: {
                         <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 15px 0; color: #000000;">Payment</h3>
                         <p style="font-size: 13px; line-height: 1.8; color: #888888; margin: 0;">
                           Method: <span style="color: #000000; text-transform: uppercase;">${orderData.paymentMethod || 'N/A'}</span><br>
-                          Status: <span style="color: #000000;">${orderData.paymentMethod === 'COD' ? 'Pending' : 'Paid'}</span>
+                          Status: <span style="color: #000000;">${isPendingPayment ? 'Pending' : 'Paid'}</span>
                         </p>
                       </td>
                     </tr>
@@ -283,13 +285,14 @@ export function generateAdminOrderNotificationEmail(notificationData: {
   const normalizedPaymentMethod = (notificationData.paymentMethod || '').trim().toUpperCase();
   const paymentMethodLabel = (() => {
     if (['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalizedPaymentMethod)) return 'Cash on Delivery';
+    if (normalizedPaymentMethod === 'KOKO') return 'Koko Buy Now Pay Later';
     if (normalizedPaymentMethod === 'PAYHERE') return 'PayHere';
     if (normalizedPaymentMethod === 'CARD') return 'Card';
     if (normalizedPaymentMethod === 'PAID') return 'Paid';
     if (!normalizedPaymentMethod) return 'Unknown';
     return normalizedPaymentMethod.replace(/_/g, ' ');
   })();
-  const paymentStatusLabel = ['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalizedPaymentMethod) ? 'Pending' : 'Paid';
+  const paymentStatusLabel = ['COD', 'CASH', 'CASH_ON_DELIVERY', 'KOKO'].includes(normalizedPaymentMethod) ? 'Pending' : 'Paid';
   const itemsHtml = notificationData.items
     .map(
       (item) => `

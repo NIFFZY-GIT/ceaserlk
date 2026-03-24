@@ -218,6 +218,7 @@ export function generateInvoicePDF(invoiceData: InvoiceData): Buffer {
   const paymentMethod = invoiceData.paymentMethod?.toUpperCase();
   const isPaid = paymentMethod === 'CARD' || paymentMethod === 'PAYHERE';
   const isCOD = paymentMethod === 'COD' || paymentMethod === 'CASH_ON_DELIVERY' || paymentMethod === 'CASH';
+  const isKoko = paymentMethod === 'KOKO';
   
   if (isCOD) {
     doc.setFillColor(239, 68, 68); // Red background for COD
@@ -226,6 +227,13 @@ export function generateInvoicePDF(invoiceData: InvoiceData): Buffer {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('PAYMENT METHOD: CASH ON DELIVERY', pageWidth / 2, yPosition + 7, { align: 'center' });
+  } else if (isKoko) {
+    doc.setFillColor(234, 88, 12); // Orange background for BNPL pending
+    doc.rect(leftMargin, yPosition, contentWidth, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYMENT METHOD: KOKO BUY NOW PAY LATER (PENDING)', pageWidth / 2, yPosition + 7, { align: 'center' });
   } else if (isPaid) {
     doc.setFillColor(34, 197, 94); // Green background for paid
     doc.rect(leftMargin, yPosition, contentWidth, 12, 'F');

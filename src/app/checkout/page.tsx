@@ -8,6 +8,7 @@ import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, Shoppin
 import Image from 'next/image';
 import Link from 'next/link';
 import PayHerePaymentHandler from './PayHerePaymentHandler';
+import KokoPaymentHandler from './KokoPaymentHandler';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function CheckoutPage() {
     postalCode: '',
     country: 'Sri Lanka'
   });
-  const [paymentMethod, setPaymentMethod] = useState<'payhere' | 'cod'>('payhere');
+  const [paymentMethod, setPaymentMethod] = useState<'payhere' | 'koko' | 'cod'>('payhere');
   const [codSubmitting, setCodSubmitting] = useState(false);
   const [codError, setCodError] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
@@ -93,7 +94,7 @@ export default function CheckoutPage() {
       .map(([key]) => key);
   };
 
-  const handleCodOrder = async () => {
+  const handleDeferredOrder = async (selectedMethod: 'COD' | 'KOKO') => {
     setCodError(null);
 
     const missingFields = validateShippingDetails();
@@ -120,9 +121,14 @@ export default function CheckoutPage() {
           ])
         ),
         useFreeDelivery: hasFreeDeliveryForLife,
+        paymentMethod: selectedMethod,
       };
 
-      console.log('Sending COD order request:', { cartId: cart.id, fields: Object.keys(shippingDetails) });
+      console.log('Sending deferred payment order request:', {
+        cartId: cart.id,
+        paymentMethod: selectedMethod,
+        fields: Object.keys(shippingDetails),
+      });
 
       const response = await fetch('/api/checkout/place-order', {
         method: 'POST',
@@ -135,7 +141,7 @@ export default function CheckoutPage() {
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
-          console.error('COD order API error:', { status: response.status, error: errorData });
+          console.error('Deferred payment order API error:', { status: response.status, error: errorData });
         } catch (parseError) {
           console.error('Could not parse error response:', parseError);
         }
@@ -144,7 +150,7 @@ export default function CheckoutPage() {
       }
 
       const data = await response.json();
-      console.log('COD order created successfully:', data);
+      console.log('Deferred payment order created successfully:', data);
 
       if (data?.orderId) {
         await fetchCart();
@@ -154,7 +160,7 @@ export default function CheckoutPage() {
         setCodError('Order was created but no confirmation was returned. Please contact support.');
       }
     } catch (error) {
-      console.error('Pay on delivery order error:', error);
+      console.error('Deferred payment order error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unexpected error while placing order. Please try again.';
       setCodError(errorMessage);
     } finally {
@@ -255,6 +261,12 @@ export default function CheckoutPage() {
       label: 'Pay Online (Recommended)',
       description: 'Pay securely with Visa, Mastercard, Amex, bank transfer, or mobile wallets like FriMi.',
       icon: Wallet,
+    },
+    {
+      value: 'koko' as const,
+      label: 'Koko: Buy Now Pay Later',
+      description: 'Pay in 3 interest free instalments with Koko.',
+      icon: CreditCard,
     },
     {
       value: 'cod' as const,
@@ -559,7 +571,7 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-5">
-                  <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
+                  <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-3">
                     {paymentOptions.map((option) => {
                       const Icon = option.icon;
                       const isActive = paymentMethod === option.value;
@@ -578,17 +590,32 @@ export default function CheckoutPage() {
                               : 'border-gray-700/60 bg-gray-900/40'
                           }`}
                         >
-                          <span
-                            className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg sm:rounded-xl border text-sm font-semibold ${
-                              isActive
-                                ? 'border-primary/40 bg-primary/20 text-primary'
-                                : 'border-gray-800/70 bg-gray-900/50 text-gray-400'
-                            }`}
-                          >
-                            <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                          </span>
+                          {option.value !== 'koko' && (
+                            <span
+                              className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg sm:rounded-xl text-sm font-semibold ${
+                                isActive
+                                  ? 'border border-primary/40 bg-primary/20 text-primary'
+                                  : 'border border-gray-800/70 bg-gray-900/50 text-gray-400'
+                              }`}
+                            >
+                              <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                            </span>
+                          )}
                           <div className="min-w-0">
-                            <p className="text-xs sm:text-sm font-semibold text-brand-white">{option.label}</p>
+                            {option.value === 'koko' ? (
+                              <div className="flex items-center h-5 sm:h-6">
+                                <Image
+                                  src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
+                                  alt="Koko Buy Now Pay Later"
+                                  width={116}
+                                  height={22}
+                                  className="h-[18px] sm:h-[22px] w-auto object-contain"
+                                />
+                                <span className="sr-only">{option.label}</span>
+                              </div>
+                            ) : (
+                              <p className="text-xs sm:text-sm font-semibold text-brand-white">{option.label}</p>
+                            )}
                             <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400 line-clamp-2">{option.description}</p>
                           </div>
                         </button>
@@ -599,6 +626,10 @@ export default function CheckoutPage() {
                   {paymentMethod === 'payhere' ? (
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-blue-500/30 bg-blue-500/5">
                       <PayHerePaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} guestId={guestId} />
+                    </div>
+                  ) : paymentMethod === 'koko' ? (
+                    <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-orange-500/40 bg-orange-500/5">
+                      <KokoPaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} guestId={guestId} />
                     </div>
                   ) : (
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-primary/40 bg-primary/5">
@@ -616,7 +647,7 @@ export default function CheckoutPage() {
                         </div>
                         <button
                           type="button"
-                          onClick={handleCodOrder}
+                          onClick={() => handleDeferredOrder('COD')}
                           disabled={codSubmitting}
                           className="flex items-center justify-center w-full px-4 py-2.5 sm:py-3 text-sm font-bold text-brand-black transition-colors bg-primary border border-transparent rounded-lg shadow-sm hover:bg-primary/90 disabled:bg-gray-500 disabled:text-gray-200"
                         >

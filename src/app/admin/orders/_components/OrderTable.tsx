@@ -39,6 +39,7 @@ const normalizePaymentMethod = (method?: string | null) => (method || '').trim()
 const getPaymentMethodLabel = (method?: string | null) => {
   const normalized = normalizePaymentMethod(method);
   if (['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalized)) return 'Cash on Delivery';
+  if (normalized === 'KOKO') return 'Koko Buy Now Pay Later';
   if (normalized === 'PAYHERE') return 'PayHere';
   if (normalized === 'CARD') return 'Card';
   if (normalized === 'PAID') return 'Paid';
@@ -48,7 +49,7 @@ const getPaymentMethodLabel = (method?: string | null) => {
 
 const getPaymentMethodClasses = (method?: string | null) => {
   const normalized = normalizePaymentMethod(method);
-  if (['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalized)) {
+  if (['COD', 'CASH', 'CASH_ON_DELIVERY', 'KOKO'].includes(normalized)) {
     return 'bg-amber-100 text-amber-800';
   }
   if (['PAYHERE', 'CARD', 'PAID'].includes(normalized)) {

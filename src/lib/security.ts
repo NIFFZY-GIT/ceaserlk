@@ -130,12 +130,12 @@ export const securityHeaders = {
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https: https://www.google-analytics.com https://www.googletagmanager.com https://www.facebook.com https://connect.facebook.net https://platform.linkedin.com https://analytics.tiktok.com https://t.co https://platform.twitter.com https://www.google.com https://googleads.g.doubleclick.net",
     "media-src 'self' blob: data: https:",
-    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://region1.google-analytics.com https://region1.analytics.google.com https://www.google.com https://googleads.g.doubleclick.net https://www.facebook.com https://connect.facebook.net https://platform.linkedin.com https://analytics.tiktok.com https://platform.twitter.com https://api.segment.com",
+    "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://qaapi.paykoko.com https://devapi.paykoko.com https://prodapi.paykoko.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://region1.google-analytics.com https://region1.analytics.google.com https://www.google.com https://googleads.g.doubleclick.net https://www.facebook.com https://connect.facebook.net https://platform.linkedin.com https://analytics.tiktok.com https://platform.twitter.com https://api.segment.com",
     "worker-src 'self' blob:",
     "frame-src https://checkout.stripe.com https://js.stripe.com https://www.payhere.lk https://sandbox.payhere.lk https://www.facebook.com https://www.instagram.com https://www.googletagmanager.com https://td.doubleclick.net https://platform.linkedin.com https://analytics.tiktok.com https://platform.twitter.com",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self' https://www.payhere.lk https://sandbox.payhere.lk https://www.facebook.com https://www.google.com"
+    "form-action 'self' https://www.payhere.lk https://sandbox.payhere.lk https://qaapi.paykoko.com https://devapi.paykoko.com https://prodapi.paykoko.com https://www.facebook.com https://www.google.com"
   ].join('; ')
 };
 

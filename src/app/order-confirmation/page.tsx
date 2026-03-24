@@ -116,15 +116,73 @@ function OrderConfirmationContent() {
 
       await poll();
     };
+
+    const verifyKokoPayment = async (kokoOrderId: string, statusHint: string | null) => {
+      const normalizedHint = (statusHint || '').toUpperCase();
+      // Status hints come from URL query parameters and are not authoritative.
+      // Always perform server verification before finalizing the result.
+
+      let attempts = 0;
+      const maxAttempts = 20;
+      const pollInterval = 2000;
+
+      const poll = async (): Promise<void> => {
+        try {
+          const res = await fetch('/api/checkout/koko/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId: kokoOrderId }),
+          });
+
+          const data = await res.json();
+
+          if (data.success && data.orderId) {
+            router.replace(`/order-confirmation?orderId=${data.orderId}`);
+            processOrder(data.orderId);
+            return;
+          }
+
+          if (data.pending && attempts < maxAttempts) {
+            attempts++;
+            setTimeout(poll, pollInterval);
+            return;
+          }
+
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          if (
+            attempts >= maxAttempts &&
+            ['FAILED', 'FAILURE', 'CANCELED', 'CANCELLED'].includes(normalizedHint)
+          ) {
+            throw new Error('Koko payment was cancelled or failed. Please try again.');
+          }
+
+          throw new Error('Koko payment verification timed out. Please check your order status.');
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Koko payment verification failed';
+          setErrorMessage(message);
+          setStatus('error');
+        }
+      };
+
+      await poll();
+    };
     
     const orderIdParam = searchParams.get('orderId');
     const payhereOrder = searchParams.get('payhere_order');
+    const kokoOrder = searchParams.get('koko_order');
+    const kokoStatus = searchParams.get('koko_status');
 
     if (orderIdParam) {
       processOrder(orderIdParam);
     } else if (payhereOrder) {
       // PayHere payment - verify status
       verifyPayHerePayment(payhereOrder);
+    } else if (kokoOrder) {
+      // Koko payment - verify status
+      verifyKokoPayment(kokoOrder, kokoStatus);
     } else {
       setErrorMessage("No order information found.");
       setStatus('error');

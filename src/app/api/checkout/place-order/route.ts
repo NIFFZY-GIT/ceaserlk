@@ -20,6 +20,7 @@ interface RequestBody {
   cartId?: unknown;
   shippingDetails?: IncomingShippingDetails;
   useFreeDelivery?: boolean;
+  paymentMethod?: unknown;
 }
 
 type NormalizedShippingDetails = Required<{
@@ -37,7 +38,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request payload.' }, { status: 400 });
   }
 
-  const { cartId, shippingDetails, useFreeDelivery } = body;
+  const { cartId, shippingDetails, useFreeDelivery, paymentMethod } = body;
+
+  const normalizedPaymentMethod =
+    typeof paymentMethod === 'string' && paymentMethod.trim() !== ''
+      ? paymentMethod.trim().toUpperCase()
+      : 'COD';
+
+  if (!['COD', 'KOKO'].includes(normalizedPaymentMethod)) {
+    return NextResponse.json(
+      { error: 'Unsupported payment method for this checkout flow.' },
+      { status: 400 }
+    );
+  }
   
   // Validate cartId
   if (typeof cartId !== 'string' || cartId.trim() === '') {
@@ -208,7 +221,7 @@ export async function POST(request: NextRequest) {
       shippingCost,
       totalAmount,
       'PENDING',
-      'COD', // Cash on Delivery
+      normalizedPaymentMethod,
     ]);
 
     const orderId = orderResult.rows[0]?.id as string | undefined;
@@ -289,7 +302,7 @@ export async function POST(request: NextRequest) {
         subtotal,
         shippingCost,
         totalAmount,
-        paymentMethod: 'COD',
+        paymentMethod: normalizedPaymentMethod,
       };
 
       const pdfBuffer = generateInvoicePDF(invoiceData);
@@ -309,7 +322,7 @@ export async function POST(request: NextRequest) {
           postalCode: normalizedDetails.postalCode,
           country: normalizedDetails.country,
         },
-        paymentMethod: 'COD',
+        paymentMethod: normalizedPaymentMethod,
       });
 
       await sendEmail({
@@ -365,12 +378,16 @@ export async function POST(request: NextRequest) {
               postalCode: normalizedDetails.postalCode,
               country: normalizedDetails.country,
             },
-            paymentMethod: 'COD',
+            paymentMethod: normalizedPaymentMethod,
           });
+
+          const adminPaymentLabel = normalizedPaymentMethod === 'KOKO'
+            ? 'Koko Buy Now Pay Later'
+            : 'Cash on Delivery';
 
           await sendEmail({
             to: adminEmails.join(','),
-            subject: `New Order #${publicOrderId} - Cash on Delivery`,
+            subject: `New Order #${publicOrderId} - ${adminPaymentLabel}`,
             html: adminEmailHtml,
           });
         }
@@ -383,7 +400,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure we always return orderId for successful orders
-    console.log('COD order created successfully:', { orderId, orderNumber, status: 'PENDING', paymentMethod: 'COD' });
+    console.log('Deferred payment order created successfully:', {
+      orderId,
+      orderNumber,
+      status: 'PENDING',
+      paymentMethod: normalizedPaymentMethod,
+    });
     return NextResponse.json({ 
       success: true, 
       orderId,

@@ -44,12 +44,18 @@ export async function sendOrderConfirmationIfNeeded(client: PoolClient, orderId:
   const normalizedPaymentMethod = (order.payment_method || '').trim().toUpperCase();
   const paymentMethodLabel = (() => {
     if (['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalizedPaymentMethod)) return 'Cash on Delivery';
+    if (normalizedPaymentMethod === 'KOKO') return 'Koko Buy Now Pay Later';
     if (normalizedPaymentMethod === 'PAYHERE') return 'PayHere';
     if (normalizedPaymentMethod === 'CARD') return 'Card';
     if (normalizedPaymentMethod === 'PAID') return 'Paid';
     if (!normalizedPaymentMethod) return 'Unknown';
     return normalizedPaymentMethod.replace(/_/g, ' ');
   })();
+  const invoicePaymentMethod = ['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalizedPaymentMethod)
+    ? 'COD'
+    : normalizedPaymentMethod === 'KOKO'
+      ? 'KOKO'
+      : 'CARD';
 
   if (order.confirmation_email_sent_at) {
     return { sent: false, reason: 'already_sent' as const, publicOrderId };
@@ -88,7 +94,7 @@ export async function sendOrderConfirmationIfNeeded(client: PoolClient, orderId:
     subtotal: parseFloat(order.subtotal),
     shippingCost: parseFloat(order.shipping_cost),
     totalAmount: parseFloat(order.total_amount),
-    paymentMethod: order.payment_method === 'COD' ? 'COD' : 'CARD'
+    paymentMethod: invoicePaymentMethod
   };
 
   const pdfBuffer = await generateInvoicePDF(invoiceData);
@@ -103,7 +109,7 @@ export async function sendOrderConfirmationIfNeeded(client: PoolClient, orderId:
     shippingCost: parseFloat(order.shipping_cost),
     totalAmount: parseFloat(order.total_amount),
     shippingAddress: shippingAddressObj,
-    paymentMethod: order.payment_method === 'COD' ? 'COD' : 'CARD'
+    paymentMethod: invoicePaymentMethod
   });
 
   await sendEmail({

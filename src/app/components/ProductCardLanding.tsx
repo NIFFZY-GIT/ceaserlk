@@ -76,6 +76,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
   }
 
   const price = parseFloat(activeVariant.price);
+  const kokoInstallment = price / 3;
   const compareAtPrice = activeVariant.compareAtPrice ? parseFloat(activeVariant.compareAtPrice) : null;
   const isOnSale = compareAtPrice && compareAtPrice > price;
   const isVideoUrl = (url: string) => /\.(mp4|webm|ogg|mov)$/i.test(url);
@@ -184,6 +185,20 @@ export const ProductCard = ({ product }: { product: Product }) => {
           <h3 className="text-lg font-semibold text-black capitalize">{product.name}</h3>
           <div className="flex items-center gap-2 mt-1">
             {isOnSale ? (<><span className="text-xl font-bold text-black">LKR {price.toFixed(2)}</span><span className="font-medium text-gray-500 line-through text-md">LKR {compareAtPrice!.toFixed(2)}</span></>) : (<span className="text-xl font-bold text-black">LKR {price.toFixed(2)}</span>)}
+          </div>
+          <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-2">
+            <div className="relative h-4 w-[74px] sm:h-5 sm:w-[90px]">
+              <Image
+                src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
+                alt="Koko"
+                fill
+                className="object-contain object-left"
+                sizes="90px"
+              />
+            </div>
+            <p className="mt-1 text-[10px] sm:text-xs font-medium text-gray-700">
+              Rs. {kokoInstallment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 3 months
+            </p>
           </div>
           {product.variants.length > 1 && (
             <div className="flex items-center gap-2 mt-3">
