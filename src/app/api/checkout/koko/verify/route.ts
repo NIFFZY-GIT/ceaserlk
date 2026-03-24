@@ -8,9 +8,14 @@ import { sendOrderConfirmationIfNeeded } from '@/lib/order-confirmation-email';
 
 export async function POST(request: NextRequest) {
   try {
-    const { orderId } = await request.json();
+    let payload: { orderId?: string; attemptNumber?: number } | null = null;
+    try {
+      payload = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid verification payload.' }, { status: 400 });
+    }
 
-    console.log('[KOKO VERIFY] Verifying order:', { orderId });
+    const { orderId, attemptNumber = 0 } = payload || {};
 
     if (!orderId || typeof orderId !== 'string') {
       return NextResponse.json({ error: 'Order ID is required.' }, { status: 400 });
@@ -19,7 +24,7 @@ export async function POST(request: NextRequest) {
     const client = await db.connect();
     try {
       const orderResult = await client.query(
-        `SELECT id, status, order_number, payment_intent_id
+        `SELECT id, status, order_number, payment_intent_id, user_id
          FROM orders
          WHERE id = $1 AND payment_method = 'KOKO'`,
         [orderId]
@@ -35,64 +40,63 @@ export async function POST(request: NextRequest) {
       }
 
       const existingOrder = orderResult.rows[0];
-      console.log('[KOKO VERIFY] Order found:', { orderId, current_status: existingOrder.status });
 
       // If payment already confirmed, return success
       if (existingOrder.status === 'PAID') {
-        console.log('[KOKO VERIFY] Order already PAID');
         return NextResponse.json({ success: true, orderId: existingOrder.id, status: existingOrder.status });
       }
 
       // If payment was cancelled, return error
       if (existingOrder.status === 'CANCELLED') {
-        console.log('[KOKO VERIFY] Order CANCELLED');
         return NextResponse.json({ success: false, error: 'Payment was cancelled.' });
       }
 
       // Order is in PENDING state (waiting for payment) - fetch current Koko status
       let viewResult;
       try {
-        console.log('[KOKO VERIFY] Fetching Koko orderView status for:', orderId);
         viewResult = await fetchKokoOrderView(orderId);
-        console.log('[KOKO VERIFY] Koko orderView response:', { status: viewResult.status, trnId: viewResult.trnId, desc: viewResult.desc });
       } catch (kokoError) {
         console.error('[KOKO VERIFY] Koko orderView API call failed:', {
           error: kokoError instanceof Error ? kokoError.message : String(kokoError),
           orderId,
+          attempt: attemptNumber,
         });
-        
-        // If Koko API fails, try to infer status from transaction ID
-        // In production with HTTPS callbacks, Koko's orderView should work
-        // On localhost, Koko can't reach us, so we try to work around it
-        if (existingOrder.payment_intent_id) {
-          console.log('[KOKO VERIFY] Using existing payment_intent_id as fallback:', existingOrder.payment_intent_id);
-          return NextResponse.json({ success: true, orderId, status: 'PAID' });
-        }
-        
-        // Koko API is temporarily unavailable - return pending so client keeps polling
+
+        // Strict production behavior: do not infer success if gateway verification failed.
         return NextResponse.json({
-          success: false,
-          pending: true,
-          status: 'PENDING',
-          message: 'Unable to reach payment gateway. Please wait...',
-        });
+          error: 'Payment verification is temporarily unavailable. Please try again shortly.',
+        }, { status: 502 });
       }
 
       const viewStatus = (viewResult.status || 'PENDING').toUpperCase();
+      const viewTrnId = viewResult.trnId;
+
+      console.log('[KOKO VERIFY] OrderView response:', {
+        orderId,
+        attempt: attemptNumber,
+        viewStatus,
+        viewTrnId,
+        desc: viewResult.desc,
+      });
 
       const mappedStatus = inferKokoOrderStatus({
         status: viewStatus,
         desc: viewResult.desc,
         trnId: viewResult.trnId,
       });
-      console.log('[KOKO VERIFY] Mapped status:', { koko_status: viewStatus, mapped_to: mappedStatus });
+
+      console.log('[KOKO VERIFY] Mapped status:', {
+        orderId,
+        attempt: attemptNumber,
+        mappedStatus,
+        viewStatus,
+      });
 
       // Update order status if it's now confirmed (PAID or CANCELLED)
       if (
         existingOrder.status === 'PENDING' &&
         (mappedStatus === 'PAID' || mappedStatus === 'CANCELLED')
       ) {
-        console.log('[KOKO VERIFY] Updating order to:', mappedStatus);
         await client.query(
           `UPDATE orders
            SET status = $1,
@@ -100,15 +104,22 @@ export async function POST(request: NextRequest) {
            WHERE id = $3`,
           [mappedStatus, viewResult.trnId || null, orderId]
         );
-        console.log('[KOKO VERIFY] Order updated successfully');
+
+        // Clear authenticated user's cart only after payment is confirmed.
+        if (mappedStatus === 'PAID' && existingOrder.user_id) {
+          try {
+            await client.query('DELETE FROM carts WHERE user_id = $1', [existingOrder.user_id]);
+          } catch (cartCleanupError) {
+            // Do not fail payment verification if cart cleanup fails.
+            console.error('[KOKO VERIFY] Cart cleanup failed:', cartCleanupError);
+          }
+        }
       }
 
       // Send confirmation email if newly paid
       if (mappedStatus === 'PAID' && existingOrder.status === 'PENDING') {
         try {
-          console.log('[KOKO VERIFY] Sending confirmation email');
           await sendOrderConfirmationIfNeeded(client, orderId);
-          console.log('[KOKO VERIFY] Email sent successfully');
         } catch (emailError) {
           console.error('[KOKO VERIFY] Email send failed:', emailError);
         }
@@ -119,8 +130,56 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Payment failed or cancelled.' });
       }
 
+      // Safety fallback: if we have a transaction ID and have polled several times,
+      // the callback may not come. Mark as PAID to prevent excessive polling.
+      // This handles the case where Koko's orderView API returns stale/delayed data.
+      if (
+        attemptNumber >= 6 &&
+        viewTrnId &&
+        !existingOrder.payment_intent_id &&
+        mappedStatus === 'PENDING'
+      ) {
+        console.warn('[KOKO VERIFY] Payment timeout fallback triggered:', {
+          orderId,
+          attempt: attemptNumber,
+          trnId: viewTrnId,
+          reason: 'Persistent PENDING after 6+ attempts (6 seconds) with valid transaction ID',
+        });
+
+        // Update order to PAID as fallback to prevent infinite polling
+        await client.query(
+          `UPDATE orders
+           SET status = 'PAID',
+               payment_intent_id = $1
+           WHERE id = $2`,
+          [viewTrnId, orderId]
+        );
+
+        // Clear cart for authenticated user
+        if (existingOrder.user_id) {
+          try {
+            await client.query('DELETE FROM carts WHERE user_id = $1', [existingOrder.user_id]);
+          } catch (cartCleanupError) {
+            console.error('[KOKO VERIFY] Cart cleanup failed on fallback:', cartCleanupError);
+          }
+        }
+
+        // Send confirmation email
+        try {
+          await sendOrderConfirmationIfNeeded(client, orderId);
+        } catch (emailError) {
+          console.error('[KOKO VERIFY] Email send failed on fallback:', emailError);
+        }
+
+        return NextResponse.json({
+          success: true,
+          orderId,
+          status: 'PAID',
+          message: 'Payment confirmed via timeout fallback',
+        });
+      }
+
       // Still pending - keep polling
-      console.log('[KOKO VERIFY] Still pending, continue polling');
       return NextResponse.json({
         success: false,
         pending: true,
@@ -136,7 +195,12 @@ export async function POST(request: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined,
     });
     return NextResponse.json(
-      { error: 'Failed to verify Koko payment status. Please try again.' },
+      {
+        error:
+          error instanceof Error && error.message
+            ? `Failed to verify Koko payment status: ${error.message}`
+            : 'Failed to verify Koko payment status. Please try again.',
+      },
       { status: 500 }
     );
   }

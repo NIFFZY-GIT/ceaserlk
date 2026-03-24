@@ -9,9 +9,8 @@ export async function POST(request: NextRequest) {
     const orderId = (formData.get('orderId') || formData.get('_orderId')) as string | null;
     const trnId = formData.get('trnId') as string | null;
     const status = (formData.get('status') as string | null) || 'PENDING';
+    const desc = (formData.get('desc') as string | null) || '';
     const signature = formData.get('signature') as string | null;
-
-    console.log('[KOKO RESPONSE] Received callback:', { orderId, trnId, status, hasSignature: !!signature });
 
     if (!orderId || !signature) {
       console.error('[KOKO RESPONSE] Missing required fields', { orderId: !!orderId, signature: !!signature });
@@ -22,20 +21,17 @@ export async function POST(request: NextRequest) {
     const verificationDataString = `${orderId}${trnId || ''}${status}`;
     const isValidSignature = verifyKokoSignature(verificationDataString, signature, config.publicKey);
 
-    console.log('[KOKO RESPONSE] Signature verification:', { isValid: isValidSignature });
-
     if (!isValidSignature) {
       console.error('[KOKO RESPONSE] Invalid signature', { orderId, status });
       return new Response('Invalid signature', { status: 400 });
     }
 
-    const nextOrderStatus = inferKokoOrderStatus({ status, trnId: trnId || undefined });
-    console.log('[KOKO RESPONSE] Inferred order status:', { koko_status: status, mapped_status: nextOrderStatus });
+    const nextOrderStatus = inferKokoOrderStatus({ status, desc, trnId: trnId || undefined });
 
     const client = await db.connect();
     try {
       const orderResult = await client.query(
-        `SELECT id, status FROM orders WHERE id = $1 AND payment_method = 'KOKO'`,
+        `SELECT id, status, user_id FROM orders WHERE id = $1 AND payment_method = 'KOKO'`,
         [orderId]
       );
 
@@ -45,12 +41,10 @@ export async function POST(request: NextRequest) {
       }
 
       const currentStatus = orderResult.rows[0].status;
-      console.log('[KOKO RESPONSE] Order found:', { orderId, currentStatus, nextOrderStatus });
 
       // Only allow transition from PENDING -> PAID/CANCELLED
       // If already PAID, do nothing
       if (currentStatus === 'PAID') {
-        console.log('[KOKO RESPONSE] Order already PAID, skipping update');
         return new Response('OK', { status: 200 });
       }
 
@@ -58,7 +52,6 @@ export async function POST(request: NextRequest) {
         currentStatus === 'PENDING' &&
         (nextOrderStatus === 'PAID' || nextOrderStatus === 'CANCELLED')
       ) {
-        console.log('[KOKO RESPONSE] Updating order status', { from: currentStatus, to: nextOrderStatus });
         await client.query(
           `UPDATE orders
            SET status = $1,
@@ -66,22 +59,20 @@ export async function POST(request: NextRequest) {
            WHERE id = $3`,
           [nextOrderStatus, trnId, orderId]
         );
-        console.log('[KOKO RESPONSE] Order updated successfully');
-      } else {
-        console.log('[KOKO RESPONSE] No status transition needed', { currentStatus, nextOrderStatus });
+
+        // Clear authenticated user's cart only after payment is confirmed.
+        if (nextOrderStatus === 'PAID' && orderResult.rows[0].user_id) {
+          await client.query('DELETE FROM carts WHERE user_id = $1', [orderResult.rows[0].user_id]);
+        }
       }
 
       if (nextOrderStatus === 'PAID') {
         try {
-          console.log('[KOKO RESPONSE] Sending confirmation email');
           await sendOrderConfirmationIfNeeded(client, orderId);
-          console.log('[KOKO RESPONSE] Confirmation email sent');
         } catch (emailError) {
           console.error('[KOKO RESPONSE] Email send failed:', emailError);
         }
       }
-
-      console.log('[KOKO RESPONSE] Callback processed successfully');
       return new Response('OK', { status: 200 });
     } finally {
       client.release();

@@ -42,6 +42,8 @@ function OrderConfirmationContent() {
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
   const fetchCartRef = useRef(fetchCart);
+  const activeFlowKeyRef = useRef<string | null>(null);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep fetchCartRef in sync with fetchCart
   useEffect(() => {
@@ -49,7 +51,17 @@ function OrderConfirmationContent() {
   }, [fetchCart]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const clearPollTimeout = () => {
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+        pollTimeoutRef.current = null;
+      }
+    };
+
     const processOrder = async (id: string) => {
+      if (cancelled) return;
       setOrderId(id);
       setStatus('success');
       fetchCartRef.current(); // Clear the client-side cart
@@ -68,8 +80,10 @@ function OrderConfirmationContent() {
               console.log(`Item ${idx}:`, item);
             });
           }
-          setOrderData(order);
-          setUserEmail(order.customer_email || '');
+          if (!cancelled) {
+            setOrderData(order);
+            setUserEmail(order.customer_email || '');
+          }
         }
       } catch (e) { console.error("Could not fetch order details", e); }
     };
@@ -77,10 +91,11 @@ function OrderConfirmationContent() {
     // Verify PayHere payment status with polling
     const verifyPayHerePayment = async (payhereOrderId: string) => {
       let attempts = 0;
-      const maxAttempts = 20; // Increased to 20 attempts (40 seconds total)
-      const pollInterval = 2000; // 2 seconds
+      const maxAttempts = 20; // Max 20 attempts (20 seconds total with 1s interval)
+      const pollInterval = 1000; // 1 second - faster polling
 
       const poll = async (): Promise<void> => {
+        if (cancelled) return;
         try {
           const res = await fetch('/api/checkout/payhere/verify', {
             method: 'POST',
@@ -98,7 +113,7 @@ function OrderConfirmationContent() {
 
           if (data.pending && attempts < maxAttempts) {
             attempts++;
-            setTimeout(poll, pollInterval);
+            pollTimeoutRef.current = setTimeout(poll, pollInterval);
             return;
           }
 
@@ -108,6 +123,7 @@ function OrderConfirmationContent() {
 
           throw new Error('Payment verification timeout. Please check your order status.');
         } catch (err: unknown) {
+          if (cancelled) return;
           const errorMessage = err instanceof Error ? err.message : 'Payment verification failed';
           setErrorMessage(errorMessage);
           setStatus('error');
@@ -123,15 +139,19 @@ function OrderConfirmationContent() {
       // Always perform server verification before finalizing the result.
 
       let attempts = 0;
-      const maxAttempts = 20;
-      const pollInterval = 2000;
+      const maxAttempts = 20; // Max 20 attempts (20 seconds total with 1s interval)
+      const pollInterval = 1000; // 1 second - faster polling
 
       const poll = async (): Promise<void> => {
+        if (cancelled) return;
         try {
           const res = await fetch('/api/checkout/koko/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId: kokoOrderId }),
+            body: JSON.stringify({
+              orderId: kokoOrderId,
+              attemptNumber: attempts,
+            }),
           });
 
           const data = await res.json();
@@ -144,7 +164,7 @@ function OrderConfirmationContent() {
 
           if (data.pending && attempts < maxAttempts) {
             attempts++;
-            setTimeout(poll, pollInterval);
+            pollTimeoutRef.current = setTimeout(poll, pollInterval);
             return;
           }
 
@@ -161,6 +181,7 @@ function OrderConfirmationContent() {
 
           throw new Error('Koko payment verification timed out. Please check your order status.');
         } catch (err: unknown) {
+          if (cancelled) return;
           const message = err instanceof Error ? err.message : 'Koko payment verification failed';
           setErrorMessage(message);
           setStatus('error');
@@ -175,6 +196,19 @@ function OrderConfirmationContent() {
     const kokoOrder = searchParams.get('koko_order');
     const kokoStatus = searchParams.get('koko_status');
 
+    const flowKey = [orderIdParam || '', payhereOrder || '', kokoOrder || '', kokoStatus || ''].join('|');
+    if (activeFlowKeyRef.current === flowKey) {
+      return () => {
+        cancelled = true;
+        clearPollTimeout();
+      };
+    }
+    activeFlowKeyRef.current = flowKey;
+
+    clearPollTimeout();
+    setStatus('loading');
+    setErrorMessage(null);
+
     if (orderIdParam) {
       processOrder(orderIdParam);
     } else if (payhereOrder) {
@@ -187,6 +221,11 @@ function OrderConfirmationContent() {
       setErrorMessage("No order information found.");
       setStatus('error');
     }
+
+    return () => {
+      cancelled = true;
+      clearPollTimeout();
+    };
   }, [searchParams, router]);
 
   if (status === 'loading') {

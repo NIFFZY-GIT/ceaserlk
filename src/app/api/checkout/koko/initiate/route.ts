@@ -248,12 +248,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Delete cart after storing intent (will be restored if payment fails)
-    await client.query('DELETE FROM carts WHERE id = $1', [cartId]);
+    // Keep cart until payment is confirmed so failed/cancelled Koko attempts
+    // do not leave the user with an empty cart.
     await client.query('COMMIT');
     transactionStarted = false;
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+    const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || request.nextUrl.origin;
+    const appUrl = rawAppUrl.replace(/\/+$/, '');
     const currency = 'LKR';
     const amount = totalAmount.toFixed(2);
     const publicOrderId = formatOrderNumber(orderNumber) || intentId;
@@ -261,7 +262,7 @@ export async function POST(request: NextRequest) {
     const description = 'Koko: Buy Now Pay Later';
 
     const returnUrl = `${appUrl}/api/checkout/koko/return`;
-    const cancelUrl = `${appUrl}/api/checkout/koko/return`;
+    const cancelUrl = `${appUrl}/checkout?payment_error=koko_failed`;
     const responseUrl = `${appUrl}/api/checkout/koko/response`;
 
     const dataString = buildKokoOrderCreateDataString({

@@ -305,20 +305,16 @@ export const inferKokoOrderStatus = (args: {
   desc?: string;
   trnId?: string;
 }): InternalOrderStatus => {
-  const direct = mapKokoStatusToOrderStatus(args.status);
-  if (direct !== 'PENDING') return direct;
-
   const description = (args.desc || '').trim().toUpperCase();
-  if (/SUCCESS|SUCCEED|PAID|COMPLETE|CAPTURED|SETTLED|AUTHORI[ZS]ED/.test(description)) {
-    return 'PAID';
-  }
-
-  if (/FAIL|FAILED|DECLIN|CANCEL|CANCELLED|CANCELED|VOID|EXPIRE|ERROR/.test(description)) {
+  // Explicit failure signals from gateway description must always win.
+  if (/PAYMENTGATEWAYTRANSACTION\.PAYMENT\.FAILED|TRANSACTION.*FAILED|PAYMENT.*FAILED|FAIL|FAILED|DECLIN|CANCEL|CANCELLED|CANCELED|VOID|EXPIRE|ERROR/.test(description)) {
     return 'CANCELLED';
   }
 
-  // Some integrations return transaction id only after successful authorization/capture.
-  if (args.trnId && args.trnId.trim() !== '') {
+  const direct = mapKokoStatusToOrderStatus(args.status);
+  if (direct !== 'PENDING') return direct;
+
+  if (/SUCCESS|SUCCEED|PAID|COMPLETE|CAPTURED|SETTLED|AUTHORI[ZS]ED/.test(description)) {
     return 'PAID';
   }
 

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote, Wallet, Gift, Plus, Minus, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote, Wallet, Gift, Plus, Minus, Trash2, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import PayHerePaymentHandler from './PayHerePaymentHandler';
@@ -12,8 +12,11 @@ import KokoPaymentHandler from './KokoPaymentHandler';
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { cart, loading: cartLoading, cartCount, fetchCart, updateQuantity, removeFromCart } = useCart();
   const { guestId } = useAuth();
+
+  const kokoPaymentFailed = searchParams.get('payment_error') === 'koko_failed';
 
   const [shippingDetails, setShippingDetails] = useState({
     email: '',
@@ -391,6 +394,24 @@ export default function CheckoutPage() {
         </header>
 
         <div className="container flex-1 px-3 sm:px-4 pb-8 sm:pb-16 mx-auto max-w-7xl">
+          {kokoPaymentFailed && (
+            <div className="mb-4 sm:mb-6 rounded-xl sm:rounded-2xl border border-red-500/40 bg-red-500/10 px-4 sm:px-5 py-3 sm:py-4">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 text-red-300">
+                  <AlertTriangle className="w-5 h-5" />
+                </span>
+                <div>
+                  <p className="text-sm sm:text-base font-semibold text-red-200">
+                    Your card payment did not go through.
+                  </p>
+                  <p className="mt-1 text-xs sm:text-sm text-red-100/90">
+                    Please try again or choose another payment method.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-4 sm:gap-6 lg:gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <div className="space-y-4 sm:space-y-6 lg:space-y-8 order-2 xl:order-1">
               <section className={sectionCardClass}>
