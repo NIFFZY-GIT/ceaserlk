@@ -85,10 +85,12 @@ export async function POST(request: NextRequest) {
   }
 
   const client = await db.connect();
+  let transactionStarted = false;
   try {
     const config = getKokoConfig();
     await ensureOrderNumberSchema(client);
     await client.query('BEGIN');
+    transactionStarted = true;
 
     const cartCheck = await client.query(
       `SELECT id, expires_at FROM carts WHERE id = $1`,
@@ -97,6 +99,7 @@ export async function POST(request: NextRequest) {
 
     if (cartCheck.rows.length === 0) {
       await client.query('ROLLBACK');
+      transactionStarted = false;
       return NextResponse.json(
         { error: 'Your cart session has expired or was not found.' },
         { status: 400 }
@@ -107,6 +110,7 @@ export async function POST(request: NextRequest) {
     if (cartExpiresAt < new Date()) {
       await client.query('DELETE FROM carts WHERE id = $1', [cartId]);
       await client.query('COMMIT');
+      transactionStarted = false;
       return NextResponse.json(
         { error: 'Your cart session has expired. Please add items again.' },
         { status: 400 }
@@ -137,6 +141,7 @@ export async function POST(request: NextRequest) {
 
     if (cartItemsResult.rows.length === 0) {
       await client.query('ROLLBACK');
+      transactionStarted = false;
       return NextResponse.json(
         { error: 'Your cart is empty. Please add items before checkout.' },
         { status: 400 }
@@ -167,7 +172,9 @@ export async function POST(request: NextRequest) {
     const totalAmount = subtotal + shippingCost;
     const fullName = `${normalizedDetails.firstName} ${normalizedDetails.lastName}`.trim();
 
-    const orderResult = await client.query(
+    // Create a temporary payment intent instead of the order
+    // Order will be created AFTER Koko confirms payment
+    const intentResult = await client.query(
       `
         INSERT INTO orders (
           user_id,
@@ -204,14 +211,16 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    const orderId = orderResult.rows[0]?.id as string | undefined;
-    const orderNumber = orderResult.rows[0]?.order_number as number | null | undefined;
+    const intentId = intentResult.rows[0]?.id as string | undefined;
+    const orderNumber = intentResult.rows[0]?.order_number as number | null | undefined;
 
-    if (!orderId) {
+    if (!intentId) {
       await client.query('ROLLBACK');
-      return NextResponse.json({ error: 'Failed to initialize order.' }, { status: 500 });
+      transactionStarted = false;
+      return NextResponse.json({ error: 'Failed to initialize payment.' }, { status: 500 });
     }
 
+    // Store order items linked to this intent
     for (const item of cartItemsResult.rows) {
       await client.query(
         `
@@ -227,7 +236,7 @@ export async function POST(request: NextRequest) {
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         `,
         [
-          orderId,
+          intentId,
           item.product_id,
           item.product_name,
           item.color_name,
@@ -239,13 +248,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Delete cart after storing intent (will be restored if payment fails)
     await client.query('DELETE FROM carts WHERE id = $1', [cartId]);
     await client.query('COMMIT');
+    transactionStarted = false;
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
     const currency = 'LKR';
     const amount = totalAmount.toFixed(2);
-    const publicOrderId = formatOrderNumber(orderNumber) || orderId;
+    const publicOrderId = formatOrderNumber(orderNumber) || intentId;
     const reference = `${config.merchantId}${Math.floor(111 + Math.random() * 888)}-${publicOrderId}`;
     const description = 'Koko: Buy Now Pay Later';
 
@@ -261,7 +272,7 @@ export async function POST(request: NextRequest) {
       pluginVersion: config.pluginVersion,
       returnUrl,
       cancelUrl,
-      orderId,
+      orderId: intentId,
       reference,
       firstName: normalizedDetails.firstName,
       lastName: normalizedDetails.lastName,
@@ -275,7 +286,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      orderId,
+      orderId: intentId,
       publicOrderId,
       gatewayUrl: `${config.baseUrl}/api/merchants/orderCreate`,
       formFields: {
@@ -287,7 +298,7 @@ export async function POST(request: NextRequest) {
         _currency: currency,
         _amount: amount,
         _reference: reference,
-        _orderId: orderId,
+        _orderId: intentId,
         _pluginName: config.pluginName,
         _pluginVersion: config.pluginVersion,
         _description: description,
@@ -300,10 +311,12 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    try {
-      await client.query('ROLLBACK');
-    } catch (rollbackError) {
-      console.error('Koko initiate rollback failed:', rollbackError);
+    if (transactionStarted) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('Koko initiate rollback failed:', rollbackError);
+      }
     }
 
     console.error('Koko initiate error:', error);
