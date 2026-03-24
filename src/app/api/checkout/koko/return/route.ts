@@ -5,27 +5,9 @@ export async function GET(request: NextRequest) {
   const orderId = incoming.searchParams.get('orderId') || incoming.searchParams.get('_orderId');
   const status = incoming.searchParams.get('status') || '';
   const trnId = incoming.searchParams.get('trnId') || '';
-  const normalizedStatus = status.trim().toUpperCase();
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || incoming.origin;
-  const isFailureStatus = [
-    'FAILED',
-    'FAILURE',
-    'DECLINED',
-    'ERROR',
-    'CANCEL',
-    'CANCELLED',
-    'CANCELED',
-    'VOIDED',
-    'REVERSED',
-    'EXPIRED',
-  ].includes(normalizedStatus);
-
-  const redirectUrl = new URL(isFailureStatus ? '/checkout' : '/order-confirmation', appUrl);
-
-  if (isFailureStatus) {
-    redirectUrl.searchParams.set('payment_error', 'koko_failed');
-  }
+  const redirectUrl = new URL('/order-confirmation', appUrl);
 
   if (orderId) {
     redirectUrl.searchParams.set('koko_order', orderId);

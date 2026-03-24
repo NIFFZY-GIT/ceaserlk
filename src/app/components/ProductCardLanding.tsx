@@ -148,7 +148,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative flex flex-col h-full p-3 sm:p-4 transition-all duration-300 bg-white rounded-xl">
+      <div className="relative flex flex-col h-full p-5 sm:p-5 transition-all duration-300 bg-white rounded-xl">
         <Link 
           href={`/product/${product.id}?variant=${activeVariant.variantId}`} 
           className="relative block w-full overflow-hidden rounded-md aspect-[4/5]"
@@ -182,9 +182,9 @@ export const ProductCard = ({ product }: { product: Product }) => {
           {isOnSale && (<div className="absolute top-0 left-0"><div className="absolute px-12 py-1.5 text-sm font-bold text-white uppercase transform -rotate-45 bg-black top-2 -left-10">SALE</div></div>)}
         </Link>
         <div className="flex flex-col flex-grow mt-4">
-          <h3 className="text-lg font-semibold text-black capitalize">{product.name}</h3>
+          <h3 className="text-sm font-semibold text-black capitalize">{product.name}</h3>
           <div className="flex items-center gap-2 mt-1">
-            {isOnSale ? (<><span className="text-xl font-bold text-black">LKR {price.toFixed(2)}</span><span className="font-medium text-gray-500 line-through text-md">LKR {compareAtPrice!.toFixed(2)}</span></>) : (<span className="text-xl font-bold text-black">LKR {price.toFixed(2)}</span>)}
+            {isOnSale ? (<><span className="text-lg font-bold text-black">LKR {price.toFixed(2)}</span><span className="font-medium text-gray-500 line-through text-xs">LKR {compareAtPrice!.toFixed(2)}</span></>) : (<span className="text-lg font-bold text-black">LKR {price.toFixed(2)}</span>)}
           </div>
           <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-2">
             <div className="relative h-4 w-[74px] sm:h-5 sm:w-[90px]">
@@ -196,7 +196,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
                 sizes="90px"
               />
             </div>
-            <p className="mt-1 text-[10px] sm:text-xs font-medium text-gray-700">
+            <p className="mt-1 text-xs sm:text-sm font-medium text-gray-700">
               Rs. {kokoInstallment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 3 months
             </p>
           </div>
