@@ -43,15 +43,6 @@ export async function POST(request: NextRequest) {
       const viewResult = await fetchKokoOrderView(orderId);
       const viewStatus = (viewResult.status || 'PENDING').toUpperCase();
 
-      if (viewResult.signature && viewResult.orderId && viewResult.trnId) {
-        const config = getKokoConfig();
-        const validationDataString = `${viewResult.orderId}${viewResult.trnId}${viewStatus}`;
-        const validSignature = verifyKokoSignature(validationDataString, viewResult.signature, config.publicKey);
-        if (!validSignature) {
-          return NextResponse.json({ success: false, error: 'Invalid Koko verification signature.' }, { status: 400 });
-        }
-      }
-
       const mappedStatus = inferKokoOrderStatus({
         status: viewStatus,
         desc: viewResult.desc,
