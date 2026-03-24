@@ -37,16 +37,6 @@ const COUNTRY_CODES: CountryCodeOption[] = [
   { label: "Canada", code: "+1" },
 ];
 
-const REGION_TO_DIAL_CODE: Record<string, string> = {
-  LK: "+94",
-  IN: "+91",
-  GB: "+44",
-  US: "+1",
-  AE: "+971",
-  AU: "+61",
-  CA: "+1",
-};
-
 function normalizeCountryCode(input: string): string {
   const digitsOnly = input.replace(/\D/g, "");
   return digitsOnly ? `+${digitsOnly}` : "+";
