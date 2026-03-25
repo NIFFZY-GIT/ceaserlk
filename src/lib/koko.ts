@@ -42,6 +42,25 @@ export const getKokoConfig = () => {
     throw new Error('Koko private key format is invalid. Store it as a full PEM block in KOKO_PRIVATE_KEY.');
   }
 
+  // Validate that keys can be parsed (fail early if there are format issues)
+  try {
+    crypto.createPublicKey({ key: publicKey, format: 'pem' });
+  } catch (error) {
+    throw new Error(
+      `Koko public key is invalid or corrupted. ${error instanceof Error ? error.message : ''}`
+    );
+  }
+
+  try {
+    crypto.createPrivateKey({ key: privateKey, format: 'pem' });
+  } catch (error) {
+    throw new Error(
+      `Koko private key is invalid or corrupted. Ensure it is a valid PKCS#1 (-----BEGIN RSA PRIVATE KEY-----) or PKCS#8 (-----BEGIN PRIVATE KEY-----) format key. ${
+        error instanceof Error ? error.message : ''
+      }`
+    );
+  }
+
   return {
     merchantId,
     apiKey,
@@ -100,17 +119,41 @@ export const buildKokoOrderViewDataString = (args: {
 };
 
 export const signKokoDataString = (dataString: string, privateKey: string) => {
-  const signer = crypto.createSign('RSA-SHA256');
-  signer.update(dataString);
-  signer.end();
-  return signer.sign(privateKey, 'base64');
+  try {
+    // Create a KeyObject from the PEM-formatted private key
+    // This ensures proper parsing of PKCS#1 format keys
+    const keyObject = crypto.createPrivateKey({
+      key: privateKey,
+      format: 'pem',
+    });
+    const signer = crypto.createSign('RSA-SHA256');
+    signer.update(dataString);
+    signer.end();
+    return signer.sign(keyObject, 'base64');
+  } catch (error) {
+    throw new Error(
+      `Failed to sign Koko data string. Ensure the private key is a valid PKCS#1 or PKCS#8 RSA private key. Error: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`
+    );
+  }
 };
 
 export const verifyKokoSignature = (dataString: string, signature: string, publicKey: string) => {
-  const verifier = crypto.createVerify('RSA-SHA256');
-  verifier.update(dataString);
-  verifier.end();
-  return verifier.verify(publicKey, signature, 'base64');
+  try {
+    // Create a KeyObject from the PEM-formatted public key
+    const keyObject = crypto.createPublicKey({
+      key: publicKey,
+      format: 'pem',
+    });
+    const verifier = crypto.createVerify('RSA-SHA256');
+    verifier.update(dataString);
+    verifier.end();
+    return verifier.verify(keyObject, signature, 'base64');
+  } catch (error) {
+    console.error('Koko signature verification failed:', error);
+    return false;
+  }
 };
 
 export type KokoOrderViewResponse = {
