@@ -66,6 +66,25 @@ export default function RootLayout({
           }}
         />
 
+        {/* --- Google Ads tag (AW-18044472287) --- */}
+        <Script
+          id="google-ads-gtag-src"
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=AW-18044472287"
+        />
+        <Script
+          id="google-ads-gtag-init"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'AW-18044472287');
+            `,
+          }}
+        />
+
         {/* --- Meta Pixel Code (1431696128992860) --- */}
         <Script
           id="fb-pixel"
