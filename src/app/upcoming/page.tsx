@@ -259,7 +259,23 @@ export default function LuxModernPage() {
         .then(() => {
           setNeedsInteractionToPlay(false);
         })
-        .catch(() => setNeedsInteractionToPlay(true));
+        .catch(() => {
+          // Mobile browsers block autoplay with sound; retry muted so background video still starts.
+          if (useVideoAudio && videoRef.current && !videoRef.current.muted) {
+            videoRef.current.muted = true;
+            setIsAudioMuted(true);
+
+            const mutedPlayPromise = videoRef.current.play();
+            if (mutedPlayPromise && typeof mutedPlayPromise.catch === 'function') {
+              mutedPlayPromise
+                .then(() => setNeedsInteractionToPlay(false))
+                .catch(() => setNeedsInteractionToPlay(true));
+              return;
+            }
+          }
+
+          setNeedsInteractionToPlay(true);
+        });
     }
   }, [useSliderAudio, useVideoAudio]);
 
