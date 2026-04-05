@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -9,6 +9,25 @@ import Image from 'next/image';
 import Link from 'next/link';
 import PayHerePaymentHandler from './PayHerePaymentHandler';
 import KokoPaymentHandler from './KokoPaymentHandler';
+
+declare global {
+  interface Window {
+    fbq?: (...args: unknown[]) => void;
+  }
+}
+
+type CheckoutFieldName = 'email' | 'phone' | 'firstName' | 'lastName' | 'address' | 'city' | 'country' | 'postalCode';
+
+const checkoutFieldEventNames: Record<CheckoutFieldName, string> = {
+  email: 'Email_Field',
+  phone: 'Phone_Field',
+  firstName: 'First_Name_Field',
+  lastName: 'Last_Name_Field',
+  address: 'Street_Address_Field',
+  city: 'City_Field',
+  country: 'Country_Field',
+  postalCode: 'Postal_Code_Field',
+};
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -39,6 +58,8 @@ export default function CheckoutPage() {
 
   // Free delivery promo state (lifetime if earned)
   const [hasFreeDeliveryForLife, setHasFreeDeliveryForLife] = useState(false);
+  const trackedFillEventsRef = useRef(new Set<string>());
+  const pendingPixelEventsRef = useRef<string[]>([]);
 
   // Cart expiration timer effect
   useEffect(() => {
@@ -180,8 +201,53 @@ export default function CheckoutPage() {
     if (codError) {
       setCodError(null);
     }
-    setShippingDetails({ ...shippingDetails, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setShippingDetails((previous) => ({ ...previous, [name]: value }));
   };
+
+  const trackCheckoutFieldEvent = useCallback((field: CheckoutFieldName, interaction: 'Focus' | 'Fill') => {
+    const eventName = `${checkoutFieldEventNames[field]}_${interaction}`;
+
+    if (interaction === 'Fill') {
+      if (trackedFillEventsRef.current.has(eventName)) {
+        return;
+      }
+
+      trackedFillEventsRef.current.add(eventName);
+    }
+
+    if (typeof window === 'undefined' || typeof window.fbq !== 'function') {
+      pendingPixelEventsRef.current.push(eventName);
+      return;
+    }
+
+    window.fbq('trackCustom', eventName);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.fbq !== 'function' || pendingPixelEventsRef.current.length === 0) {
+      return;
+    }
+
+    const queuedEvents = pendingPixelEventsRef.current.splice(0, pendingPixelEventsRef.current.length);
+    queuedEvents.forEach((eventName) => {
+      window.fbq?.('trackCustom', eventName);
+    });
+  });
+
+  const getFieldTrackingProps = useCallback(
+    (field: CheckoutFieldName) => ({
+      onFocus: () => trackCheckoutFieldEvent(field, 'Focus'),
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        handleInputChange(e);
+
+        if (e.target.value.trim()) {
+          trackCheckoutFieldEvent(field, 'Fill');
+        }
+      },
+    }),
+    [trackCheckoutFieldEvent]
+  );
 
   // Handle quantity update for cart items
   const handleQuantityUpdate = async (itemId: string, newQuantity: number) => {
@@ -436,7 +502,7 @@ export default function CheckoutPage() {
                       id="email"
                       name="email"
                       value={shippingDetails.email}
-                      onChange={handleInputChange}
+                      {...getFieldTrackingProps('email')}
                       placeholder="you@example.com"
                       required
                       autoComplete="email"
@@ -458,7 +524,7 @@ export default function CheckoutPage() {
                         id="phone"
                         name="phone"
                         value={shippingDetails.phone}
-                        onChange={handleInputChange}
+                        {...getFieldTrackingProps('phone')}
                         placeholder="71 234 5678"
                         required
                         autoComplete="tel"
@@ -476,7 +542,7 @@ export default function CheckoutPage() {
                           type="text"
                           name="firstName"
                           value={shippingDetails.firstName}
-                          onChange={handleInputChange}
+                          {...getFieldTrackingProps('firstName')}
                           placeholder="First name"
                           required
                           autoComplete="given-name"
@@ -488,7 +554,7 @@ export default function CheckoutPage() {
                           type="text"
                           name="lastName"
                           value={shippingDetails.lastName}
-                          onChange={handleInputChange}
+                          {...getFieldTrackingProps('lastName')}
                           placeholder="Last name"
                           required
                           autoComplete="family-name"
@@ -522,7 +588,7 @@ export default function CheckoutPage() {
                       id="address"
                       name="address"
                       value={shippingDetails.address}
-                      onChange={handleInputChange}
+                      {...getFieldTrackingProps('address')}
                       placeholder="House number and street"
                       required
                       autoComplete="street-address"
@@ -539,7 +605,7 @@ export default function CheckoutPage() {
                       id="city"
                       name="city"
                       value={shippingDetails.city}
-                      onChange={handleInputChange}
+                      {...getFieldTrackingProps('city')}
                       placeholder="City / Town"
                       required
                       autoComplete="address-level2"
@@ -555,6 +621,7 @@ export default function CheckoutPage() {
                         name="country"
                         value="Sri Lanka"
                         readOnly
+                        {...getFieldTrackingProps('country')}
                         className={`${inputClass} cursor-not-allowed border-dashed text-gray-400`}
                       />
                       <span className="absolute text-lg -translate-y-1/2 pointer-events-none right-5 top-1/2">🇱🇰</span>
@@ -568,7 +635,7 @@ export default function CheckoutPage() {
                         id="postalCode"
                         name="postalCode"
                         value={shippingDetails.postalCode}
-                        onChange={handleInputChange}
+                        {...getFieldTrackingProps('postalCode')}
                         placeholder="Postal code"
                         required
                         autoComplete="postal-code"
