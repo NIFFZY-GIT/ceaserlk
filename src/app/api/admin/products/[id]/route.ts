@@ -5,7 +5,7 @@ import path from 'path';
 
 // Enable dynamic rendering and set max duration for long uploads
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // 60 seconds timeout for large uploads
+export const maxDuration = 300; // 5 minutes for large uploads
 
 // Sanitize filename to remove special characters that break URLs
 const sanitizeFilename = (filename: string): string => {
@@ -67,7 +67,17 @@ const sanitizeVideoTargetDevice = (value: string | null | undefined): VideoTarge
   return 'all';
 };
 
+let variantImageColumnsReady = false;
+let variantImageColumnsReadyPromise: Promise<void> | null = null;
+
 const ensureVariantImageMediaColumns = async (queryable: { query: (text: string, values?: unknown[]) => Promise<unknown> }) => {
+  if (variantImageColumnsReady) return;
+  if (variantImageColumnsReadyPromise) {
+    await variantImageColumnsReadyPromise;
+    return;
+  }
+
+  variantImageColumnsReadyPromise = (async () => {
   await queryable.query(`
     ALTER TABLE variant_images
       ADD COLUMN IF NOT EXISTS video_audio_source character varying(20) NOT NULL DEFAULT 'product_audio';
@@ -76,6 +86,14 @@ const ensureVariantImageMediaColumns = async (queryable: { query: (text: string,
     ALTER TABLE variant_images
       ADD COLUMN IF NOT EXISTS target_device character varying(20) NOT NULL DEFAULT 'all';
   `);
+    variantImageColumnsReady = true;
+  })();
+
+  try {
+    await variantImageColumnsReadyPromise;
+  } finally {
+    variantImageColumnsReadyPromise = null;
+  }
 };
 
 // --- NEW: GET A SINGLE PRODUCT ---
@@ -167,8 +185,8 @@ export async function PUT(
   const client = await db.connect();
 
   try {
+    await ensureVariantImageMediaColumns(db);
     await client.query('BEGIN');
-    await ensureVariantImageMediaColumns(client);
 
     const formData = await request.formData();
     

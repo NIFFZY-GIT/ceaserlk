@@ -883,7 +883,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
         });
         
         xhr.open('PUT', `/api/admin/products/${initialData.id}`);
-        xhr.timeout = 300000; // 5 minute timeout
+        xhr.timeout = 600000; // 10 minute timeout
         xhr.send(formData);
       });
       
