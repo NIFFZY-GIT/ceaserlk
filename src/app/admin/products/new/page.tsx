@@ -633,7 +633,7 @@ const AddProductPage = () => {
         });
         
         xhr.open('POST', '/api/admin/products');
-        xhr.timeout = 300000; // 5 minute timeout
+        xhr.timeout = 0; // Disable client-side timeout; rely on server/proxy timeouts
         xhr.send(formData);
       });
       
