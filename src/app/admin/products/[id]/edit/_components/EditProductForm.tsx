@@ -85,12 +85,28 @@ const ErrorModal = ({ isVisible, title, message, onClose }: { isVisible: boolean
 
 // --- TYPE DEFINITIONS ---
 // Data from API
-interface ProductMedia { id: string; url: string; altText?: string | null; }
+type VideoAudioSource = 'product_audio' | 'video_audio';
+type VideoTargetDevice = 'all' | 'desktop' | 'mobile';
+
+interface ProductMedia {
+  id: string;
+  url: string;
+  altText?: string | null;
+  videoAudioSource?: VideoAudioSource | null;
+  targetDevice?: VideoTargetDevice | null;
+}
 interface ProductSize { id: string; size: string; stock: number; }
 interface ProductVariant {
   id: string; colorName: string; colorHex: string; price: string;
   compareAtPrice: string | null; sku: string | null; thumbnailUrl: string | null;
-  images: { id: string; imageUrl: string; altText?: string | null }[]; sizes: ProductSize[];
+  images: {
+    id: string;
+    imageUrl: string;
+    altText?: string | null;
+    videoAudioSource?: VideoAudioSource | null;
+    targetDevice?: VideoTargetDevice | null;
+  }[];
+  sizes: ProductSize[];
 }
 export interface FullProduct {
   id: string; name: string; description: string | null; audio_url: string | null;
@@ -112,7 +128,12 @@ const formatFileSize = (bytes: number): string => {
 };
 
 // Internal Form State
-    type MediaState = File | ProductMedia;
+    type FileWithMeta = File & {
+      __fileId?: string;
+      __videoAudioSource?: VideoAudioSource;
+      __targetDevice?: VideoTargetDevice;
+    };
+    type MediaState = FileWithMeta | ProductMedia;
     type SizeState = { id: string; size: string; stock: number };
     type ThumbnailSelection =
       | { kind: 'existing'; mediaId: string }
@@ -139,6 +160,22 @@ const formatFileSize = (bytes: number): string => {
         return VIDEO_EXTENSION_REGEX.test(media.name);
       }
       return isVideoUrl(media.url);
+    };
+
+    const getVideoAudioSource = (media: MediaState): VideoAudioSource => {
+      if (!isVideoMedia(media)) return 'product_audio';
+      if (media instanceof File) {
+        return (media as FileWithMeta).__videoAudioSource || 'product_audio';
+      }
+      return media.videoAudioSource || 'product_audio';
+    };
+
+    const getVideoTargetDevice = (media: MediaState): VideoTargetDevice => {
+      if (!isVideoMedia(media)) return 'all';
+      if (media instanceof File) {
+        return (media as FileWithMeta).__targetDevice || 'all';
+      }
+      return media.targetDevice || 'all';
     };
 
 // --- HELPER COMPONENTS ---
@@ -439,6 +476,8 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
           id: mediaItem.id,
           url: mediaItem.imageUrl,
           altText: mediaItem.altText ?? null,
+          videoAudioSource: mediaItem.videoAudioSource ?? 'product_audio',
+          targetDevice: mediaItem.targetDevice ?? 'all',
         }));
 
         let thumbnailSelection: ThumbnailSelection | null = null;
@@ -599,8 +638,13 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
     const filesWithIds = incoming.map(file => {
       const fileId = `file_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${file.name}`;
       fileRegistry.current.set(fileId, file);
-      // Create a wrapper object that includes the file ID
-      return Object.assign(file, { __fileId: fileId });
+      const isVideo = isVideoMedia(file as MediaState);
+      // Persist metadata directly on the File object so it remains stable in state.
+      return Object.assign(file, {
+        __fileId: fileId,
+        __videoAudioSource: isVideo ? 'product_audio' as VideoAudioSource : undefined,
+        __targetDevice: isVideo ? 'all' as VideoTargetDevice : undefined,
+      }) as FileWithMeta;
     });
     
     setVariants(prev => prev.map(variant => {
@@ -655,6 +699,35 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
       return { ...variant, thumbnailSelection: selection };
     }));
   }, []);
+
+  const updateVideoOptions = useCallback(
+    (variantId: string, mediaToUpdate: MediaState, updates: Partial<{ videoAudioSource: VideoAudioSource; targetDevice: VideoTargetDevice }>) => {
+      setVariants(prev => prev.map(variant => {
+        if (variant.id !== variantId) return variant;
+
+        const media = variant.media.map(item => {
+          if (item !== mediaToUpdate) return item;
+          if (!isVideoMedia(item)) return item;
+
+          if (item instanceof File) {
+            const file = item as FileWithMeta;
+            if (updates.videoAudioSource) file.__videoAudioSource = updates.videoAudioSource;
+            if (updates.targetDevice) file.__targetDevice = updates.targetDevice;
+            return file;
+          }
+
+          return {
+            ...item,
+            videoAudioSource: updates.videoAudioSource ?? item.videoAudioSource ?? 'product_audio',
+            targetDevice: updates.targetDevice ?? item.targetDevice ?? 'all',
+          };
+        });
+
+        return { ...variant, media };
+      }));
+    },
+    []
+  );
 
   const addSize = useCallback((variantId: string) => {
     const newSize = { id: `temp_size_${Date.now()}`, size: '', stock: 0 };
@@ -712,7 +785,13 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
       // Append variant data and new media
       const variantsDataForApi = variants.map(variant => {
         const existingMediaIds: string[] = [];
-        const newMediaDescriptors: Array<{ formKey: string; originalName: string }> = [];
+        const existingMedia: Array<{ id: string; videoAudioSource: VideoAudioSource; targetDevice: VideoTargetDevice }> = [];
+        const newMediaDescriptors: Array<{
+          formKey: string;
+          originalName: string;
+          videoAudioSource: VideoAudioSource;
+          targetDevice: VideoTargetDevice;
+        }> = [];
 
         variant.media.forEach((mediaItem, index) => {
           if (mediaItem instanceof File) {
@@ -730,9 +809,19 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
               usedFreshFile: !!freshFile
             });
             formData.append(formKey, fileToAppend);
-            newMediaDescriptors.push({ formKey, originalName: fileToAppend.name });
+            newMediaDescriptors.push({
+              formKey,
+              originalName: fileToAppend.name,
+              videoAudioSource: getVideoAudioSource(mediaItem),
+              targetDevice: getVideoTargetDevice(mediaItem),
+            });
           } else {
             existingMediaIds.push(mediaItem.id);
+            existingMedia.push({
+              id: mediaItem.id,
+              videoAudioSource: getVideoAudioSource(mediaItem),
+              targetDevice: getVideoTargetDevice(mediaItem),
+            });
           }
         });
 
@@ -752,6 +841,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
           sku: variant.sku,
           thumbnailSelection: variant.thumbnailSelection,
           existingMediaIds,
+          existingMedia,
           newMediaDescriptors,
           sizes: variant.sizes.map(size => ({ id: size.id, size: size.size, stock: size.stock })),
         };
@@ -1019,14 +1109,39 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                               const video = isVideoMedia(mediaItem);
                               const thumbnailActive = isActiveThumbnail(activeVariant, mediaItem);
                               return (
-                                <MediaPreviewItem
-                                  key={key}
-                                  previewUrl={previewUrl}
-                                  isVideo={video}
-                                  isThumbnail={thumbnailActive}
-                                  onSetThumbnail={() => setThumbnail(activeVariant.id, mediaItem)}
-                                  onRemove={() => removeMedia(activeVariant.id, mediaItem)}
-                                />
+                                <div key={key} className="space-y-2">
+                                  <MediaPreviewItem
+                                    previewUrl={previewUrl}
+                                    isVideo={video}
+                                    isThumbnail={thumbnailActive}
+                                    onSetThumbnail={() => setThumbnail(activeVariant.id, mediaItem)}
+                                    onRemove={() => removeMedia(activeVariant.id, mediaItem)}
+                                  />
+                                  {video && (
+                                    <div className="space-y-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200">
+                                      <label className="block text-[10px] font-medium text-slate-600">Video Audio</label>
+                                      <select
+                                        value={getVideoAudioSource(mediaItem)}
+                                        onChange={(e) => updateVideoOptions(activeVariant.id, mediaItem, { videoAudioSource: e.target.value as VideoAudioSource })}
+                                        className="w-full px-2 py-1 text-[11px] border rounded bg-white border-slate-300"
+                                      >
+                                        <option value="product_audio">Play Product Audio</option>
+                                        <option value="video_audio">Play Video Audio</option>
+                                      </select>
+
+                                      <label className="block text-[10px] font-medium text-slate-600">Show On</label>
+                                      <select
+                                        value={getVideoTargetDevice(mediaItem)}
+                                        onChange={(e) => updateVideoOptions(activeVariant.id, mediaItem, { targetDevice: e.target.value as VideoTargetDevice })}
+                                        className="w-full px-2 py-1 text-[11px] border rounded bg-white border-slate-300"
+                                      >
+                                        <option value="all">Desktop + Mobile</option>
+                                        <option value="desktop">Desktop Only</option>
+                                        <option value="mobile">Mobile Only</option>
+                                      </select>
+                                    </div>
+                                  )}
+                                </div>
                               );
                             })}
 
@@ -1048,6 +1163,10 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                           </div>
 
                           <div className="mt-3 text-xs text-slate-500">
+                            Tip: upload one desktop-only video and one mobile-only video if you want separate playback per device.
+                          </div>
+
+                          <div className="mt-2 text-xs text-slate-500">
                             Current cover preview:{' '}
                             {getThumbnailPreviewUrl(activeVariant) ? (
                               <span className="font-medium text-slate-700">set</span>

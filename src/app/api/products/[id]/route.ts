@@ -1,6 +1,17 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 
+const ensureVariantImageMediaColumns = async (queryable: { query: (text: string, values?: unknown[]) => Promise<unknown> }) => {
+  await queryable.query(`
+    ALTER TABLE variant_images
+      ADD COLUMN IF NOT EXISTS video_audio_source character varying(20) NOT NULL DEFAULT 'product_audio';
+  `);
+  await queryable.query(`
+    ALTER TABLE variant_images
+      ADD COLUMN IF NOT EXISTS target_device character varying(20) NOT NULL DEFAULT 'all';
+  `);
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -12,6 +23,8 @@ export async function GET(
   }
 
   try {
+    await ensureVariantImageMediaColumns(db);
+
     const query = `
       SELECT
         p.id,
@@ -31,7 +44,12 @@ export async function GET(
               (
                 SELECT json_agg(img_ordered ORDER BY img_ordered."displayOrder" ASC)
                 FROM (
-                  SELECT vi.id, vi.image_url AS url, COALESCE(vi.display_order, 0) AS "displayOrder"
+                  SELECT
+                    vi.id,
+                    vi.image_url AS url,
+                    COALESCE(vi.display_order, 0) AS "displayOrder",
+                    COALESCE(vi.video_audio_source, 'product_audio') AS "videoAudioSource",
+                    COALESCE(vi.target_device, 'all') AS "targetDevice"
                   FROM variant_images vi WHERE vi.variant_id = pv.id
                 ) AS img_ordered
               ) AS images,

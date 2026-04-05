@@ -40,6 +40,8 @@ interface VariantImage {
   id: string;
   url: string;
   displayOrder?: number;
+  videoAudioSource?: "product_audio" | "video_audio";
+  targetDevice?: "all" | "desktop" | "mobile";
 }
 
 interface ProductVariant {
@@ -65,6 +67,7 @@ interface MediaItem {
   id: string;
   url: string;
   type: "image" | "video";
+  videoAudioSource?: "product_audio" | "video_audio";
 }
 
 // Utility function to check if URL is a video
@@ -275,7 +278,6 @@ function TrainMediaShowcase({
   const xQuickSetterRef = useRef<((value: number) => void) | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isMuted] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [videoLoadingStates, setVideoLoadingStates] = useState<Map<string, boolean>>(new Map());
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -357,6 +359,15 @@ function TrainMediaShowcase({
 
   // Find the index of the first image (after videos)
   const firstImageIndex = media.findIndex((item) => item.type === "image");
+  const activeMedia = media[currentIndex];
+  const activeVideoUsesOwnAudio =
+    activeMedia?.type === "video" && activeMedia.videoAudioSource === "video_audio";
+
+  useEffect(() => {
+    if (activeVideoUsesOwnAudio && isAudioPlaying && onToggleAudio) {
+      onToggleAudio();
+    }
+  }, [activeVideoUsesOwnAudio, isAudioPlaying, onToggleAudio]);
 
   // Slide Animation Logic
   const slideTo = useCallback(
@@ -577,7 +588,7 @@ function TrainMediaShowcase({
       onTouchEnd={handleTouchEnd}
     >
       {/* Audio Toggle Button */}
-      {hasAudio && onToggleAudio && (
+      {hasAudio && onToggleAudio && !activeVideoUsesOwnAudio && (
         <button
           onClick={onToggleAudio}
           className="absolute bottom-20 sm:bottom-6 left-4 sm:left-6 z-30 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white rounded-full shadow-sm text-xs sm:text-sm text-neutral-700 hover:shadow-md transition-shadow"
@@ -630,7 +641,7 @@ function TrainMediaShowcase({
                   src={isVisible ? item.url : undefined}
                   autoPlay={isCurrent}
                   loop
-                  muted={isMuted}
+                  muted={!activeVideoUsesOwnAudio}
                   playsInline
                   preload={isVisible ? "auto" : "none"}
                   onCanPlay={() => handleVideoCanPlay(item.id)}
@@ -801,7 +812,7 @@ function TrainMediaShowcase({
                 key={`video-${fullscreenIndex}`}
                 src={media[fullscreenIndex].url}
                 autoPlay
-                muted
+                muted={media[fullscreenIndex].videoAudioSource !== "video_audio"}
                 loop
                 playsInline
                 className="max-w-full max-h-full object-contain animate-in zoom-in-50 fade-in duration-500 transition-all"
@@ -1214,8 +1225,16 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [fakeStockReductions, setFakeStockReductions] = useState<FakeStockReductions>({}); // Track fake reductions per size
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const updateViewport = () => setIsMobileViewport(window.innerWidth < 768);
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
 
   // Reset fake stock reductions when variant changes
   useEffect(() => {
@@ -1380,10 +1399,21 @@ export default function ProductPage() {
 
     // Separate into videos and images
     sortedItems.forEach((img) => {
+      const isVideo = isVideoUrl(img.url);
+      if (isVideo) {
+        const targetDevice = img.targetDevice ?? "all";
+        const hiddenOnMobile = targetDevice === "desktop" && isMobileViewport;
+        const hiddenOnDesktop = targetDevice === "mobile" && !isMobileViewport;
+        if (hiddenOnMobile || hiddenOnDesktop) {
+          return;
+        }
+      }
+
       const item: MediaItem = {
         id: img.id,
         url: img.url,
-        type: isVideoUrl(img.url) ? "video" : "image",
+        type: isVideo ? "video" : "image",
+        videoAudioSource: isVideo ? (img.videoAudioSource ?? "product_audio") : undefined,
       };
       
       if (item.type === "video") {
@@ -1395,7 +1425,7 @@ export default function ProductPage() {
 
     // Videos first, then images
     return [...videos, ...images];
-  }, [selectedVariant]);
+  }, [selectedVariant, isMobileViewport]);
 
   // Handle variant change - reset size selection
   const handleVariantChange = useCallback((variant: ProductVariant) => {

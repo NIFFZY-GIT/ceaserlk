@@ -907,7 +907,9 @@ CREATE TABLE public.variant_images (
     variant_id uuid NOT NULL,
     image_url character varying(255) NOT NULL,
     alt_text character varying(255),
-    display_order integer DEFAULT 0
+    display_order integer DEFAULT 0,
+    video_audio_source character varying(20) DEFAULT 'product_audio'::character varying NOT NULL,
+    target_device character varying(20) DEFAULT 'all'::character varying NOT NULL
 );
 
 

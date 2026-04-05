@@ -36,6 +36,9 @@ type ThumbnailSelectionPayload =
   | { kind: 'file'; fileName: string }
   | { kind: 'url'; url: string };
 
+type VideoAudioSourcePayload = 'product_audio' | 'video_audio';
+type VideoTargetDevicePayload = 'all' | 'desktop' | 'mobile';
+
 type VariantUpdateData = {
   id: string;
   colorName: string;
@@ -45,8 +48,34 @@ type VariantUpdateData = {
   sku: string;
   thumbnailSelection: ThumbnailSelectionPayload | null;
   existingMediaIds: string[];
-  newMediaDescriptors: Array<{ formKey: string; originalName: string }>;
+  existingMedia?: Array<{ id: string; videoAudioSource: VideoAudioSourcePayload; targetDevice: VideoTargetDevicePayload }>;
+  newMediaDescriptors: Array<{
+    formKey: string;
+    originalName: string;
+    videoAudioSource: VideoAudioSourcePayload;
+    targetDevice: VideoTargetDevicePayload;
+  }>;
   sizes: { id: string; size: string; stock: number; }[];
+};
+
+const sanitizeVideoAudioSource = (value: string | null | undefined): VideoAudioSourcePayload => {
+  return value === 'video_audio' ? 'video_audio' : 'product_audio';
+};
+
+const sanitizeVideoTargetDevice = (value: string | null | undefined): VideoTargetDevicePayload => {
+  if (value === 'desktop' || value === 'mobile') return value;
+  return 'all';
+};
+
+const ensureVariantImageMediaColumns = async (queryable: { query: (text: string, values?: unknown[]) => Promise<unknown> }) => {
+  await queryable.query(`
+    ALTER TABLE variant_images
+      ADD COLUMN IF NOT EXISTS video_audio_source character varying(20) NOT NULL DEFAULT 'product_audio';
+  `);
+  await queryable.query(`
+    ALTER TABLE variant_images
+      ADD COLUMN IF NOT EXISTS target_device character varying(20) NOT NULL DEFAULT 'all';
+  `);
 };
 
 // --- NEW: GET A SINGLE PRODUCT ---
@@ -57,6 +86,8 @@ export async function GET(
   const { id } = await params;
 
   try {
+    await ensureVariantImageMediaColumns(db);
+
     const query = `
       SELECT
         p.id,
@@ -83,7 +114,9 @@ export async function GET(
                   SELECT
                     vi.id,
                     vi.image_url AS "imageUrl",
-                    vi.alt_text AS "altText"
+                    vi.alt_text AS "altText",
+                    COALESCE(vi.video_audio_source, 'product_audio') AS "videoAudioSource",
+                    COALESCE(vi.target_device, 'all') AS "targetDevice"
                   FROM variant_images vi
                   WHERE vi.variant_id = pv.id
                 ) AS images_agg
@@ -135,6 +168,7 @@ export async function PUT(
 
   try {
     await client.query('BEGIN');
+    await ensureVariantImageMediaColumns(client);
 
     const formData = await request.formData();
     
@@ -318,6 +352,21 @@ export async function PUT(
 
       const savedMedia: Array<{ id: string; url: string; originalName: string }> = [];
 
+      for (const existing of variant.existingMedia || []) {
+        await client.query(
+          `UPDATE variant_images
+             SET video_audio_source = $1,
+                 target_device = $2
+           WHERE id = $3 AND variant_id = $4`,
+          [
+            sanitizeVideoAudioSource(existing.videoAudioSource),
+            sanitizeVideoTargetDevice(existing.targetDevice),
+            existing.id,
+            variantId,
+          ]
+        );
+      }
+
       for (const descriptor of variant.newMediaDescriptors || []) {
         const mediaFile = formData.get(descriptor.formKey) as File | null;
         
@@ -357,8 +406,16 @@ export async function PUT(
 
         const mediaUrl = `/uploads/products/${filename}`;
         const insertResult = await client.query(
-          'INSERT INTO variant_images (variant_id, image_url, alt_text) VALUES ($1, $2, $3) RETURNING id, image_url',
-          [variantId, mediaUrl, `${productName} - ${variant.colorName}`],
+          `INSERT INTO variant_images (variant_id, image_url, alt_text, video_audio_source, target_device)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, image_url`,
+          [
+            variantId,
+            mediaUrl,
+            `${productName} - ${variant.colorName}`,
+            sanitizeVideoAudioSource(descriptor.videoAudioSource),
+            sanitizeVideoTargetDevice(descriptor.targetDevice),
+          ],
         );
         savedMedia.push({ id: insertResult.rows[0].id, url: insertResult.rows[0].image_url, originalName: descriptor.originalName });
       }
