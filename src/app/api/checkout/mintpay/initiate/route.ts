@@ -269,9 +269,9 @@ export async function POST(request: NextRequest) {
     const realIp = request.headers.get('x-real-ip') || '';
     const ip = realIp || forwarded.split(',')[0]?.trim() || '127.0.0.1';
 
-    const products: MintPayProduct[] = cartItemsResult.rows.map((item) => ({
+    const products: MintPayProduct[] = cartItemsResult.rows.map((item, idx) => ({
       name: item.product_name,
-      product_id: String(item.product_id),
+      product_id: String(idx + 1),
       sku: `${item.size || ''}/${item.color_name || ''}`.replace(/^\/|\/$/g, '') || 'default',
       quantity: String(item.quantity),
       unit_price: Number.parseFloat(item.variant_price).toFixed(2),
@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
       total_price: totalAmount.toFixed(2),
       discount: '0.00',
       customer_email: normalizedDetails.email,
-      customer_id: user ? String(user.userId).slice(0, 10) : '0',
+      customer_id: user ? String(Math.abs([...String(user.userId)].reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 0))).slice(0, 10) : '0',
       customer_telephone: normalizedDetails.phone,
       ip,
       x_forwarded_for: forwarded || ip,
