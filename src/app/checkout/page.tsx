@@ -9,6 +9,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import PayHerePaymentHandler from './PayHerePaymentHandler';
 import KokoPaymentHandler from './KokoPaymentHandler';
+import MintPayPaymentHandler from './MintPayPaymentHandler';
 
 declare global {
   interface Window {
@@ -36,6 +37,7 @@ export default function CheckoutPage() {
   const { guestId } = useAuth();
 
   const kokoPaymentFailed = searchParams.get('payment_error') === 'koko_failed';
+  const mintPayPaymentFailed = searchParams.get('payment_error') === 'mintpay_failed';
 
   const [shippingDetails, setShippingDetails] = useState({
     email: '',
@@ -47,7 +49,7 @@ export default function CheckoutPage() {
     postalCode: '',
     country: 'Sri Lanka'
   });
-  const [paymentMethod, setPaymentMethod] = useState<'payhere' | 'koko' | 'cod'>('payhere');
+  const [paymentMethod, setPaymentMethod] = useState<'payhere' | 'koko' | 'mintpay' | 'cod'>('payhere');
   const [codSubmitting, setCodSubmitting] = useState(false);
   const [codError, setCodError] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
@@ -338,6 +340,12 @@ export default function CheckoutPage() {
       icon: CreditCard,
     },
     {
+      value: 'mintpay' as const,
+      label: 'MintPay: Buy Now Pay Later',
+      description: 'Pay in 3 interest-free instalments with MintPay.',
+      icon: CreditCard,
+    },
+    {
       value: 'cod' as const,
       label: 'Pay on delivery',
       description: 'Place your order now and pay when it arrives at your doorstep.',
@@ -460,7 +468,7 @@ export default function CheckoutPage() {
         </header>
 
         <div className="container flex-1 px-3 sm:px-4 pb-8 sm:pb-16 mx-auto max-w-7xl">
-          {kokoPaymentFailed && (
+          {(kokoPaymentFailed || mintPayPaymentFailed) && (
             <div className="mb-4 sm:mb-6 rounded-xl sm:rounded-2xl border border-red-500/40 bg-red-500/10 px-4 sm:px-5 py-3 sm:py-4">
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 text-red-300">
@@ -468,7 +476,7 @@ export default function CheckoutPage() {
                 </span>
                 <div>
                   <p className="text-sm sm:text-base font-semibold text-red-200">
-                    Your card payment did not go through.
+                    Your {mintPayPaymentFailed ? 'MintPay' : 'card'} payment did not go through.
                   </p>
                   <p className="mt-1 text-xs sm:text-sm text-red-100/90">
                     Please try again or choose another payment method.
@@ -659,38 +667,50 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-5">
-                  <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-3">
-                    {paymentOptions.map((option) => {
+                  <div className="space-y-2 sm:space-y-3">
+                    {/* Row 1: PayHere — full width */}
+                    {(() => {
+                      const option = paymentOptions.find(o => o.value === 'payhere')!;
                       const Icon = option.icon;
-                      const isActive = paymentMethod === option.value;
+                      const isActive = paymentMethod === 'payhere';
                       return (
                         <button
-                          key={option.value}
                           type="button"
                           aria-pressed={isActive}
-                          onClick={() => {
-                            setPaymentMethod(option.value);
-                            setCodError(null);
-                          }}
+                          onClick={() => { setPaymentMethod('payhere'); setCodError(null); }}
                           className={`flex w-full items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-                            isActive
-                              ? 'border-primary/60 bg-primary/10'
-                              : 'border-gray-700/60 bg-gray-900/40'
+                            isActive ? 'border-primary/60 bg-primary/10' : 'border-gray-700/60 bg-gray-900/40'
                           }`}
                         >
-                          {option.value !== 'koko' && (
-                            <span
-                              className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg sm:rounded-xl text-sm font-semibold ${
-                                isActive
-                                  ? 'border border-primary/40 bg-primary/20 text-primary'
-                                  : 'border border-gray-800/70 bg-gray-900/50 text-gray-400'
-                              }`}
-                            >
-                              <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                            </span>
-                          )}
+                          <span className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg sm:rounded-xl text-sm font-semibold ${
+                            isActive ? 'border border-primary/40 bg-primary/20 text-primary' : 'border border-gray-800/70 bg-gray-900/50 text-gray-400'
+                          }`}>
+                            <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                          </span>
                           <div className="min-w-0">
-                            {option.value === 'koko' ? (
+                            <p className="text-xs sm:text-sm font-semibold text-brand-white">{option.label}</p>
+                            <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400 line-clamp-2">{option.description}</p>
+                          </div>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Row 2: Koko | MintPay — side by side */}
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                      {/* Koko */}
+                      {(() => {
+                        const option = paymentOptions.find(o => o.value === 'koko')!;
+                        const isActive = paymentMethod === 'koko';
+                        return (
+                          <button
+                            type="button"
+                            aria-pressed={isActive}
+                            onClick={() => { setPaymentMethod('koko'); setCodError(null); }}
+                            className={`flex w-full items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                              isActive ? 'border-primary/60 bg-primary/10' : 'border-gray-700/60 bg-gray-900/40'
+                            }`}
+                          >
+                            <div className="min-w-0">
                               <div className="flex items-center h-5 sm:h-6">
                                 <Image
                                   src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
@@ -701,14 +721,69 @@ export default function CheckoutPage() {
                                 />
                                 <span className="sr-only">{option.label}</span>
                               </div>
-                            ) : (
-                              <p className="text-xs sm:text-sm font-semibold text-brand-white">{option.label}</p>
-                            )}
+                              <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400 line-clamp-2">{option.description}</p>
+                            </div>
+                          </button>
+                        );
+                      })()}
+
+                      {/* MintPay */}
+                      {(() => {
+                        const option = paymentOptions.find(o => o.value === 'mintpay')!;
+                        const isActive = paymentMethod === 'mintpay';
+                        return (
+                          <button
+                            type="button"
+                            aria-pressed={isActive}
+                            onClick={() => { setPaymentMethod('mintpay'); setCodError(null); }}
+                            className={`flex w-full items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                              isActive ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-gray-700/60 bg-gray-900/40'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center h-5 sm:h-6">
+                                <Image
+                                  src="/assets/mintpay/mintlogo.png"
+                                  alt="MintPay Buy Now Pay Later"
+                                  width={100}
+                                  height={22}
+                                  className="h-[18px] sm:h-[22px] w-auto object-contain"
+                                />
+                                <span className="sr-only">{option.label}</span>
+                              </div>
+                              <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400 line-clamp-2">{option.description}</p>
+                            </div>
+                          </button>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Row 3: COD — full width */}
+                    {(() => {
+                      const option = paymentOptions.find(o => o.value === 'cod')!;
+                      const Icon = option.icon;
+                      const isActive = paymentMethod === 'cod';
+                      return (
+                        <button
+                          type="button"
+                          aria-pressed={isActive}
+                          onClick={() => { setPaymentMethod('cod'); setCodError(null); }}
+                          className={`flex w-full items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                            isActive ? 'border-primary/60 bg-primary/10' : 'border-gray-700/60 bg-gray-900/40'
+                          }`}
+                        >
+                          <span className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg sm:rounded-xl text-sm font-semibold ${
+                            isActive ? 'border border-primary/40 bg-primary/20 text-primary' : 'border border-gray-800/70 bg-gray-900/50 text-gray-400'
+                          }`}>
+                            <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-semibold text-brand-white">{option.label}</p>
                             <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400 line-clamp-2">{option.description}</p>
                           </div>
                         </button>
                       );
-                    })}
+                    })()}
                   </div>
 
                   {paymentMethod === 'payhere' ? (
@@ -718,6 +793,10 @@ export default function CheckoutPage() {
                   ) : paymentMethod === 'koko' ? (
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-orange-500/40 bg-orange-500/5">
                       <KokoPaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} guestId={guestId} />
+                    </div>
+                  ) : paymentMethod === 'mintpay' ? (
+                    <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-emerald-500/40 bg-emerald-500/5">
+                      <MintPayPaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} guestId={guestId} />
                     </div>
                   ) : (
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-primary/40 bg-primary/5">

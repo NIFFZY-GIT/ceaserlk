@@ -112,6 +112,15 @@ export default function RootLayout({
           />
         </noscript>
 
+        {/* Skip ngrok browser warning for client-side fetch calls */}
+        <Script
+          id="ngrok-fetch-patch"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `if(location.hostname.includes('ngrok')){var _f=window.fetch;window.fetch=function(u,o){o=o||{};o.headers=new Headers(o.headers||{});o.headers.set('ngrok-skip-browser-warning','true');return _f.call(this,u,o);}}`
+          }}
+        />
+
         <AuthProvider>
           <CartProvider>
             <SessionExpiryMonitor />

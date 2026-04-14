@@ -190,13 +190,71 @@ function OrderConfirmationContent() {
 
       await poll();
     };
+
+    const verifyMintPayPayment = async (mintpayOrderId: string, statusHint: string | null) => {
+      const normalizedHint = (statusHint || '').toUpperCase();
+
+      let attempts = 0;
+      const maxAttempts = 20;
+      const pollInterval = 1000;
+
+      const poll = async (): Promise<void> => {
+        if (cancelled) return;
+        try {
+          const res = await fetch('/api/checkout/mintpay/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId: mintpayOrderId,
+              attemptNumber: attempts,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (data.success && data.orderId) {
+            router.replace(`/order-confirmation?orderId=${data.orderId}`);
+            processOrder(data.orderId);
+            return;
+          }
+
+          if (data.pending && attempts < maxAttempts) {
+            attempts++;
+            pollTimeoutRef.current = setTimeout(poll, pollInterval);
+            return;
+          }
+
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          if (
+            attempts >= maxAttempts &&
+            ['FAIL', 'FAILED', 'FAILURE', 'CANCELED', 'CANCELLED', 'REJECTED'].includes(normalizedHint)
+          ) {
+            throw new Error('MintPay payment was cancelled or failed. Please try again.');
+          }
+
+          throw new Error('MintPay payment verification timed out. Please check your order status.');
+        } catch (err: unknown) {
+          if (cancelled) return;
+          const message = err instanceof Error ? err.message : 'MintPay payment verification failed';
+          setErrorMessage(message);
+          setStatus('error');
+        }
+      };
+
+      await poll();
+    };
     
     const orderIdParam = searchParams.get('orderId');
     const payhereOrder = searchParams.get('payhere_order');
     const kokoOrder = searchParams.get('koko_order');
     const kokoStatus = searchParams.get('koko_status');
+    const mintpayOrder = searchParams.get('mintpay_order');
+    const mintpayStatus = searchParams.get('mintpay_status');
 
-    const flowKey = [orderIdParam || '', payhereOrder || '', kokoOrder || '', kokoStatus || ''].join('|');
+    const flowKey = [orderIdParam || '', payhereOrder || '', kokoOrder || '', kokoStatus || '', mintpayOrder || '', mintpayStatus || ''].join('|');
     if (activeFlowKeyRef.current === flowKey) {
       return () => {
         cancelled = true;
@@ -217,6 +275,9 @@ function OrderConfirmationContent() {
     } else if (kokoOrder) {
       // Koko payment - verify status
       verifyKokoPayment(kokoOrder, kokoStatus);
+    } else if (mintpayOrder) {
+      // MintPay payment - verify status
+      verifyMintPayPayment(mintpayOrder, mintpayStatus);
     } else {
       setErrorMessage("No order information found.");
       setStatus('error');
@@ -225,6 +286,7 @@ function OrderConfirmationContent() {
     return () => {
       cancelled = true;
       clearPollTimeout();
+      activeFlowKeyRef.current = null;
     };
   }, [searchParams, router]);
 

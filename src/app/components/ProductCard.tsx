@@ -79,7 +79,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
   }
 
   const price = parseFloat(activeVariant.price);
-  const kokoInstallment = price / 3;
+  const installment = price / 3;
   const compareAtPrice = activeVariant.compareAtPrice ? parseFloat(activeVariant.compareAtPrice) : null;
   const isOnSale = compareAtPrice && compareAtPrice > price;
   // --- Only use first 2 images, no videos ---
@@ -147,17 +147,29 @@ export const ProductCard = ({ product }: { product: Product }) => {
             {isOnSale ? (<><span className="text-lg font-bold text-black">LKR {price.toFixed(2)}</span><span className="font-medium text-gray-500 line-through text-xs">LKR {compareAtPrice!.toFixed(2)}</span></>) : (<span className="text-lg font-bold text-black">LKR {price.toFixed(2)}</span>)}
           </div>
           <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-2">
-            <div className="relative h-4 w-[74px] sm:h-5 sm:w-[90px]">
-              <Image
-                src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
-                alt="Koko"
-                fill
-                className="object-contain object-left"
-                sizes="90px"
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative h-4 w-[74px] sm:h-5 sm:w-[90px] flex-shrink-0">
+                <Image
+                  src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
+                  alt="Koko"
+                  fill
+                  className="object-contain object-left"
+                  sizes="90px"
+                />
+              </div>
+              <span className="text-gray-300">|</span>
+              <div className="relative h-4 w-[60px] sm:h-5 sm:w-[74px] flex-shrink-0">
+                <Image
+                  src="/assets/mintpay/mintlogo.png"
+                  alt="MintPay"
+                  fill
+                  className="object-contain object-left"
+                  sizes="74px"
+                />
+              </div>
             </div>
-            <p className="mt-1 text-xs sm:text-sm font-medium text-gray-700">
-              Rs. {kokoInstallment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 3 months
+            <p className="mt-1 text-[10px] sm:text-xs font-medium text-gray-700">
+              Rs. {installment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 3 months
             </p>
           </div>
           {product.variants.length > 1 && (

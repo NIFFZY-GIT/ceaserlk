@@ -874,7 +874,7 @@ function ProductDetailsPanel({
           100
       )
     : 0;
-  const kokoInstallment = selectedVariant.price / 3;
+  const installment = selectedVariant.price / 3;
 
   const selectedStock = selectedVariant.stock?.find(
     (s) => s.size === selectedSize
@@ -942,17 +942,29 @@ function ProductDetailsPanel({
               </div>
 
               <div className="border border-[#e5e5e5] bg-[#fafafa] rounded-md p-3 sm:p-4">
-                <div className="relative w-[112px] h-[20px] sm:w-[128px] sm:h-[22px]">
-                  <Image
-                    src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
-                    alt="Koko"
-                    fill
-                    className="object-contain object-left"
-                    sizes="128px"
-                  />
+                <div className="flex items-center gap-3">
+                  <div className="relative w-[112px] h-[20px] sm:w-[128px] sm:h-[22px] flex-shrink-0">
+                    <Image
+                      src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
+                      alt="Koko"
+                      fill
+                      className="object-contain object-left"
+                      sizes="128px"
+                    />
+                  </div>
+                  <span className="text-gray-300 text-lg">|</span>
+                  <div className="relative w-[90px] h-[20px] sm:w-[110px] sm:h-[22px] flex-shrink-0">
+                    <Image
+                      src="/assets/mintpay/mintlogo.png"
+                      alt="MintPay"
+                      fill
+                      className="object-contain object-left"
+                      sizes="110px"
+                    />
+                  </div>
                 </div>
                 <p className="mt-1.5 text-xs sm:text-sm text-[#444] font-medium">
-                  Rs. {kokoInstallment.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 3 months
+                  Rs. {installment.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 3 months
                 </p>
               </div>
 
