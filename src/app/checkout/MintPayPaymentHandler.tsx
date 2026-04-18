@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AlertCircle, CreditCard, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 import { Cart } from '@/context/CartContext';
 
 interface MintPayPaymentHandlerProps {
@@ -92,7 +93,13 @@ export default function MintPayPaymentHandler({ cart, shippingDetails, useFreeDe
       <div className="p-3 sm:p-4 border border-emerald-500/30 rounded-lg sm:rounded-xl bg-emerald-500/5">
         <div className="flex items-start gap-2 sm:gap-3">
           <div className="p-1.5 sm:p-2 rounded-md sm:rounded-lg bg-emerald-500/15 flex-shrink-0">
-            <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-300" />
+            <Image
+              src="/assets/mintpay/mintlogo.png"
+              alt="MintPay"
+              width={64}
+              height={20}
+              className="h-4 sm:h-5 w-auto object-contain"
+            />
           </div>
           <div className="min-w-0">
             <p className="text-sm sm:text-base font-semibold text-emerald-300 mb-1">MintPay</p>
@@ -127,7 +134,13 @@ export default function MintPayPaymentHandler({ cart, shippingDetails, useFreeDe
           </>
         ) : (
           <>
-            <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Image
+              src="/assets/mintpay/mintlogo.png"
+              alt="MintPay"
+              width={80}
+              height={20}
+              className="h-4 sm:h-5 w-auto object-contain"
+            />
             <span>Continue with MintPay</span>
           </>
         )}
