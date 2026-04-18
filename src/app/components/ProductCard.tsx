@@ -160,7 +160,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
               <span className="text-gray-300">|</span>
               <div className="relative h-4 w-[60px] sm:h-5 sm:w-[74px] flex-shrink-0">
                 <Image
-                  src="/assets/mintpay/mintlogo.png"
+                  src="/assets/mintpay/mintpaylogo.png"
                   alt="MintPay"
                   fill
                   className="object-contain object-left"

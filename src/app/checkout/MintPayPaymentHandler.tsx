@@ -94,7 +94,7 @@ export default function MintPayPaymentHandler({ cart, shippingDetails, useFreeDe
         <div className="flex items-start gap-2 sm:gap-3">
           <div className="p-1.5 sm:p-2 rounded-md sm:rounded-lg bg-emerald-500/15 flex-shrink-0">
             <Image
-              src="/assets/mintpay/mintlogo.png"
+              src="/assets/mintpay/mintpaylogo.png"
               alt="MintPay"
               width={64}
               height={20}
@@ -135,7 +135,7 @@ export default function MintPayPaymentHandler({ cart, shippingDetails, useFreeDe
         ) : (
           <>
             <Image
-              src="/assets/mintpay/mintlogo.png"
+              src="/assets/mintpay/mintpaylogo.png"
               alt="MintPay"
               width={80}
               height={20}

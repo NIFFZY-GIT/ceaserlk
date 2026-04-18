@@ -743,7 +743,7 @@ export default function CheckoutPage() {
                             <div className="min-w-0">
                               <div className="flex items-center h-5 sm:h-6">
                                 <Image
-                                  src="/assets/mintpay/mintlogo.png"
+                                  src="/assets/mintpay/mintpaylogo.png"
                                   alt="MintPay Buy Now Pay Later"
                                   width={100}
                                   height={22}

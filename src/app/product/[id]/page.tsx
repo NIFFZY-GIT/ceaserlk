@@ -955,7 +955,7 @@ function ProductDetailsPanel({
                   <span className="text-gray-300 text-lg">|</span>
                   <div className="relative w-[90px] h-[20px] sm:w-[110px] sm:h-[22px] flex-shrink-0">
                     <Image
-                      src="/assets/mintpay/mintlogo.png"
+                      src="/assets/mintpay/mintpaylogo.png"
                       alt="MintPay"
                       fill
                       className="object-contain object-left"
