@@ -187,10 +187,12 @@ export async function middleware(request: NextRequest) {
   // but allow guest orders through:
   // - checkout/place-order (guest checkout)
   // - /api/orders/[id] GET (order confirmation for guests) 
+  // - /api/orders/[id]/invoice GET (invoice download from confirmation page)
   // - /api/orders/track (guest order tracking)
   if (pathname.startsWith('/api/orders') && 
       !pathname.includes('/api/checkout/place-order') &&
       !pathname.match(/^\/api\/orders\/[^/]+$/) && // Allow GET /api/orders/{id}
+      !pathname.match(/^\/api\/orders\/[^/]+\/invoice$/) && // Allow GET /api/orders/{id}/invoice
       !pathname.includes('/api/orders/track')) {    // Allow /api/orders/track
     const sessionToken = request.cookies.get('session-token')?.value;
     
