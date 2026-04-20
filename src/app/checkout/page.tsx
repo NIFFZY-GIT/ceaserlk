@@ -54,9 +54,22 @@ export default function CheckoutPage() {
   const [codError, setCodError] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
+  // Products that must not use MintPay
+  const MINTPAY_BLOCKED_PRODUCTS = ['a22db2e3-5b1d-4ba5-9719-108be93965b2'];
+  const hasMintPayBlockedProduct = cart?.items.some(item =>
+    MINTPAY_BLOCKED_PRODUCTS.includes(item.sku.variant.product.id)
+  ) ?? false;
+
   // Cart expiration timer state
   const [cartTimeRemaining, setCartTimeRemaining] = useState<number | null>(null);
   const [cartExpired, setCartExpired] = useState(false);
+
+  // Reset payment method if MintPay is blocked for current cart
+  useEffect(() => {
+    if (hasMintPayBlockedProduct && paymentMethod === 'mintpay') {
+      setPaymentMethod('payhere');
+    }
+  }, [hasMintPayBlockedProduct, paymentMethod]);
 
   // Free delivery promo state (lifetime if earned)
   const [hasFreeDeliveryForLife, setHasFreeDeliveryForLife] = useState(false);
@@ -728,7 +741,7 @@ export default function CheckoutPage() {
                       })()}
 
                       {/* MintPay */}
-                      {(() => {
+                      {!hasMintPayBlockedProduct && (() => {
                         const option = paymentOptions.find(o => o.value === 'mintpay')!;
                         const isActive = paymentMethod === 'mintpay';
                         return (
@@ -794,7 +807,7 @@ export default function CheckoutPage() {
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-orange-500/40 bg-orange-500/5">
                       <KokoPaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} guestId={guestId} />
                     </div>
-                  ) : paymentMethod === 'mintpay' ? (
+                  ) : (paymentMethod === 'mintpay' && !hasMintPayBlockedProduct) ? (
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-emerald-500/40 bg-emerald-500/5">
                       <MintPayPaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} guestId={guestId} />
                     </div>
