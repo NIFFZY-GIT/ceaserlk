@@ -708,68 +708,65 @@ export default function CheckoutPage() {
                       );
                     })()}
 
-                    {/* Row 2: Koko | MintPay — side by side */}
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                      {/* Koko */}
-                      {(() => {
-                        const option = paymentOptions.find(o => o.value === 'koko')!;
-                        const isActive = paymentMethod === 'koko';
-                        return (
-                          <button
-                            type="button"
-                            aria-pressed={isActive}
-                            onClick={() => { setPaymentMethod('koko'); setCodError(null); }}
-                            className={`flex w-full items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-                              isActive ? 'border-primary/60 bg-primary/10' : 'border-gray-700/60 bg-gray-900/40'
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center h-5 sm:h-6">
-                                <Image
-                                  src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
-                                  alt="Koko Buy Now Pay Later"
-                                  width={116}
-                                  height={22}
-                                  className="h-[18px] sm:h-[22px] w-auto object-contain"
-                                />
-                                <span className="sr-only">{option.label}</span>
-                              </div>
-                              <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400 line-clamp-2">{option.description}</p>
+                    {/* Row 2: Koko — full width */}
+                    {(() => {
+                      const option = paymentOptions.find(o => o.value === 'koko')!;
+                      const isActive = paymentMethod === 'koko';
+                      return (
+                        <button
+                          type="button"
+                          aria-pressed={isActive}
+                          onClick={() => { setPaymentMethod('koko'); setCodError(null); }}
+                          className={`flex w-full items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                            isActive ? 'border-primary/60 bg-primary/10' : 'border-gray-700/60 bg-gray-900/40'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center h-5 sm:h-6">
+                              <Image
+                                src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
+                                alt="Koko Buy Now Pay Later"
+                                width={116}
+                                height={22}
+                                className="h-[18px] sm:h-[22px] w-auto object-contain"
+                              />
+                              <span className="sr-only">{option.label}</span>
                             </div>
-                          </button>
-                        );
-                      })()}
+                            <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400 line-clamp-2">{option.description}</p>
+                          </div>
+                        </button>
+                      );
+                    })()}
 
-                      {/* MintPay */}
-                      {!hasMintPayBlockedProduct && (() => {
-                        const option = paymentOptions.find(o => o.value === 'mintpay')!;
-                        const isActive = paymentMethod === 'mintpay';
-                        return (
-                          <button
-                            type="button"
-                            aria-pressed={isActive}
-                            onClick={() => { setPaymentMethod('mintpay'); setCodError(null); }}
-                            className={`flex w-full items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-                              isActive ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-gray-700/60 bg-gray-900/40'
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center h-5 sm:h-6">
-                                <Image
-                                  src="/assets/mintpay/mintpaylogo.png"
-                                  alt="MintPay Buy Now Pay Later"
-                                  width={100}
-                                  height={22}
-                                  className="h-[18px] sm:h-[22px] w-auto object-contain"
-                                />
-                                <span className="sr-only">{option.label}</span>
-                              </div>
-                              <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400 line-clamp-2">{option.description}</p>
+                    {/* MintPay — full width */}
+                    {!hasMintPayBlockedProduct && (() => {
+                      const option = paymentOptions.find(o => o.value === 'mintpay')!;
+                      const isActive = paymentMethod === 'mintpay';
+                      return (
+                        <button
+                          type="button"
+                          aria-pressed={isActive}
+                          onClick={() => { setPaymentMethod('mintpay'); setCodError(null); }}
+                          className={`flex w-full items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-left transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                            isActive ? 'border-emerald-500/60 bg-emerald-500/10' : 'border-gray-700/60 bg-gray-900/40'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center h-5 sm:h-6">
+                              <Image
+                                src="/assets/mintpay/mintpaylogo.png"
+                                alt="MintPay Buy Now Pay Later"
+                                width={100}
+                                height={22}
+                                className="h-[18px] sm:h-[22px] w-auto object-contain"
+                              />
+                              <span className="sr-only">{option.label}</span>
                             </div>
-                          </button>
-                        );
-                      })()}
-                    </div>
+                            <p className="mt-0.5 text-[10px] sm:text-xs text-gray-400 line-clamp-2">{option.description}</p>
+                          </div>
+                        </button>
+                      );
+                    })()}
 
                     {/* Row 3: COD — full width */}
                     {(() => {
