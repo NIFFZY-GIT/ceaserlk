@@ -119,7 +119,15 @@ const Footer = () => {
             aria-label="Designed and Developed by ZEVARONE"
           >
             <span className="text-gray-400">Powered by</span>
-            <span className="font-semibold tracking-wide text-white">ZEVARONE</span>
+            <span className="zevarone-logo-animate rounded">
+              <Image
+                src="/assets/zevaroneassets/zevaronelogo.png"
+                alt="ZEVARONE"
+                width={90}
+                height={20}
+                className="h-4 w-auto"
+              />
+            </span>
           </a>
         </div>
       </div>
