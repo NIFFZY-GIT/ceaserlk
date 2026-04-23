@@ -952,20 +952,18 @@ function ProductDetailsPanel({
                       sizes="128px"
                     />
                   </div>
-                  {product.id !== 'a22db2e3-5b1d-4ba5-9719-108be93965b2' && (
-                    <>
-                      <span className="text-gray-300 text-lg">|</span>
-                      <div className="relative w-[90px] h-[20px] sm:w-[110px] sm:h-[22px] flex-shrink-0">
-                        <Image
-                          src="/assets/mintpay/mintpaylogo.png"
-                          alt="MintPay"
-                          fill
-                          className="object-contain object-left"
-                          sizes="110px"
-                        />
-                      </div>
-                    </>
-                  )}
+                  <>
+                    <span className="text-gray-300 text-lg">|</span>
+                    <div className="relative w-[90px] h-[20px] sm:w-[110px] sm:h-[22px] flex-shrink-0">
+                      <Image
+                        src="/assets/mintpay/mintpaylogo.png"
+                        alt="MintPay"
+                        fill
+                        className="object-contain object-left"
+                        sizes="110px"
+                      />
+                    </div>
+                  </>
                 </div>
                 <p className="mt-1.5 text-xs sm:text-sm text-[#444] font-medium">
                   Rs. {installment.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 3 months

@@ -55,7 +55,7 @@ export default function CheckoutPage() {
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
   // Products that must not use MintPay
-  const MINTPAY_BLOCKED_PRODUCTS = ['a22db2e3-5b1d-4ba5-9719-108be93965b2'];
+  const MINTPAY_BLOCKED_PRODUCTS: string[] = [];
   const hasMintPayBlockedProduct = cart?.items.some(item =>
     MINTPAY_BLOCKED_PRODUCTS.includes(item.sku.variant.product.id)
   ) ?? false;
