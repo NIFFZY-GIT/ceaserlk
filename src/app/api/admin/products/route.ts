@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { verifyAdminAuth } from '@/lib/auth';
+import { ensureProductPaymentGateSchema, normalizeBlockedPaymentMethods } from '@/lib/payment-gates';
 
 // Enable dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+        await ensureProductPaymentGateSchema(db);
         const query = `
             SELECT p.id, p.name, p.shipping_cost, p.is_published, p.created_at,
                    COUNT(DISTINCT pv.id) AS variant_count,
@@ -96,6 +98,10 @@ export async function POST(request: NextRequest) {
         const description = formData.get('description') as string;
         const shippingCost = formData.get('shippingCost') as string;
         const variantsString = formData.get('variants') as string;
+                const blockedPaymentMethodsString = formData.get('blockedPaymentMethods') as string | null;
+                const blockedPaymentMethods = normalizeBlockedPaymentMethods(
+                    blockedPaymentMethodsString ? JSON.parse(blockedPaymentMethodsString) : []
+                );
         
         let runningSize = 0;
 
@@ -175,9 +181,13 @@ export async function POST(request: NextRequest) {
 
         await client.query('BEGIN');
 
+        await ensureProductPaymentGateSchema(client);
+
         const productResult = await client.query(
-            'INSERT INTO products (name, description, shipping_cost, audio_url, trading_card_image, is_published) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-            [productName, description, parseFloat(shippingCost) || 0, audioUrl, tradingImageUrl, true]
+            `INSERT INTO products (name, description, shipping_cost, audio_url, trading_card_image, blocked_payment_methods, is_published)
+             VALUES ($1, $2, $3, $4, $5, $6::text[], $7)
+             RETURNING id`,
+            [productName, description, parseFloat(shippingCost) || 0, audioUrl, tradingImageUrl, blockedPaymentMethods, true]
         );
         const productId = productResult.rows[0].id;
 

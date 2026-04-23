@@ -27,6 +27,7 @@ export interface CartItem {
         id: string;
         name: string;
         shipping_cost: string;
+        blocked_payment_methods?: string[];
       };
     };
   };

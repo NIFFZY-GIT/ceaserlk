@@ -8,6 +8,7 @@ import {
   formatMintPayDate,
   MintPayProduct,
 } from '@/lib/mintpay';
+import { ensureProductPaymentGateSchema, isPaymentMethodBlockedInCart } from '@/lib/payment-gates';
 
 interface IncomingShippingDetails {
   email?: string;
@@ -86,6 +87,16 @@ export async function POST(request: NextRequest) {
   let transactionStarted = false;
   let intentId: string | undefined;
   try {
+    await ensureProductPaymentGateSchema(client);
+
+    const mintPayBlocked = await isPaymentMethodBlockedInCart(client, cartId, 'MINTPAY');
+    if (mintPayBlocked) {
+      return NextResponse.json(
+        { error: 'MintPay is not available for one or more products in your cart.' },
+        { status: 400 }
+      );
+    }
+
     const config = getMintPayConfig();
     await ensureOrderNumberSchema(client);
     await client.query('BEGIN');

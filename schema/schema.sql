@@ -785,7 +785,8 @@ CREATE TABLE public.products (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     audio_url character varying(255),
     shipping_cost numeric(10,2) DEFAULT 0.00 NOT NULL,
-    trading_card_image character varying(255)
+    trading_card_image character varying(255),
+    blocked_payment_methods text[] DEFAULT '{}'::text[] NOT NULL
 );
 
 

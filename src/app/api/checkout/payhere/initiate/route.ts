@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import crypto from 'crypto';
+import { ensureProductPaymentGateSchema, isPaymentMethodBlockedInCart } from '@/lib/payment-gates';
 
 // PayHere configuration
 const PAYHERE_MERCHANT_ID = process.env.PAYHERE_MERCHANT_ID!;
@@ -40,6 +41,15 @@ export async function POST(request: NextRequest) {
     if (!cart || !cart.id || !shippingDetails) {
       return NextResponse.json(
         { error: 'Cart and shipping details are required.' },
+        { status: 400 }
+      );
+    }
+
+    await ensureProductPaymentGateSchema(db);
+    const payHereBlocked = await isPaymentMethodBlockedInCart(db, String(cart.id), 'PAYHERE');
+    if (payHereBlocked) {
+      return NextResponse.json(
+        { error: 'PayHere is not available for one or more products in your cart.' },
         { status: 400 }
       );
     }

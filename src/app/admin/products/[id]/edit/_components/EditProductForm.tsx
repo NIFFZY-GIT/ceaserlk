@@ -110,9 +110,16 @@ interface ProductVariant {
 }
 export interface FullProduct {
   id: string; name: string; description: string | null; audio_url: string | null;
-  trading_card_image: string | null; shipping_cost: string; variants: ProductVariant[];
+  trading_card_image: string | null; shipping_cost: string; blockedPaymentMethods?: string[]; variants: ProductVariant[];
 }
 type ExistingColor = { colorName: string; colorHex: string };
+
+const PAYMENT_METHOD_OPTIONS = [
+  { value: 'PAYHERE', label: 'PayHere' },
+  { value: 'KOKO', label: 'Koko BNPL' },
+  { value: 'MINTPAY', label: 'MintPay BNPL' },
+  { value: 'COD', label: 'Cash On Delivery' },
+] as const;
 
 // Upload size limits - ensure nginx client_max_body_size matches (currently 200M)
 const MAX_TOTAL_UPLOAD_BYTES = 200 * 1024 * 1024;  // 200MB total
@@ -436,6 +443,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
   const [currentTradingCardUrl, setCurrentTradingCardUrl] = useState<string | null>(null);
   const [tradingImage, setTradingImage] = useState<File | null>(null);
   const [removeTradingCard, setRemoveTradingCard] = useState(false);
+  const [blockedPaymentMethods, setBlockedPaymentMethods] = useState<string[]>([]);
 
   const tradingCardPreviewUrl = useObjectUrl(tradingImage);
   
@@ -470,6 +478,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
       setShippingCost(initialData.shipping_cost || '');
       setCurrentAudioUrl(initialData.audio_url);
       setCurrentTradingCardUrl(initialData.trading_card_image);
+      setBlockedPaymentMethods(initialData.blockedPaymentMethods || []);
       
       const formVariants = initialData.variants.map(variant => {
         const media = (variant.images || []).map(mediaItem => ({
@@ -764,6 +773,7 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
       formData.append('productName', productName);
       formData.append('description', description);
       formData.append('shippingCost', shippingCost);
+      formData.append('blockedPaymentMethods', JSON.stringify(blockedPaymentMethods));
 
       // Handle file updates
       if (audioFile) formData.append('audioFile', audioFile);
@@ -999,6 +1009,34 @@ export default function EditProductForm({ initialData }: { initialData: FullProd
                     />
                     <p className="mt-2 text-xs text-slate-500">Use the toolbar to add bullet points, bold highlights, and line breaks.</p>
                   </div>
+                </div>
+              </Card>
+
+              <Card title="Payment Gate Controls" description="Block specific payment methods for this product. By default all methods are enabled.">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {PAYMENT_METHOD_OPTIONS.map((option) => {
+                    const checked = blockedPaymentMethods.includes(option.value);
+                    return (
+                      <label key={option.value} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            setBlockedPaymentMethods((previous) =>
+                              e.target.checked
+                                ? [...previous, option.value]
+                                : previous.filter((method) => method !== option.value)
+                            );
+                          }}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-slate-800">{option.label}</p>
+                          <p className="text-xs text-slate-500">{checked ? 'Blocked for this product' : 'Allowed for this product'}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               </Card>
 

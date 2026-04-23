@@ -60,6 +60,7 @@ interface Product {
   name: string;
   description: string;
   audio_url?: string;
+  blockedPaymentMethods?: string[];
   variants: ProductVariant[];
 }
 
@@ -875,6 +876,10 @@ function ProductDetailsPanel({
       )
     : 0;
   const installment = selectedVariant.price / 3;
+  const blockedPaymentMethods = new Set((product.blockedPaymentMethods || []).map((method) => method.toUpperCase()));
+  const isKokoEnabled = !blockedPaymentMethods.has('KOKO');
+  const isMintPayEnabled = !blockedPaymentMethods.has('MINTPAY');
+  const showBnplBanner = isKokoEnabled || isMintPayEnabled;
 
   const selectedStock = selectedVariant.stock?.find(
     (s) => s.size === selectedSize
@@ -941,19 +946,22 @@ function ProductDetailsPanel({
                 </div>
               </div>
 
-              <div className="border border-[#e5e5e5] bg-[#fafafa] rounded-md p-3 sm:p-4">
+              {showBnplBanner && (
+                <div className="border border-[#e5e5e5] bg-[#fafafa] rounded-md p-3 sm:p-4">
                 <div className="flex items-center gap-3">
-                  <div className="relative w-[112px] h-[20px] sm:w-[128px] sm:h-[22px] flex-shrink-0">
-                    <Image
-                      src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
-                      alt="Koko"
-                      fill
-                      className="object-contain object-left"
-                      sizes="128px"
-                    />
-                  </div>
-                  <>
-                    <span className="text-gray-300 text-lg">|</span>
+                  {isKokoEnabled && (
+                    <div className="relative w-[112px] h-[20px] sm:w-[128px] sm:h-[22px] flex-shrink-0">
+                      <Image
+                        src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
+                        alt="Koko"
+                        fill
+                        className="object-contain object-left"
+                        sizes="128px"
+                      />
+                    </div>
+                  )}
+                  {isKokoEnabled && isMintPayEnabled && <span className="text-gray-300 text-lg">|</span>}
+                  {isMintPayEnabled && (
                     <div className="relative w-[90px] h-[20px] sm:w-[110px] sm:h-[22px] flex-shrink-0">
                       <Image
                         src="/assets/mintpay/mintpaylogo.png"
@@ -963,12 +971,13 @@ function ProductDetailsPanel({
                         sizes="110px"
                       />
                     </div>
-                  </>
+                  )}
                 </div>
                 <p className="mt-1.5 text-xs sm:text-sm text-[#444] font-medium">
                   Rs. {installment.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 3 months
                 </p>
-              </div>
+                </div>
+              )}
 
               {/* Color Selection */}
               {product.variants.length > 1 && (

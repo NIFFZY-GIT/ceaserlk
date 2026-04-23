@@ -3,6 +3,7 @@ import { verifyAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
 import { buildKokoOrderCreateDataString, getKokoConfig, signKokoDataString } from '@/lib/koko';
+import { ensureProductPaymentGateSchema, isPaymentMethodBlockedInCart } from '@/lib/payment-gates';
 
 interface IncomingShippingDetails {
   email?: string;
@@ -87,6 +88,16 @@ export async function POST(request: NextRequest) {
   const client = await db.connect();
   let transactionStarted = false;
   try {
+    await ensureProductPaymentGateSchema(client);
+
+    const kokoBlocked = await isPaymentMethodBlockedInCart(client, cartId, 'KOKO');
+    if (kokoBlocked) {
+      return NextResponse.json(
+        { error: 'Koko payment is not available for one or more products in your cart.' },
+        { status: 400 }
+      );
+    }
+
     const config = getKokoConfig();
     await ensureOrderNumberSchema(client);
     await client.query('BEGIN');

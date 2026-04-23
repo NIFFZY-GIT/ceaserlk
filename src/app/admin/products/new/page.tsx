@@ -123,6 +123,13 @@ type ProductVariant = {
   thumbnailImageName: string | null;
 };
 
+const PAYMENT_METHOD_OPTIONS = [
+  { value: 'PAYHERE', label: 'PayHere' },
+  { value: 'KOKO', label: 'Koko BNPL' },
+  { value: 'MINTPAY', label: 'MintPay BNPL' },
+  { value: 'COD', label: 'Cash On Delivery' },
+] as const;
+
 // --- HELPER COMPONENTS for better structure ---
 
 const Card = ({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) => (
@@ -356,6 +363,7 @@ const AddProductPage = () => {
     }
   ]);
   const [activeVariantId, setActiveVariantId] = useState<number | null>(variants[0]?.id || null);
+  const [blockedPaymentMethods, setBlockedPaymentMethods] = useState<string[]>([]);
 
   // --- API & LOADING STATE ---
   const [isLoading, setIsLoading] = useState(false);
@@ -562,6 +570,7 @@ const AddProductPage = () => {
       formData.append('productName', productName);
       formData.append('description', description);
       formData.append('shippingCost', shippingCost);
+      formData.append('blockedPaymentMethods', JSON.stringify(blockedPaymentMethods));
       if (audioFile) formData.append('audioFile', audioFile);
       if (tradingImage) formData.append('tradingImage', tradingImage);
       
@@ -769,6 +778,34 @@ const AddProductPage = () => {
                     />
                     <p className="mt-2 text-xs text-slate-500">Use the toolbar to add line breaks, bullet points, and bold highlights.</p>
                   </div>
+                </div>
+              </Card>
+
+              <Card title="Payment Gate Controls" description="Block specific payment methods for this product. By default all methods are enabled.">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {PAYMENT_METHOD_OPTIONS.map((option) => {
+                    const checked = blockedPaymentMethods.includes(option.value);
+                    return (
+                      <label key={option.value} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            setBlockedPaymentMethods((previous) =>
+                              e.target.checked
+                                ? [...previous, option.value]
+                                : previous.filter((method) => method !== option.value)
+                            );
+                          }}
+                          className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-slate-800">{option.label}</p>
+                          <p className="text-xs text-slate-500">{checked ? 'Blocked for this product' : 'Allowed for this product'}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               </Card>
 

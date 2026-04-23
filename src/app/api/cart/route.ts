@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { PoolClient } from 'pg';
+import { ensureProductPaymentGateSchema } from '@/lib/payment-gates';
 
 const CART_EXPIRATION_SECONDS = 3600; // 1 hour (increased from 30 minutes)
 
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
 
   const client = await db.connect();
   try {
+    await ensureProductPaymentGateSchema(client);
     // This query ensures a cart exists before we try to select from it.
     const cartId = await getOrCreateCartId(sessionId, client);
 
@@ -93,7 +95,8 @@ export async function GET(request: NextRequest) {
                   'product', json_build_object(
                     'id', p.id,
                     'name', p.name,
-                    'shipping_cost', p.shipping_cost
+                    'shipping_cost', p.shipping_cost,
+                    'blocked_payment_methods', COALESCE(p.blocked_payment_methods, '{}'::text[])
                   )
                 )
               )

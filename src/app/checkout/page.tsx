@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -54,22 +54,36 @@ export default function CheckoutPage() {
   const [codError, setCodError] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
-  // Products that must not use MintPay
-  const MINTPAY_BLOCKED_PRODUCTS: string[] = [];
-  const hasMintPayBlockedProduct = cart?.items.some(item =>
-    MINTPAY_BLOCKED_PRODUCTS.includes(item.sku.variant.product.id)
-  ) ?? false;
+  const blockedPaymentMethods = useMemo(() => {
+    const blocked = new Set<string>();
+    (cart?.items || []).forEach((item) => {
+      (item.sku.variant.product.blocked_payment_methods || []).forEach((method) => {
+        if (typeof method === 'string' && method.trim()) {
+          blocked.add(method.trim().toUpperCase());
+        }
+      });
+    });
+    return blocked;
+  }, [cart?.items]);
+
+  const isPaymentMethodBlocked = useCallback(
+    (method: 'payhere' | 'koko' | 'mintpay' | 'cod') => blockedPaymentMethods.has(method.toUpperCase()),
+    [blockedPaymentMethods]
+  );
 
   // Cart expiration timer state
   const [cartTimeRemaining, setCartTimeRemaining] = useState<number | null>(null);
   const [cartExpired, setCartExpired] = useState(false);
 
-  // Reset payment method if MintPay is blocked for current cart
+  // Reset payment method if selected method is blocked for current cart
   useEffect(() => {
-    if (hasMintPayBlockedProduct && paymentMethod === 'mintpay') {
-      setPaymentMethod('payhere');
+    if (isPaymentMethodBlocked(paymentMethod)) {
+      const fallback = (['payhere', 'koko', 'mintpay', 'cod'] as const).find((method) => !isPaymentMethodBlocked(method));
+      if (fallback) {
+        setPaymentMethod(fallback);
+      }
     }
-  }, [hasMintPayBlockedProduct, paymentMethod]);
+  }, [isPaymentMethodBlocked, paymentMethod]);
 
   // Free delivery promo state (lifetime if earned)
   const [hasFreeDeliveryForLife, setHasFreeDeliveryForLife] = useState(false);
@@ -680,7 +694,7 @@ export default function CheckoutPage() {
                 <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-5">
                   <div className="space-y-2 sm:space-y-3">
                     {/* Row 1: PayHere — full width */}
-                    {(() => {
+                    {!isPaymentMethodBlocked('payhere') && (() => {
                       const option = paymentOptions.find(o => o.value === 'payhere')!;
                       const Icon = option.icon;
                       const isActive = paymentMethod === 'payhere';
@@ -707,7 +721,7 @@ export default function CheckoutPage() {
                     })()}
 
                     {/* Row 2: Koko — full width */}
-                    {(() => {
+                    {!isPaymentMethodBlocked('koko') && (() => {
                       const option = paymentOptions.find(o => o.value === 'koko')!;
                       const isActive = paymentMethod === 'koko';
                       return (
@@ -737,7 +751,7 @@ export default function CheckoutPage() {
                     })()}
 
                     {/* MintPay — full width */}
-                    {!hasMintPayBlockedProduct && (() => {
+                    {!isPaymentMethodBlocked('mintpay') && (() => {
                       const option = paymentOptions.find(o => o.value === 'mintpay')!;
                       const isActive = paymentMethod === 'mintpay';
                       return (
@@ -767,7 +781,7 @@ export default function CheckoutPage() {
                     })()}
 
                     {/* Row 3: COD — full width */}
-                    {(() => {
+                    {!isPaymentMethodBlocked('cod') && (() => {
                       const option = paymentOptions.find(o => o.value === 'cod')!;
                       const Icon = option.icon;
                       const isActive = paymentMethod === 'cod';
@@ -802,7 +816,7 @@ export default function CheckoutPage() {
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-orange-500/40 bg-orange-500/5">
                       <KokoPaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} guestId={guestId} />
                     </div>
-                  ) : (paymentMethod === 'mintpay' && !hasMintPayBlockedProduct) ? (
+                  ) : (paymentMethod === 'mintpay' && !isPaymentMethodBlocked('mintpay')) ? (
                     <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl border-emerald-500/40 bg-emerald-500/5">
                       <MintPayPaymentHandler cart={cart} shippingDetails={shippingDetails} useFreeDelivery={hasFreeDeliveryForLife} guestId={guestId} />
                     </div>

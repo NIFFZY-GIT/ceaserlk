@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { ensureProductPaymentGateSchema, normalizeBlockedPaymentMethods } from '@/lib/payment-gates';
 
 // Enable dynamic rendering and set max duration for long uploads
 export const dynamic = 'force-dynamic';
@@ -104,6 +105,7 @@ export async function GET(
   const { id } = await params;
 
   try {
+    await ensureProductPaymentGateSchema(db);
     await ensureVariantImageMediaColumns(db);
 
     const query = `
@@ -114,6 +116,7 @@ export async function GET(
         p.audio_url,
         p.shipping_cost,
         p.trading_card_image,
+        p.blocked_payment_methods AS "blockedPaymentMethods",
         p.is_published,
         (
           SELECT json_agg(variants_agg)
@@ -185,6 +188,7 @@ export async function PUT(
   const client = await db.connect();
 
   try {
+    await ensureProductPaymentGateSchema(db);
     await ensureVariantImageMediaColumns(db);
     await client.query('BEGIN');
 
@@ -194,6 +198,10 @@ export async function PUT(
     const productName = formData.get('productName') as string;
     const description = formData.get('description') as string;
     const shippingCost = formData.get('shippingCost') as string;
+    const blockedPaymentMethodsString = formData.get('blockedPaymentMethods') as string | null;
+    const blockedPaymentMethods = normalizeBlockedPaymentMethods(
+      blockedPaymentMethodsString ? JSON.parse(blockedPaymentMethodsString) : []
+    );
     const audioFile = formData.get('audioFile') as File | null;
     const removeAudio = formData.get('removeAudio') === 'true';
     const tradingCardFile = formData.get('tradingCardFile') as File | null;
@@ -322,23 +330,23 @@ export async function PUT(
     // --- 3. Update the Base Product ---
     if (shouldUpdateAudio && shouldUpdateTradingCard) {
       await client.query(
-        'UPDATE products SET name = $1, description = $2, shipping_cost = $3, audio_url = $4, trading_card_image = $5 WHERE id = $6',
-        [productName, description, parseFloat(shippingCost) || 0, audioUrl, tradingCardImageUrl, productId]
+        'UPDATE products SET name = $1, description = $2, shipping_cost = $3, blocked_payment_methods = $4::text[], audio_url = $5, trading_card_image = $6 WHERE id = $7',
+        [productName, description, parseFloat(shippingCost) || 0, blockedPaymentMethods, audioUrl, tradingCardImageUrl, productId]
       );
     } else if (shouldUpdateAudio) {
       await client.query(
-        'UPDATE products SET name = $1, description = $2, shipping_cost = $3, audio_url = $4 WHERE id = $5',
-        [productName, description, parseFloat(shippingCost) || 0, audioUrl, productId]
+        'UPDATE products SET name = $1, description = $2, shipping_cost = $3, blocked_payment_methods = $4::text[], audio_url = $5 WHERE id = $6',
+        [productName, description, parseFloat(shippingCost) || 0, blockedPaymentMethods, audioUrl, productId]
       );
     } else if (shouldUpdateTradingCard) {
       await client.query(
-        'UPDATE products SET name = $1, description = $2, shipping_cost = $3, trading_card_image = $4 WHERE id = $5',
-        [productName, description, parseFloat(shippingCost) || 0, tradingCardImageUrl, productId]
+        'UPDATE products SET name = $1, description = $2, shipping_cost = $3, blocked_payment_methods = $4::text[], trading_card_image = $5 WHERE id = $6',
+        [productName, description, parseFloat(shippingCost) || 0, blockedPaymentMethods, tradingCardImageUrl, productId]
       );
     } else {
       await client.query(
-        'UPDATE products SET name = $1, description = $2, shipping_cost = $3 WHERE id = $4',
-        [productName, description, parseFloat(shippingCost) || 0, productId]
+        'UPDATE products SET name = $1, description = $2, shipping_cost = $3, blocked_payment_methods = $4::text[] WHERE id = $5',
+        [productName, description, parseFloat(shippingCost) || 0, blockedPaymentMethods, productId]
       );
     }
 

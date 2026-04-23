@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { generateAdminOrderNotificationEmail, generateOrderConfirmationEmail, sendEmail } from '@/lib/email';
 import { generateInvoicePDF, generateInvoiceFilename, InvoiceData } from '@/lib/pdf-invoice';
 import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
+import { ensureProductPaymentGateSchema, isPaymentMethodBlockedInCart } from '@/lib/payment-gates';
 
 interface IncomingShippingDetails {
   email?: string;
@@ -92,6 +93,17 @@ export async function POST(request: NextRequest) {
 
   const client = await db.connect();
   try {
+    await ensureProductPaymentGateSchema(client);
+
+    const selectedPayment = normalizedPaymentMethod === 'KOKO' ? 'KOKO' : 'COD';
+    const paymentBlocked = await isPaymentMethodBlockedInCart(client, cartId, selectedPayment);
+    if (paymentBlocked) {
+      return NextResponse.json(
+        { error: `${selectedPayment} is not available for one or more products in your cart.` },
+        { status: 400 }
+      );
+    }
+
     await ensureOrderNumberSchema(client);
     await client.query('BEGIN');
 

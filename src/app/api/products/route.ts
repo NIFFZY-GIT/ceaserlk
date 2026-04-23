@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureProductPaymentGateSchema } from '@/lib/payment-gates';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -10,12 +11,14 @@ export async function GET(request: NextRequest) {
   const colors = searchParams.get('colors')?.split(',');
 
   try {
+    await ensureProductPaymentGateSchema(db);
     let query = `
       SELECT
         p.id,
         p.name,
         p.description,
         p.shipping_cost,
+        p.blocked_payment_methods AS "blockedPaymentMethods",
         (
           SELECT json_agg(variants_agg)
           FROM (

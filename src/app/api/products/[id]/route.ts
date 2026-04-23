@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureProductPaymentGateSchema } from '@/lib/payment-gates';
 
 const ensureVariantImageMediaColumns = async (queryable: { query: (text: string, values?: unknown[]) => Promise<unknown> }) => {
   await queryable.query(`
@@ -23,6 +24,7 @@ export async function GET(
   }
 
   try {
+    await ensureProductPaymentGateSchema(db);
     await ensureVariantImageMediaColumns(db);
 
     const query = `
@@ -31,6 +33,7 @@ export async function GET(
         p.name,
         p.description,
         p.audio_url,
+        p.blocked_payment_methods AS "blockedPaymentMethods",
         (
           SELECT json_agg(variants_agg)
           FROM (
