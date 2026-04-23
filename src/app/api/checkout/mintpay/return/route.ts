@@ -38,16 +38,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL(`/order-confirmation?orderId=${orderId}`, appUrl));
     }
 
-    // If callback says fail, redirect to checkout with error
+    // Callback query params are only hints.
+    // Do not mark as cancelled here without a MintPay status verification.
     if (callbackStatus === 'fail') {
-      // Mark as cancelled if still pending
-      if (order.status === 'PENDING') {
-        await client.query(
-          `UPDATE orders SET status = 'CANCELLED' WHERE id = $1 AND status = 'PENDING'`,
-          [orderId]
-        );
-      }
-      return NextResponse.redirect(new URL('/checkout?payment_error=mintpay_failed', appUrl));
+      const redirectUrl = new URL('/order-confirmation', appUrl);
+      redirectUrl.searchParams.set('mintpay_order', orderId);
+      redirectUrl.searchParams.set('mintpay_status', callbackStatus);
+      return NextResponse.redirect(redirectUrl);
     }
 
     // Success callback — verify with MintPay status API

@@ -24,6 +24,7 @@ const getPaymentMethodLabel = (method?: string | null) => {
   const normalized = normalizePaymentMethod(method);
   if (['COD', 'CASH', 'CASH_ON_DELIVERY'].includes(normalized)) return 'Cash on Delivery';
   if (normalized === 'KOKO') return 'Koko Buy Now Pay Later';
+  if (normalized === 'MINTPAY') return 'MintPay Buy Now Pay Later';
   if (normalized === 'PAYHERE') return 'PayHere';
   if (normalized === 'CARD') return 'Card';
   if (normalized === 'PAID') return 'Paid';
@@ -33,13 +34,26 @@ const getPaymentMethodLabel = (method?: string | null) => {
 
 const getPaymentMethodClasses = (method?: string | null) => {
   const normalized = normalizePaymentMethod(method);
-  if (['COD', 'CASH', 'CASH_ON_DELIVERY', 'KOKO'].includes(normalized)) {
+  if (['COD', 'CASH', 'CASH_ON_DELIVERY', 'KOKO', 'MINTPAY'].includes(normalized)) {
     return 'bg-amber-100 text-amber-800';
   }
   if (['PAYHERE', 'CARD', 'PAID'].includes(normalized)) {
     return 'bg-emerald-100 text-emerald-800';
   }
   return 'bg-slate-100 text-slate-800';
+};
+
+const getPaymentStatusLabel = (orderStatus: OrderStatus, method?: string | null) => {
+  if (orderStatus === 'CANCELLED') return 'Canceled';
+  if (orderStatus === 'REFUNDED') return 'Refunded';
+  if (orderStatus === 'PENDING') return 'Pending';
+
+  const normalized = normalizePaymentMethod(method);
+  if (['COD', 'CASH', 'CASH_ON_DELIVERY', 'KOKO', 'MINTPAY'].includes(normalized)) {
+    return 'Pending';
+  }
+
+  return 'Paid';
 };
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -123,7 +137,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <div className="space-y-6 lg:col-span-1">
           <div className="p-6 bg-white rounded-lg shadow-md"><h2 className="mb-4 text-xl font-semibold">Customer</h2><div className="space-y-1 text-sm"><p className="font-medium text-gray-900">{order.full_name}</p><a href={`mailto:${order.customer_email}`} className="text-primary hover:underline">{order.customer_email}</a><p className="text-gray-600">{order.phone_number}</p></div></div>
           <div className="p-6 bg-white rounded-lg shadow-md"><h2 className="mb-4 text-xl font-semibold">Shipping Address</h2><address className="text-sm not-italic text-gray-600">{order.shipping_address_line1}<br/>{order.shipping_city}, {order.shipping_postal_code}</address></div>
-          <div className="p-6 bg-white rounded-lg shadow-md"><h2 className="mb-4 text-xl font-semibold">Payment</h2><div className="space-y-2 text-sm"><div className="flex items-center justify-between"><span className="text-gray-600">Method</span><span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getPaymentMethodClasses(order.payment_method)}`}>{getPaymentMethodLabel(order.payment_method)}</span></div><div className="flex items-center justify-between"><span className="text-gray-600">Status</span><span className="font-semibold text-gray-900">{['COD', 'CASH', 'CASH_ON_DELIVERY', 'KOKO'].includes(normalizePaymentMethod(order.payment_method)) ? 'Pending' : 'Paid'}</span></div></div></div>
+          <div className="p-6 bg-white rounded-lg shadow-md"><h2 className="mb-4 text-xl font-semibold">Payment</h2><div className="space-y-2 text-sm"><div className="flex items-center justify-between"><span className="text-gray-600">Method</span><span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${getPaymentMethodClasses(order.payment_method)}`}>{getPaymentMethodLabel(order.payment_method)}</span></div><div className="flex items-center justify-between"><span className="text-gray-600">Status</span><span className="font-semibold text-gray-900">{getPaymentStatusLabel(order.status, order.payment_method)}</span></div></div></div>
           <div className="p-6 bg-white rounded-lg shadow-md"><h2 className="mb-4 text-xl font-semibold">Update Status & Delivery</h2><div className="space-y-4"><div><label className="block text-sm font-medium text-gray-700 mb-2">Order Status</label><select value={newStatus} onChange={e => setNewStatus(e.target.value as FullOrder['status'])} className="w-full border-gray-300 rounded-md shadow-sm"><option value="PAID">Paid</option><option value="PROCESSING">Processing</option><option value="PACKED">Packed</option><option value="SHIPPED">Shipped</option><option value="DELIVERED">Delivered</option><option value="CANCELLED">Cancelled</option><option value="REFUNDED">Refunded</option></select></div><div><label className="block text-sm font-medium text-gray-700 mb-2">Delivery ID (Koombiya Tracking Code)</label><input type="text" value={deliveryId} onChange={e => setDeliveryId(e.target.value)} placeholder="e.g., K12345678" className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"/><p className="text-xs text-gray-500 mt-1">Enter the tracking code from your delivery partner</p></div></div><button onClick={handleStatusUpdate} disabled={isUpdating || newStatus === order.status} className="w-full px-4 py-2 mt-4 font-semibold text-white transition-colors rounded-md bg-primary hover:bg-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed">{isUpdating ? <Loader2 className="mx-auto animate-spin"/> : 'Save Changes'}</button>{updateMessage && <p className={`mt-2 text-sm text-center ${updateMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>{updateMessage.text}</p>}</div>
         </div>
         <div className="p-6 bg-white rounded-lg shadow-md lg:col-span-2">

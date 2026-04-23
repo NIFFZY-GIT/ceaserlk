@@ -212,13 +212,11 @@ export default function CheckoutPage() {
   const helperTextClass = 'mt-1 sm:mt-2 text-[10px] sm:text-xs text-gray-400';
   const sectionCardClass = 'relative overflow-hidden rounded-xl sm:rounded-2xl border border-gray-700/50 bg-gradient-to-br from-gray-950 via-gray-900/70 to-gray-950 p-3 sm:p-5 md:p-6 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.75)] backdrop-blur-xl';
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (codError) {
-      setCodError(null);
-    }
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setCodError((previous) => (previous ? null : previous));
     const { name, value } = e.target;
     setShippingDetails((previous) => ({ ...previous, [name]: value }));
-  };
+  }, []);
 
   const trackCheckoutFieldEvent = useCallback((field: CheckoutFieldName, interaction: 'Focus' | 'Fill') => {
     const eventName = `${checkoutFieldEventNames[field]}_${interaction}`;
@@ -261,7 +259,7 @@ export default function CheckoutPage() {
         }
       },
     }),
-    [trackCheckoutFieldEvent]
+    [handleInputChange, trackCheckoutFieldEvent]
   );
 
   // Handle quantity update for cart items

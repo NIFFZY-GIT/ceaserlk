@@ -45,11 +45,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, orderId: existingOrder.id, status: 'PAID' });
       }
 
-      if (existingOrder.status === 'CANCELLED') {
-        return NextResponse.json({ success: false, error: 'Payment was cancelled or rejected.' });
-      }
-
-      // PENDING — query MintPay status API
+      // PENDING/CANCELLED — query MintPay status API to ensure final state is accurate
       const purchaseId = existingOrder.payment_intent_id;
       if (!purchaseId) {
         // No purchase_id stored yet — tell client to keep polling
@@ -99,22 +95,26 @@ export async function POST(request: NextRequest) {
       if (statusResponse.message === 'Success' && 'status' in statusResponse.data && statusResponse.data.status) {
         const mintStatus = inferMintPayOrderStatus(statusResponse.data.status);
 
-        if (
-          existingOrder.status === 'PENDING' &&
-          (mintStatus === 'PAID' || mintStatus === 'CANCELLED')
-        ) {
+        if (mintStatus === 'PAID' && existingOrder.status !== 'PAID') {
           await client.query(
-            `UPDATE orders SET status = $1 WHERE id = $2`,
-            [mintStatus, orderId]
+            `UPDATE orders SET status = 'PAID' WHERE id = $1 AND status <> 'PAID'`,
+            [orderId]
           );
 
-          if (mintStatus === 'PAID' && existingOrder.user_id) {
+          if (existingOrder.user_id) {
             try {
               await client.query('DELETE FROM carts WHERE user_id = $1', [existingOrder.user_id]);
             } catch (cartCleanupError) {
               console.error('[MINTPAY VERIFY] Cart cleanup failed:', cartCleanupError);
             }
           }
+        }
+
+        if (mintStatus === 'CANCELLED' && existingOrder.status === 'PENDING') {
+          await client.query(
+            `UPDATE orders SET status = 'CANCELLED' WHERE id = $1 AND status = 'PENDING'`,
+            [orderId]
+          );
         }
 
         if (mintStatus === 'PAID') {

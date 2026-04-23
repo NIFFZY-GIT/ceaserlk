@@ -132,8 +132,16 @@ export async function middleware(request: NextRequest) {
   if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
     const contentType = request.headers.get('content-type');
     const isApiRoute = pathname.startsWith('/api/');
+    const isPaymentCallbackRoute =
+      pathname === '/api/checkout/koko/response' ||
+      pathname === '/api/checkout/payhere/notify';
+    const isAllowedContentType =
+      !contentType ||
+      contentType.includes('application/json') ||
+      contentType.includes('multipart/form-data') ||
+      (isPaymentCallbackRoute && contentType.includes('application/x-www-form-urlencoded'));
     
-    if (isApiRoute && contentType && !contentType.includes('application/json') && !contentType.includes('multipart/form-data')) {
+    if (isApiRoute && !isAllowedContentType) {
       return createSecureErrorResponse('Invalid content type', 400);
     }
   }

@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
 
   const client = await db.connect();
   let transactionStarted = false;
+  let intentId: string | undefined;
   try {
     const config = getMintPayConfig();
     await ensureOrderNumberSchema(client);
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    const intentId = intentResult.rows[0]?.id as string | undefined;
+    intentId = intentResult.rows[0]?.id as string | undefined;
     const orderNumber = intentResult.rows[0]?.order_number as number | null | undefined;
 
     if (!intentId) {
@@ -312,6 +313,10 @@ export async function POST(request: NextRequest) {
 
     if (mintPayResponse.message !== 'Success') {
       console.error('[MINTPAY INITIATE] MintPay API returned failure:', mintPayResponse);
+      await db.query(
+        `UPDATE orders SET status = 'CANCELLED' WHERE id = $1 AND status = 'PENDING'`,
+        [intentId]
+      );
       return NextResponse.json(
         { error: `MintPay rejected the order: ${mintPayResponse.data}` },
         { status: 400 }
@@ -336,6 +341,17 @@ export async function POST(request: NextRequest) {
       gatewayUrl: config.gatewayUrl,
     });
   } catch (error) {
+    if (typeof intentId === 'string' && intentId) {
+      try {
+        await db.query(
+          `UPDATE orders SET status = 'CANCELLED' WHERE id = $1 AND status = 'PENDING'`,
+          [intentId]
+        );
+      } catch (statusUpdateError) {
+        console.error('MintPay initiate status update failed:', statusUpdateError);
+      }
+    }
+
     if (transactionStarted) {
       try {
         await client.query('ROLLBACK');
