@@ -168,7 +168,7 @@ export const ProductCard = ({ product, featured = false }: { product: Product; f
           )}
         </Link>
 
-        <div className={`grid flex-1 px-1 pb-1 ${featured ? 'pt-2' : 'pt-3'} grid-rows-[42px_34px_36px_30px_58px_48px] gap-y-1`}>
+        <div className={`grid flex-1 px-1 pb-1 ${featured ? 'pt-2' : 'pt-3'} grid-rows-[42px_34px_30px_58px_48px] gap-y-1`}>
           <div className="flex min-w-0 items-start justify-between gap-2 overflow-hidden">
             <div className="min-w-0">
               <h3 className="truncate text-sm font-semibold text-[#1a1a1a]">{product.name}</h3>
