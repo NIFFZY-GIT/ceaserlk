@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { trackTikTokEvent } from '@/lib/tiktok';
 import { Loader2, ArrowLeft, CreditCard, Shield, CheckCircle2, Sparkles, ShoppingBag, Truck, Banknote, Wallet, Gift, Plus, Minus, Trash2, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -89,6 +90,30 @@ export default function CheckoutPage() {
   const [hasFreeDeliveryForLife, setHasFreeDeliveryForLife] = useState(false);
   const trackedFillEventsRef = useRef(new Set<string>());
   const pendingPixelEventsRef = useRef<string[]>([]);
+  const trackedInitiateCheckoutRef = useRef(false);
+
+  useEffect(() => {
+    if (!cart || cartLoading || cart.items.length === 0 || trackedInitiateCheckoutRef.current) return;
+
+    trackedInitiateCheckoutRef.current = true;
+    const contents = cart.items.map((item) => ({
+      content_id: item.sku.variant.product.id,
+      content_type: 'product',
+      content_name: item.sku.variant.product.name,
+      quantity: item.quantity,
+      price: Number(item.sku.variant.price),
+    }));
+
+    trackTikTokEvent('InitiateCheckout', {
+      content_id: contents[0]?.content_id,
+      content_name: contents[0]?.content_name,
+      content_type: 'product',
+      contents,
+      value: cart.totalAmount,
+      currency: 'LKR',
+      quantity: cart.items.reduce((total, item) => total + item.quantity, 0),
+    });
+  }, [cart, cartLoading]);
 
   // Cart expiration timer effect
   useEffect(() => {

@@ -7,13 +7,16 @@ import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import TradingCardDownload from '@/components/TradingCardDownload';
+import { trackTikTokEvent } from '@/lib/tiktok';
 
 interface OrderItem {
   product_id: number;
   product_name: string;
   trading_card_image?: string;
   quantity: number;
-  price: number;
+  price?: number;
+  price_paid?: number | string;
+  sku_id?: string | null;
 }
 
 interface OrderData {
@@ -21,8 +24,10 @@ interface OrderData {
   order_number?: number | null;
   customer_email: string;
   items: OrderItem[];
-  total: number;
+  total?: number;
+  total_amount?: number | string;
   status: string;
+  payment_method?: string;
 }
 
 const formatPublicOrderId = (order: Pick<OrderData, 'order_number' | 'id'>) => {
@@ -83,6 +88,34 @@ function OrderConfirmationContent() {
           if (!cancelled) {
             setOrderData(order);
             setUserEmail(order.customer_email || '');
+
+            const orderStatus = String(order.status || '').toUpperCase();
+            const paymentMethod = String(order.payment_method || '').toUpperCase();
+            const isCompletedOrder = ['PAID', 'COMPLETED'].includes(orderStatus) || paymentMethod === 'COD';
+            const isCodOrder = paymentMethod === 'COD';
+            const purchaseEventKey = `tiktok-order-event-${order.id}`;
+
+            if (isCompletedOrder && !sessionStorage.getItem(purchaseEventKey)) {
+              sessionStorage.setItem(purchaseEventKey, '1');
+              const contents = (order.items || []).map((item: OrderItem) => ({
+                content_id: String(item.product_id),
+                content_type: 'product',
+                content_name: item.product_name,
+                quantity: item.quantity,
+                price: Number(item.price_paid ?? item.price ?? 0),
+              }));
+              const value = Number(order.total_amount ?? order.total);
+
+              trackTikTokEvent(isCodOrder ? 'PlaceAnOrder' : 'CompletePayment', {
+                order_id: order.id,
+                content_id: contents[0]?.content_id,
+                content_name: contents[0]?.content_name,
+                content_type: 'product',
+                contents,
+                ...(Number.isFinite(value) ? { value } : {}),
+                currency: 'LKR',
+              }, `${isCodOrder ? 'order' : 'purchase'}-${order.id}`);
+            }
           }
         }
       } catch (e) { console.error("Could not fetch order details", e); }

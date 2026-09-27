@@ -5,6 +5,7 @@ import { generateAdminOrderNotificationEmail, generateOrderConfirmationEmail, se
 import { generateInvoicePDF, generateInvoiceFilename, InvoiceData } from '@/lib/pdf-invoice';
 import { ensureOrderNumberSchema, formatOrderNumber } from '@/lib/order-number';
 import { ensureProductPaymentGateSchema, isPaymentMethodBlockedInCart } from '@/lib/payment-gates';
+import { getTikTokEventContext, sendTikTokServerEvent } from '@/lib/tiktok-events';
 
 interface IncomingShippingDetails {
   email?: string;
@@ -296,6 +297,33 @@ export async function POST(request: NextRequest) {
       quantity: item.quantity as number,
       pricePaid: Number.parseFloat(item.variant_price),
     }));
+
+    if (normalizedPaymentMethod === 'COD') {
+      await sendTikTokServerEvent(
+        'PlaceAnOrder',
+        `order-${orderId}`,
+        {
+          order_id: orderId,
+          content_id: String(cartItemsResult.rows[0]?.product_id),
+          content_name: cartItemsResult.rows[0]?.product_name,
+          content_type: 'product',
+          contents: cartItemsResult.rows.map((item) => ({
+            content_id: String(item.product_id),
+            content_type: 'product',
+            content_name: item.product_name,
+            quantity: Number(item.quantity),
+            price: Number.parseFloat(item.variant_price),
+          })),
+          value: totalAmount,
+          currency: 'LKR',
+        },
+        {
+          ...getTikTokEventContext(request, `${request.nextUrl.origin}/order-confirmation?orderId=${encodeURIComponent(orderId)}`),
+          email: normalizedDetails.email,
+          phone: normalizedDetails.phone,
+        }
+      );
+    }
 
     try {
       const invoiceData: InvoiceData = {

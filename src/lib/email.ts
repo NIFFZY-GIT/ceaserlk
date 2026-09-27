@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 
 export interface EmailConfig {
   host: string;
@@ -24,7 +24,7 @@ export interface EmailData {
 
 // --- SHARED STYLES & COMPONENTS ---
 // Create email transporter
-export function createEmailTransporter(): nodemailer.Transporter {
+export function createEmailTransporter(): Transporter {
   const config: EmailConfig = {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.EMAIL_PORT || '587'),
@@ -65,7 +65,6 @@ export async function sendEmail(emailData: EmailData): Promise<void> {
   try {
     const info = await transporter.sendMail(mailOptions);
     console.log('Email sent successfully:', info.messageId);
-    return info;
   } catch (error) {
     console.error('Failed to send email:', error);
     throw error;

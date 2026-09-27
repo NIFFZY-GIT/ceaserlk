@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Loader2, Check, ShoppingBag } from 'lucide-react';
+import { Loader2, Check, ShoppingBag, Truck } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
@@ -26,6 +26,8 @@ type ProductVariant = {
 type Product = {
   id: string;
   name: string;
+  shipping_cost?: string | number | null;
+  blockedPaymentMethods?: string[];
   variants: ProductVariant[];
 };
 
@@ -80,6 +82,13 @@ export const ProductCard = ({ product }: { product: Product }) => {
 
   const price = parseFloat(activeVariant.price);
   const installment = price / 3;
+  const hasFreeDelivery = product.shipping_cost !== undefined
+    && (product.shipping_cost === null || Number(product.shipping_cost) <= 0);
+  const blockedPaymentMethods = new Set((product.blockedPaymentMethods || []).map((method) => method.toUpperCase()));
+  const bnplProviders = [
+    ...(!blockedPaymentMethods.has('KOKO') ? ['Koko'] : []),
+    ...(!blockedPaymentMethods.has('MINTPAY') ? ['MintPay'] : []),
+  ];
   const compareAtPrice = activeVariant.compareAtPrice ? parseFloat(activeVariant.compareAtPrice) : null;
   const isOnSale = compareAtPrice && compareAtPrice > price;
   // --- Only use first 2 images, no videos ---
@@ -129,119 +138,152 @@ export const ProductCard = ({ product }: { product: Product }) => {
 
   return (
     <div
-      className="flex flex-col h-full group"
+      className="group flex h-full flex-col"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative flex flex-col h-full p-5 transition-all duration-300 bg-white border border-gray-100 rounded-xl hover:shadow-xl hover:-translate-y-1">
-        <Link 
-          href={`/product/${product.id}?variant=${activeVariant.variantId}`} 
-          className="relative block w-full overflow-hidden rounded-md aspect-[3/4]"
+      <div className="flex h-full flex-col bg-white">
+        <Link
+          href={`/product/${product.id}?variant=${activeVariant.variantId}`}
+          className="relative block aspect-[5/7] w-full overflow-hidden bg-[#f0f1ef]"
         >
-          <Image key={currentImageUrl} src={currentImageUrl} alt={`${product.name} - ${activeVariant.colorName}`} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" style={{ objectFit: 'cover' }} className="transition-all duration-500 group-hover:scale-105" />
-          {isOnSale && (<div className="absolute top-0 left-0"><div className="absolute px-12 py-1.5 text-sm font-bold text-white uppercase transform -rotate-45 bg-black top-2 -left-10">SALE</div></div>)}
+          <Image
+            key={currentImageUrl}
+            src={currentImageUrl}
+            alt={`${product.name} - ${activeVariant.colorName}`}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          />
+          {isOnSale && (
+            <span className="absolute left-3 top-3 bg-[#1a1a1a] px-2.5 py-1 text-[10px] font-semibold uppercase text-white">
+              Sale
+            </span>
+          )}
         </Link>
-        <div className="flex flex-col flex-grow mt-4">
-          <h3 className="text-sm font-semibold text-black capitalize">{product.name}</h3>
-          <div className="flex items-center gap-2 mt-1">
-            {isOnSale ? (<><span className="text-lg font-bold text-black">LKR {price.toFixed(2)}</span><span className="font-medium text-gray-500 line-through text-xs">LKR {compareAtPrice!.toFixed(2)}</span></>) : (<span className="text-lg font-bold text-black">LKR {price.toFixed(2)}</span>)}
+
+        <div className="flex flex-1 flex-col px-1 pt-3 pb-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-semibold text-[#1a1a1a]">{product.name}</h3>
+              <p className="mt-0.5 truncate text-xs text-[#777]">{activeVariant.colorName}</p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end">
+              <span className="text-sm font-bold text-[#1a1a1a]">
+                LKR {price.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              {isOnSale && (
+                <span className="text-[11px] text-[#888] line-through">
+                  LKR {compareAtPrice!.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-2">
-            <div className="flex items-center gap-2">
-              <div className="relative h-4 w-[74px] sm:h-5 sm:w-[90px] flex-shrink-0">
-                <Image
-                  src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
-                  alt="Koko"
-                  fill
-                  className="object-contain object-left"
-                  sizes="90px"
-                />
-              </div>
-              <span className="text-gray-300">|</span>
-              <div className="relative h-4 w-[60px] sm:h-5 sm:w-[74px] flex-shrink-0">
-                <Image
-                  src="/assets/mintpay/mintpaylogo.png"
-                  alt="MintPay"
-                  fill
-                  className="object-contain object-left"
-                  sizes="74px"
-                />
+
+          {bnplProviders.length > 0 && (
+            <div className="mt-1">
+              <p className="text-[11px] leading-snug text-[#666]">
+                3 payments of LKR {installment.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <div className="mt-1 flex h-4 items-center gap-2" aria-label={`Available installment providers: ${bnplProviders.join(' and ')}`}>
+                {bnplProviders.includes('Koko') && (
+                  <Image
+                    src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
+                    alt="Koko"
+                    width={46}
+                    height={16}
+                    className="h-4 w-[46px] object-contain object-left"
+                  />
+                )}
+                {bnplProviders.length > 1 && <span className="h-3 border-l border-[#d5d5d5]" aria-hidden="true" />}
+                {bnplProviders.includes('MintPay') && (
+                  <Image
+                    src="/assets/mintpay/mintpaylogo.png"
+                    alt="MintPay"
+                    width={42}
+                    height={16}
+                    className="h-4 w-[42px] object-contain object-left"
+                  />
+                )}
               </div>
             </div>
-            <p className="mt-1 text-[10px] sm:text-xs font-medium text-gray-700">
-              Rs. {installment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x 3 months
+          )}
+
+          {hasFreeDelivery && (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#006633]">
+              <Truck size={13} aria-hidden="true" />
+              Delivery is free
             </p>
-          </div>
+          )}
+
           {product.variants.length > 1 && (
-            <div className="flex items-center gap-2 mt-3">
+            <div className="mt-3 flex items-center gap-2 border-t border-[#ededed] pt-3">
               {product.variants.map((variant, index) => (
-                <button 
-                  key={variant.variantId} 
+                <button
+                  key={variant.variantId}
+                  type="button"
                   onMouseEnter={() => setActiveVariantIndex(index)}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveVariantIndex(index); }}
+                  onClick={(e) => { e.preventDefault(); setActiveVariantIndex(index); }}
                   aria-label={`Select color ${variant.colorName}`}
-                  // --- THIS IS THE FIX ---
-                  className={`w-5 h-5 rounded-full border border-gray-300 ring-2 ring-offset-1 transition-all ${
-                    activeVariantIndex === index ? 'ring-primary' : 'ring-transparent'
+                  aria-pressed={activeVariantIndex === index}
+                  className={`h-5 w-5 rounded-full border border-white outline outline-1 outline-offset-1 transition-colors ${
+                    activeVariantIndex === index ? 'outline-[#1a1a1a]' : 'outline-[#d5d5d5] hover:outline-[#777]'
                   }`}
-                  // --- END OF FIX ---
                   style={{ backgroundColor: variant.colorHex }}
                 />
               ))}
             </div>
           )}
-          {activeVariant.stock.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1 mt-3">
-              {sortStockItems(activeVariant.stock).map(stockItem => (
-                <button 
-                  key={stockItem.id} 
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (stockItem.stock > 0) setSelectedSize(stockItem.size); }} 
+
+          <div className="mt-3">
+            <div className="mb-1.5 flex items-center justify-between text-[10px] uppercase text-[#777]">
+              <span>Size</span>
+              <span>{totalStock === 0 ? 'Out of stock' : selectedSize ? `Selected: ${selectedSize}` : 'Choose a size'}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {sortStockItems(activeVariant.stock).map((stockItem) => (
+                <button
+                  key={stockItem.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (stockItem.stock > 0) setSelectedSize(stockItem.size);
+                  }}
                   disabled={stockItem.stock <= 0}
-                  className={`relative min-w-8 h-8 px-2 border rounded-md font-semibold text-xs flex items-center justify-center transition-colors ${stockItem.stock > 0 ? (selectedSize === stockItem.size ? 'bg-black text-white border-black' : 'bg-white text-black border-gray-300 hover:bg-gray-100') : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
+                  aria-pressed={selectedSize === stockItem.size}
+                  className={`relative flex h-8 min-w-8 items-center justify-center border px-2 text-xs transition-colors disabled:cursor-not-allowed ${
+                    stockItem.stock <= 0
+                      ? 'border-[#e5e5e5] bg-[#f5f5f5] text-[#aaa]'
+                      : selectedSize === stockItem.size
+                        ? 'border-[#1a1a1a] bg-[#1a1a1a] text-white'
+                        : 'border-[#dedede] bg-white text-[#333] hover:border-[#1a1a1a]'
+                  }`}
                 >
                   {stockItem.size}
                   {stockItem.stock <= 0 && <OutOfStockLine />}
                 </button>
               ))}
             </div>
-          )}
-          <div className="flex items-center justify-between flex-grow pt-4 mt-auto">
-            <div className="h-5">
-              {totalStock > 0 ? (<p className="text-sm text-gray-600">{selectedSize ? (<><span className="font-semibold text-black">{activeVariant.stock.find(s => s.size === selectedSize)?.stock}</span> in stock</>) : ('Select a size')}</p>) : (<p className="text-sm font-semibold text-red-500">Out of Stock</p>)}
-            </div>
-            <button
-              onClick={handleAddToCart}
-              disabled={!selectedSize || totalStock === 0 || isAdding || showAdded}
-              className={`px-8 py-3 text-sm font-semibold text-white transition-all duration-300 rounded-full disabled:cursor-not-allowed ${
-                showAdded 
-                  ? 'bg-green-500 scale-105' 
-                  : 'bg-black hover:bg-gray-800 disabled:bg-gray-400'
-              }`}
-            >
-              {isAdding ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : showAdded ? (
-                <span className="flex items-center gap-1.5 animate-pulse">
-                  <Check className="w-4 h-4" />
-                  Added!
-                </span>
-              ) : (
-                'Add to Cart'
-              )}
-            </button>
           </div>
-          
-          {/* Success Animation Overlay */}
-          {showAdded && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="flex flex-col items-center gap-2 p-4 bg-white/95 rounded-xl shadow-lg animate-bounce-in">
-                <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full">
-                  <ShoppingBag className="w-6 h-6 text-green-600" />
-                </div>
-                <span className="text-sm font-semibold text-green-600">Added to Cart!</span>
-              </div>
-            </div>
-          )}
+
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={!selectedSize || totalStock === 0 || isAdding || showAdded}
+            className={`mt-4 inline-flex h-10 w-full items-center justify-center gap-2 text-xs font-semibold transition-all duration-300 disabled:cursor-not-allowed ${
+              showAdded
+                ? 'scale-[1.02] bg-[#e9f2ec] text-[#17643a]'
+                : 'bg-[#1a1a1a] text-white hover:bg-[#333] disabled:bg-[#d4d4d4]'
+            }`}
+          >
+            {isAdding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : showAdded ? (
+              <><Check className="h-4 w-4 animate-bounce-in" /> Added to bag</>
+            ) : (
+              <><ShoppingBag className="h-4 w-4" /> Add to bag</>
+            )}
+          </button>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { trackTikTokEvent } from '@/lib/tiktok';
 import {
   ChevronLeft,
   ChevronRight,
@@ -1251,6 +1252,7 @@ export default function ProductPage() {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [fakeStockReductions, setFakeStockReductions] = useState<FakeStockReductions>({}); // Track fake reductions per size
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const trackedViewContentProductId = useRef<string | null>(null);
 
   useEffect(() => {
     const updateViewport = () => setIsMobileViewport(window.innerWidth < 768);
@@ -1335,6 +1337,25 @@ export default function ProductPage() {
       fetchProduct();
     }
   }, [productId]);
+
+  useEffect(() => {
+    if (!product || trackedViewContentProductId.current === product.id) return;
+
+    trackedViewContentProductId.current = product.id;
+    const price = Number(product.variants[0]?.price);
+    trackTikTokEvent('ViewContent', {
+      content_id: product.id,
+      content_type: 'product',
+      content_name: product.name,
+      ...(Number.isFinite(price)
+        ? {
+            contents: [{ content_id: product.id, content_type: 'product', content_name: product.name, price, quantity: 1 }],
+            value: price,
+            currency: 'LKR',
+          }
+        : {}),
+    });
+  }, [product]);
 
   // Auto-play product audio when page loads
   useEffect(() => {

@@ -2,6 +2,7 @@ import type { PoolClient } from 'pg';
 import { sendEmail, generateOrderConfirmationEmail, generateAdminOrderNotificationEmail } from '@/lib/email';
 import { generateInvoicePDF, generateInvoiceFilename, InvoiceData } from '@/lib/pdf-invoice';
 import { formatOrderNumber } from '@/lib/order-number';
+import { sendTikTokServerEvent } from '@/lib/tiktok-events';
 
 export async function ensureOrderEmailSchema(client: PoolClient) {
   await client.query(
@@ -28,6 +29,7 @@ export async function sendOrderConfirmationIfNeeded(client: PoolClient, orderId:
       shipping_cost,
       total_amount,
       payment_method,
+      status,
       created_at,
       confirmation_email_sent_at
      FROM orders
@@ -40,6 +42,45 @@ export async function sendOrderConfirmationIfNeeded(client: PoolClient, orderId:
   }
 
   const order = orderResult.rows[0];
+  const normalizedOrderStatus = String(order.status || '').toUpperCase();
+  if (['PAID', 'COMPLETED'].includes(normalizedOrderStatus)) {
+    const purchaseItemsResult = await client.query(
+      `SELECT product_id, product_name, quantity, price_paid
+       FROM order_items
+       WHERE order_id = $1`,
+      [orderId]
+    );
+    const purchaseContents = purchaseItemsResult.rows.map((item) => ({
+      content_id: String(item.product_id),
+      content_type: 'product',
+      content_name: item.product_name,
+      quantity: Number(item.quantity),
+      price: Number(item.price_paid),
+    }));
+    const eventUrl = process.env.NEXT_PUBLIC_APP_URL
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/order-confirmation?orderId=${encodeURIComponent(orderId)}`
+      : undefined;
+
+    await sendTikTokServerEvent(
+      'CompletePayment',
+      `purchase-${orderId}`,
+      {
+        order_id: orderId,
+        content_id: purchaseContents[0]?.content_id,
+        content_name: purchaseContents[0]?.content_name,
+        content_type: 'product',
+        contents: purchaseContents,
+        value: Number(order.total_amount),
+        currency: 'LKR',
+      },
+      {
+        url: eventUrl,
+        email: order.customer_email,
+        phone: order.phone_number,
+      }
+    );
+  }
+
   const publicOrderId = formatOrderNumber(order.order_number) || order.id;
   const normalizedPaymentMethod = (order.payment_method || '').trim().toUpperCase();
   const paymentMethodLabel = (() => {

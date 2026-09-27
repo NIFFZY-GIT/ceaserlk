@@ -3,7 +3,7 @@
  * Implements OWASP guidelines for email security
  */
 
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 import { getValidatedEnvironment } from './environment';
 import { secureLog, sanitizeHtml } from './security';
 
@@ -55,7 +55,7 @@ const EMAIL_RATE_WINDOW = 60 * 60 * 1000; // 1 hour
 /**
  * Create secure email transporter with validation
  */
-function createSecureTransporter(): nodemailer.Transporter {
+function createSecureTransporter(): Transporter {
   const env = getValidatedEnvironment();
   
   const config: EmailConfig = {
@@ -93,7 +93,7 @@ function createSecureTransporter(): nodemailer.Transporter {
 /**
  * Legacy function for backward compatibility
  */
-export function createEmailTransporter(): nodemailer.Transporter {
+export function createEmailTransporter(): Transporter {
   return createSecureTransporter();
 }
 

@@ -43,7 +43,7 @@
     "jspdf": "^4.0.0",
     "lucide-react": "^0.542.0",
     "next": "^16.1.6",
-    "nodemailer": "^7.0.6",
+    "nodemailer": "^10.0.10",
     "pg": "^8.16.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -74,5 +74,12 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.12",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true,
+    "sharp@0.34.5": true,
+    "core-js@3.47.0": true,
+    "protobufjs@7.6.6": true,
+    "unrs-resolver@1.12.2": true
   }
 }

@@ -12,6 +12,7 @@ import Navbar from '@/app/components/Navbar';
 import Footer from '@/app/components/Footer';
 import { SessionExpiryMonitor } from '@/components/SessionExpiryMonitor';
 import { SessionExpiredModal } from '@/components/SessionExpiredModal';
+import { TikTokPageView } from '@/components/TikTokPageView';
 
 const montserrat = Montserrat({
   subsets: ['latin'],
@@ -91,6 +92,34 @@ export default function RootLayout({
             `,
           }}
         />
+
+        {/* --- TikTok Pixel Code (DAS9OVRC77U5PB60BIHG) --- */}
+        <Script
+          id="tiktok-pixel"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function (w, d, t) {
+                w.TiktokAnalyticsObject = t;
+                var ttq = w[t] = w[t] || [];
+                ttq.methods = ["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];
+                ttq.setAndDefer = function(t, e) { t[e] = function() { t.push([e].concat(Array.prototype.slice.call(arguments, 0))); } };
+                for (var i = 0; i < ttq.methods.length; i++) ttq.setAndDefer(ttq, ttq.methods[i]);
+                ttq.load = function(t) {
+                  var e = "https://analytics.tiktok.com/i18n/pixel/events.js";
+                  var n = d.createElement("script");
+                  n.type = "text/javascript";
+                  n.async = true;
+                  n.src = e + "?sdkid=" + t + "&lib=" + w.TiktokAnalyticsObject;
+                  var i = d.getElementsByTagName("script")[0];
+                  i.parentNode.insertBefore(n, i);
+                };
+                ttq.load('DAS9OVRC77U5PB60BIHG');
+              }(window, document, 'ttq');
+            `,
+          }}
+        />
+        <TikTokPageView />
 
         {/* --- Noscript fallbacks for GTM and Meta Pixel --- */} 
         <noscript>

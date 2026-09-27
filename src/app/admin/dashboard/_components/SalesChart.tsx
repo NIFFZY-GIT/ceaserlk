@@ -22,7 +22,7 @@ export default function SalesChart({ data }: { data: SalesData[] }) {
           }}
           labelStyle={{ color: '#f9fafb' }} // text-gray-50
           itemStyle={{ color: '#60a5fa' }} // text-blue-400
-          formatter={(value: number) => [`LKR ${value.toFixed(2)}`, 'Revenue']}
+          formatter={(value) => [`LKR ${Number(value ?? 0).toFixed(2)}`, 'Revenue']}
         />
         <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
       </BarChart>

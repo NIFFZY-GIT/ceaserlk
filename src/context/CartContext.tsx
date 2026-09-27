@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { trackTikTokEvent } from '@/lib/tiktok';
 
 // --- TYPE DEFINITIONS FOR THE FULLY-FETCHED CART ---
 export interface VariantImage {
@@ -51,7 +52,7 @@ interface CartContextType {
   openCart: () => void;
   closeCart: () => void;
   clearError: () => void;
-  fetchCart: () => Promise<void>;
+  fetchCart: () => Promise<Cart | null>;
   addToCart: (skuId: string, quantity: number) => Promise<boolean>;
   removeFromCart: (cartItemId: string) => Promise<boolean>;
   updateQuantity: (cartItemId: string, newQuantity: number) => Promise<boolean>;
@@ -103,7 +104,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     if (!user && !isGuest) {
       setCart(null);
       setLoading(false);
-      return;
+      return null;
     }
 
     setLoading(true);
@@ -114,7 +115,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     if (!sessionId) { 
       console.warn('No session ID available for cart');
       setLoading(false); 
-      return; 
+      return null; 
     }
     
     console.log('Fetching cart with sessionId:', sessionId, 'isGuest:', isGuest, 'hasUser:', !!user);
@@ -127,16 +128,18 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           if (user) {
             handleAuthError({ status: 401 }, 'view cart');
           }
-          return;
+          return null;
         }
         throw new Error("Failed to fetch cart");
       }
       const data: Cart = await res.json();
       console.log('Cart fetched successfully:', data);
       setCart(data);
+      return data;
     } catch (error) {
       console.error("Cart fetch error:", error);
       setError("Failed to load cart");
+      return null;
     } finally {
       setLoading(false);
     }
@@ -185,7 +188,27 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(errorData.error || 'Failed to add item to cart');
       }
       
-      await fetchCart(); // Re-fetch the cart to get updated state from the server
+      const updatedCart = await fetchCart(); // Re-fetch the cart to get updated state from the server
+      const addedItem = updatedCart?.items.find(item => item.sku.id === skuId);
+      const product = addedItem?.sku.variant.product;
+      const unitPrice = Number(addedItem?.sku.variant.price);
+      const contentId = product?.id ?? skuId;
+      const content = {
+        content_id: contentId,
+        content_type: 'product',
+        quantity,
+        ...(product ? { content_name: product.name } : {}),
+        ...(Number.isFinite(unitPrice) ? { price: unitPrice } : {}),
+      };
+
+      trackTikTokEvent('AddToCart', {
+        content_id: contentId,
+        content_type: 'product',
+        contents: [content],
+        quantity,
+        currency: 'LKR',
+        ...(Number.isFinite(unitPrice) ? { value: unitPrice * quantity } : {}),
+      });
       return true;
     } catch (error) {
       console.error("Add to cart error:", error);

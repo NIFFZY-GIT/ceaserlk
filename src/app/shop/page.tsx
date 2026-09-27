@@ -23,6 +23,8 @@ type Product = {
   id: string;
   name: string;
   description: string;
+  shipping_cost?: string | number | null;
+  blockedPaymentMethods?: string[];
   variants: ProductVariant[];
 };
 

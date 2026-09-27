@@ -26,6 +26,9 @@ interface EnvironmentConfig {
   // Payment Processing
   STRIPE_SECRET_KEY: string;
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: string;
+
+  // TikTok Events API
+  TIKTOK_EVENTS_API_ACCESS_TOKEN?: string;
   
   // Cron Security
   CRON_SECRET: string;
@@ -52,6 +55,7 @@ export function getEnvironmentConfig(): EnvironmentConfig {
     EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+    TIKTOK_EVENTS_API_ACCESS_TOKEN: process.env.TIKTOK_EVENTS_API_ACCESS_TOKEN,
     CRON_SECRET: process.env.CRON_SECRET || '',
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
     NODE_ENV: (process.env.NODE_ENV as 'development' | 'production' | 'test') || 'development',
