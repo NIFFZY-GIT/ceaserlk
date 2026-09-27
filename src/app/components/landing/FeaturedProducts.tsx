@@ -196,19 +196,6 @@ const FeaturedProducts = () => {
               </Link>
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-between lg:hidden">
-            <Link href="/shop" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
-              View all products <ArrowRight className="h-4 w-4" />
-            </Link>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => scrollProducts(-1)} disabled={!canScrollPrevious} aria-label="Scroll products left" className="flex h-9 w-9 items-center justify-center border border-white/20 text-white disabled:opacity-30">
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <button type="button" onClick={() => scrollProducts(1)} disabled={!canScrollNext} aria-label="Scroll products right" className="flex h-9 w-9 items-center justify-center border border-white/20 text-white disabled:opacity-30">
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     
