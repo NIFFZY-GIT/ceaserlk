@@ -10,45 +10,58 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const SLIDE_DURATION_MS = 5000; // 5 seconds per slide
+const SLIDE_DURATION_MS = 5000;
 
-type NetworkInformation = {
-  saveData?: boolean;
-  effectiveType?: string;
-  addEventListener?: (type: 'change', listener: () => void) => void;
-  removeEventListener?: (type: 'change', listener: () => void) => void;
+type ShowcaseSlide = {
+  id: number | string;
+  title: string;
+  description: string;
+  ctaText: string;
+  ctaHref: string;
+  mediaType: 'image' | 'video';
+  mediaUrl: string;
 };
 
-const showcaseData = [
+const fallbackShowcaseData: ShowcaseSlide[] = [
   {
+    id: 'default-1',
     title: "To rule an empire, you must dress like an emperor",
     description:
       "Crafted for those who demand excellence.\nEvery detail reflects power, precision, and purpose.",
-    cta: { text: "Discover The Tech", href: "/about" }
+    ctaText: "Discover The Tech",
+    ctaHref: "/about",
+    mediaType: 'image',
+    mediaUrl: '/images/H123.JPG',
   },
   {
+    id: 'default-2',
     title: "WEAR THE MINDSET OF SUCCESS",
     description:
       "CEASAR is more than clothing —\nit’s a statement of discipline, focus, and elevation.",
-    cta: { text: "Our Mission", href: "/about" }
+    ctaText: "Our Mission",
+    ctaHref: "/about",
+    mediaType: 'image',
+    mediaUrl: '/images/H123.JPG',
   },
   {
+    id: 'default-3',
     title: "DESIGNED FOR THOSE WHO RISE",
     description:
       "Luxury fabrics. Timeless design.\nBuilt for individuals who never settle.",
-    cta: { text: "Explore The Collection", href: "/shop" }
+    ctaText: "Explore The Collection",
+    ctaHref: "/shop",
+    mediaType: 'image',
+    mediaUrl: '/images/H123.JPG',
   }
 ];
 
 const VideoShowcase = () => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const sectionRef = useRef(null);
+  const [showcaseData, setShowcaseData] = useState(fallbackShowcaseData);
+  const sectionRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const progressAnimation = useRef<gsap.core.Tween | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [videoEligible, setVideoEligible] = useState(true);
-  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
-  const [manualOverride, setManualOverride] = useState(false);
+  const activeSlide = showcaseData[activeIndex] ?? fallbackShowcaseData[0];
 
   // Animation for the entire section entering the viewport
   useLayoutEffect(() => {
@@ -68,77 +81,32 @@ const VideoShowcase = () => {
     return () => ctx.revert();
   }, []);
 
-  // Detect user/device preferences before ever loading the video asset
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const connection = (navigator as Navigator & { connection?: NetworkInformation }).connection;
-
-    const evaluateEligibility = () => {
-      if (manualOverride) {
-        setVideoEligible(true);
-        return;
-      }
-      const prefersReducedMotion = reduceMotionQuery.matches;
-      const saveData = Boolean(connection?.saveData);
-      const slowConnection = Boolean(connection?.effectiveType && /(slow-)?2g|3g/i.test(connection.effectiveType));
-
-      const eligible = !prefersReducedMotion && !saveData && !slowConnection;
-      setVideoEligible(eligible);
-      if (!eligible) {
-        setShouldLoadVideo(false);
-      }
-    };
-
-    evaluateEligibility();
-
-    const handleChange = () => evaluateEligibility();
-    reduceMotionQuery.addEventListener('change', handleChange);
-    connection?.addEventListener?.('change', handleChange);
-
-    return () => {
-      reduceMotionQuery.removeEventListener('change', handleChange);
-      connection?.removeEventListener?.('change', handleChange);
-    };
-  }, [manualOverride]);
-
-  // Lazy-load the background video when the hero nears the viewport
-  useEffect(() => {
-    if (!videoEligible || !sectionRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry?.isIntersecting) {
-          setShouldLoadVideo(true);
-          observer.disconnect();
+    let cancelled = false;
+    const loadSlides = async () => {
+      try {
+        const response = await fetch('/api/hero-slides', { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json() as { slides?: ShowcaseSlide[] };
+        if (!cancelled && Array.isArray(data.slides) && data.slides.length > 0) {
+          setShowcaseData(data.slides);
+          setActiveIndex(0);
         }
-      },
-      { rootMargin: '320px' }
-    );
+      } catch (error) {
+        console.error('Failed to load homepage hero slides:', error);
+      }
+    };
 
-    observer.observe(sectionRef.current);
+    void loadSlides();
+    return () => { cancelled = true; };
+  }, []);
 
-    return () => observer.disconnect();
-  }, [videoEligible]);
-
-  // Ensure playback kicks in once sources attach
   useEffect(() => {
-    if (!shouldLoadVideo || !videoEligible || !videoRef.current) return;
-    const player = videoRef.current;
-    const playPromise = player.play();
-    if (playPromise && typeof playPromise.then === 'function') {
-      playPromise.catch(() => undefined);
-    }
-  }, [shouldLoadVideo, videoEligible]);
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _handleManualStart = () => {
-    setManualOverride(true);
-    setVideoEligible(true);
-    setShouldLoadVideo(true);
-  };
+    const video = videoRef.current;
+    if (!video || activeSlide.mediaType !== 'video') return;
+    void video.play().catch(() => undefined);
+    return () => video.pause();
+  }, [activeSlide.mediaType, activeSlide.mediaUrl]);
 
   // Effect to handle the auto-playing slideshow and text animations
   useEffect(() => {
@@ -150,80 +118,76 @@ const VideoShowcase = () => {
     
     // Animate the progress bar
     progressAnimation.current?.kill(); // Kill any existing animation
-    progressAnimation.current = gsap.fromTo(`.progress-bar-${activeIndex}`, 
+    progressAnimation.current = gsap.fromTo(`.progress-bar-${activeIndex}`,
       { scaleX: 0 }, 
       { scaleX: 1, duration: SLIDE_DURATION_MS / 1000, ease: 'linear' }
     );
     
-    // Set up the interval for the next slide
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      setActiveIndex(prev => (prev + 1) % showcaseData.length);
+    const interval = setInterval(() => {
+      setActiveIndex((previous) => (previous + 1) % showcaseData.length);
     }, SLIDE_DURATION_MS);
 
-    // Cleanup function
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      contentTl.kill();
+      progressAnimation.current?.kill();
+      clearInterval(interval);
     };
-  }, [activeIndex]);
+  }, [activeIndex, showcaseData.length]);
 
   const handleSlideChange = (index: number) => {
     if (index === activeIndex) return;
     setActiveIndex(index);
   };
 
-  const activeSlide = showcaseData[activeIndex];
-
   return (
     <section
       ref={sectionRef}
       className="relative h-screen min-h-[820px] w-full bg-brand-black text-white flex items-center"
     >
-      {/* Background Image */}
-      <div className="absolute top-0 left-0 w-full h-full z-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/images/H123.JPG"
-          alt="Athletic apparel background"
-          className="w-full h-full object-cover object-[center_30%]"
-        />
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {activeSlide.mediaType === 'video' ? (
+          <video
+            key={activeSlide.mediaUrl}
+            ref={videoRef}
+            src={activeSlide.mediaUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            aria-label={activeSlide.title}
+            className="h-full w-full object-cover object-center"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={activeSlide.mediaUrl}
+            src={activeSlide.mediaUrl}
+            alt={activeSlide.title}
+            className="h-full w-full object-cover object-[center_30%]"
+          />
+        )}
       </div>
-      {/* {!videoEligible && !manualOverride && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
-          <div className="rounded-full bg-black/60 px-6 py-3 text-sm font-semibold text-white uppercase tracking-widest shadow-lg">
-            Video paused for slow connection
-          </div>
-        </div>
-      )}
-      {!videoEligible && !manualOverride && (
-        <div className="absolute bottom-10 right-10 z-40">
-          <button
-            type="button"
-            onClick={handleManualStart}
-            className="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-full shadow-md hover:bg-primary/90"
-          >
-            Play background video
-          </button>
-        </div>
-      )} */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/55 z-10" />
 
       {/* Content */}
       <div className="relative z-20 container mx-auto px-6 h-full flex flex-col justify-end pt-16 lg:pt-24 pb-24 lg:pb-32 gap-10">
         <div className="max-w-3xl lg:max-w-5xl space-y-8 lg:space-y-10">
-          <h2 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold uppercase tracking-tight leading-[0.9] whitespace-pre-line slide-title">
+          <h2 className="slide-title break-words whitespace-pre-line text-4xl font-bold uppercase leading-[0.9] sm:text-5xl md:text-7xl lg:text-8xl">
             {activeSlide.title}
           </h2>
           <p className="text-lg sm:text-xl lg:text-2xl text-gray-100 leading-relaxed whitespace-pre-line max-w-3xl slide-description">
             {activeSlide.description}
           </p>
-          <Link
-            href={activeSlide.cta.href}
-            className="group inline-flex items-center gap-3 pt-3 text-white font-bold text-lg lg:text-xl slide-cta"
-          >
-            <span>{activeSlide.cta.text}</span>
-            <ArrowRight className="w-6 h-6 transition-transform duration-300 group-hover:translate-x-2" />
-          </Link>
+          {activeSlide.ctaText && (
+            <Link
+              href={activeSlide.ctaHref}
+              className="slide-cta group inline-flex items-center gap-3 pt-3 text-lg font-bold text-white lg:text-xl"
+            >
+              <span>{activeSlide.ctaText}</span>
+              <ArrowRight className="h-6 w-6 transition-transform duration-300 group-hover:translate-x-2" />
+            </Link>
+          )}
         </div>
 
         {/* Controls */}

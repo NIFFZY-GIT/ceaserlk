@@ -54,7 +54,7 @@ const sortStockItems = (items: StockInfo[]): StockInfo[] => {
   return sorted;
 };
 
-export const ProductCard = ({ product }: { product: Product }) => {
+export const ProductCard = ({ product, featured = false }: { product: Product; featured?: boolean }) => {
   const { addToCart } = useCart();
   const { user, isGuest } = useAuth();
   const router = useRouter();
@@ -145,7 +145,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
       <div className="flex h-full flex-col bg-white">
         <Link
           href={`/product/${product.id}?variant=${activeVariant.variantId}`}
-          className="relative block aspect-[5/7] w-full overflow-hidden bg-[#f0f1ef]"
+          className={`relative block w-full overflow-hidden bg-[#f0f1ef] ${featured ? 'aspect-[3/4]' : 'aspect-[5/7]'}`}
         >
           <Image
             key={currentImageUrl}
@@ -168,7 +168,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
           )}
         </Link>
 
-        <div className="flex flex-1 flex-col px-1 pt-3 pb-1">
+        <div className={`flex flex-1 flex-col px-1 pb-1 ${featured ? 'pt-2' : 'pt-3'}`}>
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <h3 className="truncate text-sm font-semibold text-[#1a1a1a]">{product.name}</h3>
@@ -187,18 +187,18 @@ export const ProductCard = ({ product }: { product: Product }) => {
           </div>
 
           {bnplProviders.length > 0 && (
-            <div className="mt-1">
+            <div className={featured ? 'mt-1 flex items-center justify-between gap-1' : 'mt-1'}>
               <p className="text-[11px] leading-snug text-[#666]">
                 3 payments of LKR {installment.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
-              <div className="mt-1 flex h-4 items-center gap-2" aria-label={`Available installment providers: ${bnplProviders.join(' and ')}`}>
+              <div className={`flex h-4 shrink-0 items-center gap-1.5 ${featured ? '' : 'mt-1 gap-2'}`} aria-label={`Available installment providers: ${bnplProviders.join(' and ')}`}>
                 {bnplProviders.includes('Koko') && (
                   <Image
                     src="/assets/Koko Merchant Toolkit V4.0/Koko Assets/Koko logo/MAINLogo-HD_H.png"
                     alt="Koko"
-                    width={46}
+                    width={featured ? 38 : 46}
                     height={16}
-                    className="h-4 w-[46px] object-contain object-left"
+                    className={`h-4 object-contain object-left ${featured ? 'w-[38px]' : 'w-[46px]'}`}
                   />
                 )}
                 {bnplProviders.length > 1 && <span className="h-3 border-l border-[#d5d5d5]" aria-hidden="true" />}
@@ -206,9 +206,9 @@ export const ProductCard = ({ product }: { product: Product }) => {
                   <Image
                     src="/assets/mintpay/mintpaylogo.png"
                     alt="MintPay"
-                    width={42}
+                    width={featured ? 36 : 42}
                     height={16}
-                    className="h-4 w-[42px] object-contain object-left"
+                    className={`h-4 object-contain object-left ${featured ? 'w-[36px]' : 'w-[42px]'}`}
                   />
                 )}
               </div>
@@ -216,7 +216,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
           )}
 
           {product.variants.length > 1 && (
-            <div className="mt-3 flex items-center gap-2 border-t border-[#ededed] pt-3">
+            <div className={`flex items-center gap-2 border-t border-[#ededed] ${featured ? 'mt-2 pt-2' : 'mt-3 pt-3'}`}>
               {product.variants.map((variant, index) => (
                 <button
                   key={variant.variantId}
@@ -234,8 +234,8 @@ export const ProductCard = ({ product }: { product: Product }) => {
             </div>
           )}
 
-          <div className="mt-3">
-            <div className="mb-1.5 flex items-center justify-between text-[10px] uppercase text-[#777]">
+          <div className={featured ? 'mt-2' : 'mt-3'}>
+            <div className="mb-1 flex items-center justify-between text-[10px] uppercase text-[#777]">
               <span>Size</span>
               <span>{totalStock === 0 ? 'Out of stock' : selectedSize ? `Selected: ${selectedSize}` : 'Choose a size'}</span>
             </div>
@@ -250,7 +250,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
                   }}
                   disabled={stockItem.stock <= 0}
                   aria-pressed={selectedSize === stockItem.size}
-                  className={`relative flex h-8 min-w-8 items-center justify-center border px-2 text-xs transition-colors disabled:cursor-not-allowed ${
+                  className={`relative flex ${featured ? 'h-7 min-w-7 px-1.5' : 'h-8 min-w-8 px-2'} items-center justify-center border text-xs transition-colors disabled:cursor-not-allowed ${
                     stockItem.stock <= 0
                       ? 'border-[#e5e5e5] bg-[#f5f5f5] text-[#aaa]'
                       : selectedSize === stockItem.size
@@ -269,7 +269,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
             type="button"
             onClick={handleAddToCart}
             disabled={!selectedSize || totalStock === 0 || isAdding || showAdded}
-            className={`mt-4 inline-flex h-10 w-full items-center justify-center gap-2 text-xs font-semibold transition-all duration-300 disabled:cursor-not-allowed ${
+            className={`${featured ? 'mt-3' : 'mt-4'} inline-flex h-10 w-full items-center justify-center gap-2 text-xs font-semibold transition-all duration-300 disabled:cursor-not-allowed ${
               showAdded
                 ? 'scale-[1.02] bg-[#e9f2ec] text-[#17643a]'
                 : 'bg-[#1a1a1a] text-white hover:bg-[#333] disabled:bg-[#d4d4d4]'
