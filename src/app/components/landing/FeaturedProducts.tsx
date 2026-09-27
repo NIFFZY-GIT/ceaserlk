@@ -2,16 +2,12 @@
 
 "use client";
 
-import { useRef, useLayoutEffect, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, MoveRight } from 'lucide-react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ArrowLeft, ArrowRight, MoveRight } from 'lucide-react';
 import { ProductCard } from '@/app/components/ProductCard';
 import { preloadProductVideos } from '@/lib/video-preloader';
-
-gsap.registerPlugin(ScrollTrigger);
 
 // Type definitions for the product structure
 type StockInfo = { id: string; size: string; stock: number };
@@ -34,13 +30,13 @@ type Product = {
 
 
 const FeaturedProducts = () => {
-  // Refs for GSAP animations
-  const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   
   // State for products
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [canScrollPrevious, setCanScrollPrevious] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
   const leadVariant = products[0]?.variants[0];
   const collectionImage = leadVariant?.images?.find((media) => !/\.(mp4|webm|ogg|mov|m4v)$/i.test(media.url))?.url
     || (leadVariant?.thumbnailUrl && !/\.(mp4|webm|ogg|mov|m4v)$/i.test(leadVariant.thumbnailUrl)
@@ -75,84 +71,96 @@ const FeaturedProducts = () => {
     fetchProducts();
   }, []);
 
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      const section = sectionRef.current;
-      const track = trackRef.current;
-      
-      if (!section || !track) return;
-      
-      // Using gsap.matchMedia for responsive animations is best practice
-      const mm = gsap.matchMedia();
-  
-      // Add a media query for desktop screens where the animation should run
-      mm.add("(min-width: 1024px)", () => {
-          if (!track.parentElement) return;
-          const amountToScroll = track.scrollWidth - track.parentElement.offsetWidth;
-  
-          const tl = gsap.timeline({
-            scrollTrigger: {
-              trigger: section,
-              pin: true,
-              start: 'top top',
-              end: () => `+=${amountToScroll}`,
-              scrub: 1,
-              invalidateOnRefresh: true,
-            },
-          });
-  
-          tl.from(".gsap-header-item", { y: 50, opacity: 0, duration: 0.5, ease: 'power5.out', stagger: 0.2 });
-          tl.to(track, { x: -amountToScroll, ease: 'power1.inOut' }, ">-0.2");
-      });
-    }, sectionRef); // scope the context to the section
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
 
-    return () => ctx.revert(); // cleanup
-  }, []);
+    const updateControls = () => {
+      setCanScrollPrevious(track.scrollLeft > 4);
+      setCanScrollNext(track.scrollLeft + track.clientWidth < track.scrollWidth - 4);
+    };
+
+    updateControls();
+    track.addEventListener('scroll', updateControls, { passive: true });
+    const resizeObserver = new ResizeObserver(updateControls);
+    resizeObserver.observe(track);
+    if (track.parentElement) resizeObserver.observe(track.parentElement);
+
+    return () => {
+      track.removeEventListener('scroll', updateControls);
+      resizeObserver.disconnect();
+    };
+  }, [loading, products.length]);
+
+  const scrollProducts = (direction: -1 | 1) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const firstCard = track.querySelector<HTMLElement>('[data-featured-card]');
+    const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 0;
+    track.scrollBy({
+      left: direction * ((firstCard?.offsetWidth || track.clientWidth) + gap),
+      behavior: 'smooth',
+    });
+  };
+
+  const cardWidth = 'w-[min(78vw,17rem)] sm:w-[min(44vw,18rem)] lg:w-[calc((100%-2.5rem)/3)] xl:w-[calc((100%-3.75rem)/4)]';
 
   return (
-    <section ref={sectionRef} className="relative overflow-hidden bg-brand-black py-16 text-white md:py-20">
-      <div className="container mx-auto flex h-full flex-col justify-center px-6">
-        <div className="mb-8 flex items-end justify-between gap-6 md:mb-10">
+    <section className="bg-brand-black py-14 text-white md:py-16">
+      <div className="container mx-auto flex flex-col justify-center px-6">
+        <div className="mb-7 flex items-end justify-between gap-6 md:mb-8">
           <div>
-            <p className="gsap-header-item text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
               Made to be worn
             </p>
-            <h2 className="gsap-header-item mt-2 text-3xl font-bold uppercase leading-none sm:text-4xl md:text-5xl">
+            <h2 className="mt-2 text-3xl font-bold uppercase leading-none sm:text-4xl md:text-5xl">
               Latest drops
             </h2>
-            <p className="gsap-header-item mt-2 max-w-md text-sm text-gray-400 sm:text-base">
+            <p className="mt-2 max-w-md text-sm text-gray-400 sm:text-base">
               Everyday essentials, cut with intention.
             </p>
           </div>
-          <Link href="/shop" className="group hidden items-center gap-2 border-b border-white/25 pb-2 text-sm font-semibold text-white transition-colors hover:border-primary hover:text-primary md:flex gsap-header-item">
-            <span>View All Products</span>
-            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-          </Link>
+          <div className="flex shrink-0 items-center gap-3">
+            <Link href="/shop" className="group hidden items-center gap-2 border-b border-white/25 pb-2 text-sm font-semibold text-white transition-colors hover:border-primary hover:text-primary sm:flex">
+              <span>View all</span>
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
+            <div className="hidden gap-2 lg:flex">
+              <button type="button" onClick={() => scrollProducts(-1)} disabled={!canScrollPrevious} aria-label="Scroll products left" title="Previous products" className="flex h-10 w-10 items-center justify-center border border-white/20 text-white transition hover:border-white/50 disabled:cursor-default disabled:opacity-30">
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={() => scrollProducts(1)} disabled={!canScrollNext} aria-label="Scroll products right" title="Next products" className="flex h-10 w-10 items-center justify-center border border-white/20 text-white transition hover:border-white/50 disabled:cursor-default disabled:opacity-30">
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="w-full overflow-x-auto overscroll-behavior-x-contain pb-3 modern-scrollbar">
-          <div ref={trackRef} className="flex items-stretch gap-4 pr-6 w-max md:gap-5 md:pr-0">
+        <div className="w-full">
+          <div
+            ref={trackRef}
+            className="flex w-full snap-x snap-mandatory items-stretch gap-4 overflow-x-auto overscroll-x-contain pb-2 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:gap-5"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {loading ? (
-              // Loading skeleton
-              Array.from({ length: 6 }).map((_, index) => (
-                <div key={`skeleton-${index}`} className="w-[min(78vw,17rem)] flex-shrink-0 animate-pulse bg-white p-3">
-                    <div className="aspect-[3/4] w-full bg-gradient-to-br from-gray-200 to-gray-300"></div>
-                    <div className="mt-3 space-y-2">
-                      <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300"></div>
-                      <div className="h-4 w-4/5 bg-gradient-to-r from-gray-200 to-gray-300"></div>
-                      <div className="h-9 w-full bg-gradient-to-r from-gray-200 to-gray-300"></div>
-                    </div>
+              Array.from({ length: 4 }).map((_, index) => (
+                <div data-featured-card key={`skeleton-${index}`} className={`${cardWidth} snap-start flex-shrink-0 animate-pulse bg-white p-3`}>
+                  <div className="aspect-[3/4] w-full bg-gradient-to-br from-gray-200 to-gray-300"></div>
+                  <div className="mt-3 space-y-2">
+                    <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300"></div>
+                    <div className="h-4 w-4/5 bg-gradient-to-r from-gray-200 to-gray-300"></div>
+                    <div className="h-9 w-full bg-gradient-to-r from-gray-200 to-gray-300"></div>
+                  </div>
                 </div>
               ))
             ) : products.length > 0 ? (
               products.map((product, index) => (
-                <div key={`featured-product-${product.id}-${index}`} className="w-[min(78vw,17rem)] flex-shrink-0">
+                <div data-featured-card key={`featured-product-${product.id}-${index}`} className={`${cardWidth} snap-start flex-shrink-0`}>
                   <ProductCard product={product} featured />
                 </div>
               ))
             ) : (
-              // No products fallback
-              <div className="flex min-h-[480px] w-[min(78vw,17rem)] flex-shrink-0 items-center justify-center border border-white/10 bg-white/[0.04] p-8 text-center text-gray-400">
+              <div data-featured-card className={`${cardWidth} snap-start flex-shrink-0 border border-white/10 bg-white/[0.04] p-6 text-center text-gray-400`}>
                 <div className="space-y-4">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center border border-white/15 bg-white/5">
                     <ArrowRight className="h-5 w-5 text-primary" />
@@ -163,7 +171,7 @@ const FeaturedProducts = () => {
               </div>
             )}
             
-            <div className="relative flex w-[min(78vw,17rem)] flex-shrink-0 self-stretch">
+            <div data-featured-card className={`${cardWidth} snap-start flex flex-shrink-0`}>
               <Link href="/shop" className="group relative flex min-h-full w-full flex-col justify-between overflow-hidden border border-white/15 bg-[#151515] p-5 transition-colors duration-300 hover:border-primary/70 hover:bg-[#1b1b1b] sm:p-6">
                 <Image
                   src={collectionImage}
@@ -186,6 +194,19 @@ const FeaturedProducts = () => {
                   </span>
                 </div>
               </Link>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between lg:hidden">
+            <Link href="/shop" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+              View all products <ArrowRight className="h-4 w-4" />
+            </Link>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => scrollProducts(-1)} disabled={!canScrollPrevious} aria-label="Scroll products left" className="flex h-9 w-9 items-center justify-center border border-white/20 text-white disabled:opacity-30">
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={() => scrollProducts(1)} disabled={!canScrollNext} aria-label="Scroll products right" className="flex h-9 w-9 items-center justify-center border border-white/20 text-white disabled:opacity-30">
+                <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
