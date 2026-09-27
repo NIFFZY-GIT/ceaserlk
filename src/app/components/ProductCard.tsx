@@ -160,6 +160,12 @@ export const ProductCard = ({ product }: { product: Product }) => {
               Sale
             </span>
           )}
+          {hasFreeDelivery && (
+            <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 bg-white/95 px-2.5 py-1.5 text-[10px] font-semibold text-[#006633] shadow-sm">
+              <Truck size={13} aria-hidden="true" />
+              Free delivery
+            </span>
+          )}
         </Link>
 
         <div className="flex flex-1 flex-col px-1 pt-3 pb-1">
@@ -207,13 +213,6 @@ export const ProductCard = ({ product }: { product: Product }) => {
                 )}
               </div>
             </div>
-          )}
-
-          {hasFreeDelivery && (
-            <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#006633]">
-              <Truck size={13} aria-hidden="true" />
-              Delivery is free
-            </p>
           )}
 
           {product.variants.length > 1 && (
